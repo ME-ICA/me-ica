@@ -2,7 +2,7 @@
 
 import os
 import os.path as op
-from meqc.meica import find_CM, format_inset, fparse, gen_script, get_options
+from meica.meica import find_CM, format_inset, fparse, gen_script, get_options
 
 def test_fparse():
     ('sub.001', '.nii.gz') == fparse('sub.001.nii.gz')
