@@ -1,59 +1,60 @@
+# ME-QC
 
-# Dependencies
+Quality control metrics for data processed using Prantik Kundu's [Multi-Echo Independent Components Analysis (ME-ICA)](https://bitbucket.org/prantikk/me-ica/overview). 
 
-1. AFNI
-2. Python 2.7
-3. numpy
-4. scipy
+[![Build Status](https://travis-ci.org/emdupre/meqc.svg?branch=master)](https://travis-ci.org/emdupre/meqc) [![Coverage Status](https://coveralls.io/repos/github/emdupre/meqc/badge.svg?branch=master)](https://coveralls.io/github/emdupre/meqc?branch=master)
 
+## Usage
 
-# Installation
+ME-ICA minimally requires (1) acquired echo times (in milliseconds) and (2) functional datasets equal to the number of acquired echoes. But you can supply many other options, viewable with `meica.py -h`.  
 
-Install Python and other dependencies. If you have AFNI installed and on your path, you should already have an up-to-date version of ME-ICA on your path. Running `meica.py` without any options will check for dependencies and let you know if they are met. If you don't have numpy/scipy (or appropriate versions) installed, I would strongly recommend using the [Enthought Canopy Python Distribution](https://www.enthought.com/downloads/). Click [here](http://wiki.org/installing.html) for more installation help.
+Here's one example use case:
 
-# Important Files and Directories
+    meica.py -d 'sub-001_task-rest_echo-[1,2,3]_run-01_meep1.nii.gz' -e 15,30,45 -b 12s -a 'sub-001_T1w.nii.gz' --MNI
 
-- `meica.py` : a master script that performs preprocessing and calls the ICA/TE-dependence analysis script `tedana.py`
-- `meica.libs` : a folder that includes utility functions for TE-dependence analysis for denoising and anatomical-functional co-registration
-- `meica.libs/tedana.py` : performs ICA and TE-dependence calculations
+Where:
 
-# Usage
+`-e 15,30,45`  are the echo times in milliseconds  
+`-d 'sub-001_task-rest_echo-[1,2,3]_run-01_meep1.nii.gz'`  are the 4-D multi-echo fMRI datasets. Can supply each dataset individually or with bash shell expansion  
+`-a 'sub-001_T1w.nii.gz'`  is an anatomical image with skull  
+`-b 12s`  means drop first 12 seconds of data for equilibration  
+`--MNI`  warp anatomical to MNI space using AFNI's MNI_caez_N27 (Colin 27) template. 
 
-fMRI data is called: 		rest_e1.nii.gz, rest_e2.nii.gz, rest_e3.nii.gz, etc. 
-Anatomical is:		mprage.nii.gz
+Additional, optional parameters support situations such as: anatomical with no skull, applying FWHM smoothing, non-linear warping, etc.
 
-meica.py and tedana.py have a number of options which you can view using the -h flag. 
-
-Here's an example use:
-
-    meica.py -d rest1_e1.nii.gz,rest1_e2.nii.gz,rest1_e3.nii.gz -e 15,30,45 -b 15s -a mprage.nii --MNI --prefix sub1_rest
-
-This means:
-
-    -e 15,30,45   are the echo times in milliseconds
-    -d rest_e1.nii.gz,rest_e2...   are the 4-D time series datasets (comma separated list of dataset of each TE) from a multi-echo fMRI acqusition
-    -a ...   is a "raw" mprage with a skull
-    -b   15 means drop first 15 seconds of data for equilibration
-    --MNI   warp anatomical to MNI space using a built-in high-resolution MNI template. 
-	--prefix sub1_rest   prefix for final functional output datasets, i.e. sub1_rest_....nii.gz
-
-Again, see `meica.py -h` for handling other situations such as: anatomical with no skull, no anatomical at all, applying FWHM smoothing, non-linear warp to standard space, etc.
-
-Click [here](http://wiki.org/group_analysis.html) more info on group analysis.
+## Procedure
+PROCEDURE 1 : Preprocess multi-echo datasets and apply multi-echo ICA based
+on spatial concatenation
+-Check arguments, input filenames, and filesystem for dependencies
+-Calculation of motion parameters based on images with highest constrast
+-Application of motion correction and coregistration parameters
+-Misc. EPI preprocessing (temporal alignment, smoothing, etc) in appropriate
+order
+-Compute PCA and ICA in conjuction with TE-dependence analysis
 
 ## Output
 
-- `./meica.rest1_e1/` : contains preprocessing intermediate files. Click [here](http://wiki.org/meica_preprocessing.html) for detailed listing.
-- `sub1_rest_medn.nii.gz` : 'Denoised' BOLD time series after: basic preprocessing, T2* weighted averaging of echoes (i.e. 'optimal combination'), ICA denoising. Use this dataset for task analysis and resting state time series correlation analysis. See [here](http://wiki.org/viewing_results.html#dof) for information on degrees of freedom in denoised data.
-- `sub1_rest_tsoc.nii.gz` : 'Raw' BOLD time series dataset after: basic preprocessing and T2* weighted averaging of echoes (i.e. 'optimal combination'). 'Standard' denoising or task analyses can be assessed on this dataset (e.g. motion regression, physio correction, scrubbing, blah...) for comparison to ME-ICA denoising.
-- `sub1_rest_mefc.nii.gz` : Component maps (in units of \delta S) of accepted BOLD ICA components. Use this dataset for ME-ICR seed-based connectivity analysis.
-- `sub1_rest_mefl.nii.gz` : Component maps (in units of \delta S) of ALL ICA components.
-- `sub1_rest_ctab.nii.gz` : Table of component Kappa, Rho, and variance explained values, plus listing of component classifications. See [here](http://wiki.org/viewing_results.html#kappa_spectra) for more info.
+- `*_medn.nii.gz` : 'Denoised' BOLD time series after: basic preprocessing, T2* weighted averaging of echoes (i.e. 'optimal combination'), ICA denoising. Use this dataset for task analysis and resting state time series correlation analysis.
+- `*_tsoc.nii.gz` : 'Raw' BOLD time series dataset after: basic preprocessing and T2* weighted averaging of echoes (i.e. 'optimal combination'). 'Standard' denoising or task analyses can be assessed on this dataset (e.g. motion regression, physio correction, scrubbing, blah...) for comparison to ME-ICA denoising.
+- `*_mefc.nii.gz` : Component maps (in units of \delta S) of accepted BOLD ICA components. Use this dataset for ME-ICR seed-based connectivity analysis.
+- `*_mefl.nii.gz` : Component maps (in units of \delta S) of ALL ICA components.
+- `*_ctab.nii.gz` : Table of component Kappa, Rho, and variance explained values, plus listing of component classifications. 
 
-For a step-by-step guide on how to assess ME-ICA results in more detail, click [here](http://wiki.org/viewing_results.html)
-
-#Some Notes
+## Some Notes
 
 - Make sure your datasets have slice timing information in the header. If not sure, specify a `--tpattern` option to `meica.py`. Check AFNI documentation of [3dTshift](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dTshift.html) to see slice timing codes.
-- For more info on T2* weighted anatomical-functional coregistration click [here](http://wiki.org/meica_alignp_mepi_anat.html)
 - FWHM smoothing is not recommended. tSNR boost is provided by optimal combination of echoes. For better overlap of 'blobs' across subjects, use non-linear standard space normalization instead with `meica.py ... --qwarp`
+
+## Citations
+
+If you use ME-ICA in publications, please cite:
+
+> Kundu, P., Brenowitz, N.D., Voon, V., Worbe, Y., Vertes, P.E., Inati, S.J.,
+Saad, Z.S., Bandettini, P.A. & Bullmore, E.T. Integrated strategy for
+improving functional connectivity mapping using multiecho fMRI. PNAS (2013).
+http://dx.doi.org/10.1073/pnas.1301725110
+
+> Kundu, P., Inati, S.J., Evans, J.W., Luh, W.M. & Bandettini, P.A.
+Differentiating BOLD and non-BOLD signals in fMRI time series using
+multi-echo EPI. NeuroImage (2011).
+http://dx.doi.org/10.1016/j.neuroimage.2011.12.028
