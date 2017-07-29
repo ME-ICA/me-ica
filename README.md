@@ -1,8 +1,8 @@
-# ME-QC
+# ME-ICA
 
-Quality control metrics for data processed using Prantik Kundu's [Multi-Echo Independent Components Analysis (ME-ICA)](https://bitbucket.org/prantikk/me-ica/overview). 
+Core code for Multi-Echo Independent Components Analysis (ME-ICA). 
 
-[![Build Status](https://travis-ci.org/emdupre/meqc.svg?branch=master)](https://travis-ci.org/emdupre/meqc) [![Coverage Status](https://coveralls.io/repos/github/emdupre/meqc/badge.svg?branch=master)](https://coveralls.io/github/emdupre/meqc?branch=master)
+[![Build Status](https://travis-ci.org/emdupre/me-ica.svg?branch=master)](https://travis-ci.org/emdupre/me-ica) [![Coverage Status](https://coveralls.io/repos/github/emdupre/me-ica/badge.svg?branch=master)](https://coveralls.io/github/emdupre/me-ica?branch=master)
 
 ## Usage
 
