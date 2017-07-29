@@ -41,7 +41,7 @@ before_script:
 - python setup.py install
 
 script:
-- py.test --cov-report term-missing --cov=meqc
+- py.test --cov-report term-missing --cov=meica
 
 after_success:
 - coveralls

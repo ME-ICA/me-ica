@@ -492,14 +492,14 @@ def gen_script(options):
         raise OSError("Need at least dataset inputs and TEs. Try meica.py -h")
 
     # Check for already created meica directories
-    meicas = glob.glob('meica.*')
-    if any(os.path.isdir(m) for i, m in enumerate(meicas)):
-        meica_exists   = True
-    else: meica_exists = False
+    # meicas = glob.glob('meica.*')
+    # if any(os.path.isdir(m) for i, m in enumerate(meicas)):
+    #     meica_exists   = True
+    # else: meica_exists = False
 
-    if not options.overwrite and meica_exists:
-        raise OSError("*+ A ME-ICA directory already exists! " +
-                      "Use '--OVERWRITE' flag to overwrite it.")
+    # if not options.overwrite and meica_exists:
+    #     raise OSError("*+ A ME-ICA directory already exists! " +
+    #                   "Use '--OVERWRITE' flag to overwrite it.")
 
     if os.getenv('DYLD_FALLBACK_LIBRARY_PATH') is None:
         raise OSError("*+ AFNI environmental variables not set! Set " +
