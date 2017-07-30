@@ -36,7 +36,7 @@ def test_find_CM():
     [1.1718978881835938,
      -41.01300048828125,
      -46.293296813964844] == find_CM(op.join(resdir,
-                                             '/sub-001_T1w.nii.gz'))
+                                             'sub-001_T1w.nii.gz'))
 
 def test_gen_script():
     os.environ['DYLD_FALLBACK_LIBRARY_PATH'] = '~/abin'
