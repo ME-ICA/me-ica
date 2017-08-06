@@ -2,7 +2,8 @@
 
 Core code for Multi-Echo Independent Components Analysis (ME-ICA). 
 
-[![Build Status](https://travis-ci.org/emdupre/me-ica.svg?branch=py3)](https://travis-ci.org/emdupre/me-ica) [![Coverage Status](https://coveralls.io/repos/github/emdupre/me-ica/badge.svg?branch=py3)](https://coveralls.io/github/emdupre/me-ica?branch=master)
+[![Build Status](https://travis-ci.org/emdupre/me-ica.svg?branch=py3)](https://travis-ci.org/emdupre/me-ica) [![Coverage Status](https://coveralls.io/repos/github/emdupre/me-ica/badge.svg?branch=py3)](https://coveralls.io/github/emdupre/me-ica?branch=master) [![License](https://img.shields.io/badge/License-LGPL%202.0-blue.svg)](https://opensource.org/licenses/LGPL-2.1)
+
 
 ## Usage
 

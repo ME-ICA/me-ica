@@ -10,88 +10,196 @@ import nibabel as nib
 import numpy as np
 
 
-def fparse(fname):
+def fparse(flist):
     """
-    Filename parser for NIFTI and AFNI files.
+    Filename parser for AFNI and NIFTI files
 
-    Returns prefix from input datafiles (e.g., sub_001) and filetype (e.g.,
-    .nii). If AFNI format is supplied, extracts space (+tlrc, +orig, or +mni)
-    as filetype.
+    Returns prefix from input datafiles (e.g., sub_001) and filetype extension
+    (e.g., .nii). If AFNI format is supplied, should extract space (+tlrc,
+    +orig, or +mni) as filetype.
 
     Parameters
     ----------
-    fname : str
+    flist : list
+        list of filenames for acquired functional datasets
 
     Returns
     -------
-    str, str: prefix of filename, type of filename
+    prefix : str
+        the prefix for each filename, up to the echo number
+    trailing : str
+        any part of filename after echo (in BIDS spec, '_bold') up to extension
+    ftype : str
+        file type for the acquired functional datasets
     """
 
-    if '.' in fname:
-        if '+' in fname:  # i.e., if AFNI format
-            prefix = fname.split('+')[0]
-            suffix = ''.join(fname.split('+')[-1:])
-            ftype  = '+' + suffix.split('.')[0]
-        else:
-            if fname.endswith('.gz'):  # if gzipped, two matches for ftype
-                prefix = '.'.join(fname.split('.')[:-2])
-                ftype  = '.' + '.'.join(fname.split('.')[-2:])
+    # find string index of echo number in filename by comparing where two file
+    # names differ. needs a single index, so if you have 10+ echos... 
+    # what? how? also, then this won't work.
+    echo_ind = [i for i in range(len(flist[0])) 
+                if flist[0][i] != flist[1][i]][0]
+
+    for i, f in enumerate(flist):
+
+        if '.' in f:  # if file name has an assoc. file type
+            if '+' in f:  # i.e., if AFNI format
+                fname      = f.split('+')[0]  # everything before the +
+                suffix     = ''.join(f.split('+')[-1:])
+                # need to calculate indices to remove for trailing filepart
+                suffix_ind = len(f) - (len(suffix) + 1) 
+                # dropping .BRIK/.HEAD, take AFNI space (e.g., +tlrc) as ftype
+                ftype      = '+' + suffix.split('.')[0]
+                prefix     = fname[:echo_ind]
+                trailing   = fname[echo_ind+1:suffix_ind]
+
             else:
-                prefix = '.'.join(fname.split('.')[:-1])
-                ftype  = '.' + ''.join(fname.split('.')[-1:])
-    else:
-        prefix = fname
-        ftype  = ''
+                if f.endswith('.gz'):  # if gzipped, two matches for ftype
+                    fname    = '.'.join(f.split('.')[:-2])
+                    ftype    = '.' + '.'.join(f.split('.')[-2:])
+                    # need to calculate indices to remove for trailing filepart
+                    ftype_ind = len(f) - len(ftype)
+                    prefix   = fname[:echo_ind]
+                    trailing = fname[echo_ind+1:ftype_ind]
+                    
+                else:  # only one associated ftype (e.g., .nii)
+                    fname    = '.'.join(f.split('.')[:-1])
+                    ftype    = '.' + ''.join(f.split('.')[-1:])
+                    # need to calculate indices to remove for trailing filepart
+                    ftype_ind = len(f) - len(ftype)
+                    prefix   = fname[:echo_ind]
+                    trailing = fname[echo_ind+1:ftype_ind]
 
-    return prefix, ftype
+
+        else:  # if this happens...?
+            prefix = f[:echo_ind]
+            trailing = f[echo_ind:]
+            ftype  = ''
 
 
-def format_inset(inset, tes=None, e=0):
+    return prefix, trailing, ftype
+
+
+def format_dset(inset):
     """
-    Parse input file specification as short- or longhand.
+    Parse input file specification as short- or longhand
 
-    Given a dataset specification (usually from options.input_ds),
-    parse and create a setname for all output files. Also optionally takes
-    a label to append to all created files.
+    Given a dataset specification (usually from options.input_ds), parse and
+    identify a file prefix, trailing file part, and file type.
+
+    Can handle 'shorthand' specification (with bash shell expansion), or
+    'longhand' specification (writing out each filename-- in either a comma-
+    separated string _OR_ a list).
 
     Parameters
     ----------
     inset : str
-    tes   : str
-    e     : echo to process, default 1
+        filenames for acquired functional datasets
 
     Returns
     -------
-    str: dataset name
-    str: name to be "set" for any output files
+    prefix : str
+        the prefix for each filename, before the echo num
+    trailing : str
+        part of filename after echo number (in BIDS spec, '_bold')
+    ftype : str
+        file type for the acquired functional datasets
+    """
+
+    if '[' in inset:  # parse shorthand file spec
+    # love this option as an end user, hate it as a dev
+        fparts = re.split(r'[\[\],]',inset)
+        datasets_in = glob.glob(fparts[0] + '*')
+        prefix, trailing, ftype = fparse(datasets_in)
+
+    else:  # parse longhand file spec
+        if isinstance(inset, str):  
+            datasets_in   = inset.split(',')
+            prefix, trailing, ftype = fparse(datasets_in)
+
+        elif isinstance(inset, list):
+            prefix, trailing, ftype = fparse(inset)
+
+        else:
+          print("*+ Can't understand dataset specification. " +
+                "Datasets must match format 'Dset1,Dset2,Dset3' or " +
+                "'Dset1 Dset2 Dset3'")
+          raise TypeError
+
+    return prefix, trailing, ftype
+
+
+def format_tes(tes):
+    """
+    Identify the number of echoes acquired based on the provided TEs.
+
+    Supports TE specification as comma-separated string _OR_ list.
+
+    Parameters
+    ----------
+    tes : str
+        acquired TEs
+
+    Returns
+    -------
+    echo_nums : list
+        a list of the number of echoes collected (e.g., [1, 2])
+    """
+
+    if isinstance(tes, list):  # if provided with a list of tes
+        echo_nums = [str(te+1) for te in range(len(tes))]
+
+    elif isinstance(tes, str): # if provided with a string of tes
+        tes       = tes.split(',') # split into a list before taking range
+        echo_nums = [str(te+1) for te in range(len(tes))]
+
+    else: 
+        print("*+ Can't understand TEs specification. " +
+              "TEs must match format 'TE1,TE2,TE3' or " +
+              "'TE1 TE2 TE3'")
+        raise TypeError
+
+    return echo_nums
+
+
+def format_inset(inset, tes, e=2):
+    """
+    Parse and create a setname for all output files. 
+
+    Requires that files are available in the present working directory (in 
+    order to assert that number of identified input datasets match the 
+    specified number of echoes.)
+
+    Parameters
+    ----------
+    inset : str
+        filenames for acquired functional datasets
+    tes : str
+        acquired TEs
+    e : int
+        exemplar echo, default second acquired echo
+
+    Returns
+    -------
+    dsname : str
+        dataset name
+    setname : str
+        name to be "set" for any output files
     """
     try:
-        # Parse shorthand input file specification
-        if '[' in inset:
-            fname, ftype = fparse(inset)
-            if '+' in ftype:  # if AFNI format, call .HEAD file
-                ftype = ftype + '.HEAD'
-            prefix       = re.split(r'[\[\],]',fname)[0]
-            echo_nums    = re.split(r'[\[\],]',fname)[1:-1]
-            trailing     = re.split(r'[\]+]',fname)[-1]
-            dsname       = prefix + echo_nums[e] + trailing + ftype
-            setname      = prefix + ''.join(echo_nums) + trailing
+        echo_nums = format_tes(tes)
+        prefix, trailing, ftype = format_dset(inset)
 
-        # Parse longhand input file specificiation
-        else:
-            datasets_in   = inset.split(',')
-            prefix, ftype = fparse(datasets_in[0])
-            echo_nums     = [str(vv+1) for vv in range(len(tes))]
-            trailing      = ''
-            dsname        = datasets_in[e].strip()
-            setname       = prefix + ''.join(echo_nums[1:]) + trailing
-            assert len(echo_nums) == len(datasets_in)
+        dsname    = prefix + echo_nums[e-1] + trailing + ftype
+        setname   = prefix + ''.join(echo_nums) + trailing
+
+        datasets = glob.glob(prefix + '*')
+        assert len(echo_nums) == len(datasets)
 
     except AssertionError as err:
-            print("*+ Can't understand dataset specification. "            +
-                  "Number of TEs and input datasets must be equal and "    +
-                  "matched in order. Try quotes around -d argument.")
-            raise err
+        print("*+ Can't understand input specification. "            +
+              "Number of TEs and input datasets must be equal and "  +
+              "matched in order.")
+        raise err
 
     return dsname, setname
 
@@ -107,7 +215,8 @@ def check_obliquity(fname):
 
     Returns
     -------
-    float : angle from plumb (in degrees)
+    ang merit : float
+        angle from plumb (in degrees)
     """
 
     # get abbreviated affine matrix (3x3)
@@ -181,10 +290,12 @@ def get_options(_debug=None):
     # Base processing options
     parser.add_argument('-e',
                         dest='tes',
-                        help="Echo times in ms. ex: -e 14.5,38.5,62.5",
+                        nargs='+',
+                        help="Echo times in ms. ex: -e 14.5 38.5 62.5",
                         default="")
     parser.add_argument('-d',
                         dest='input_ds',
+                        nargs='+',
                         help="Input datasets. ex: -d RESTe[123].nii.gz",
                         default='')
     parser.add_argument('-a',
@@ -403,9 +514,9 @@ def gen_script(options):
     """
 
     # Check for required input data
-    for echo in range(len(options.tes.split(','))):
+    for echo in format_tes(options.tes):
         dataset, _setname = format_inset(options.input_ds,
-                                         options.tes.split(','),
+                                         options.tes,
                                          e=echo)
         if not os.path.isfile(dataset):
             raise OSError("*+ Can't find dataset {}!".format(dataset))
@@ -420,7 +531,7 @@ def gen_script(options):
 
     # Generate output filenames
     _dsname, setname = format_inset(options.input_ds,
-                                    options.tes.split(','))
+                                    options.tes)
     if options.label != '':
         setname = setname + options.label
 
@@ -456,7 +567,7 @@ def gen_script(options):
 
     if options.anat is not '':
         dsname, _setname   = format_inset(options.input_ds,
-                                          options.tes.split(','))
+                                          options.tes)
 
         img = nib.load(dsname)
         epi_cm   = find_CM(dsname)
@@ -675,7 +786,7 @@ def gen_script(options):
                                                                     basebrik) +
                        "> motion.1D ")
     e2dsin, _setname = format_inset(options.input_ds,
-                                    options.tes.split(','),
+                                    options.tes,
                                     e=0)
     script_list.append("")
     script_list.append("# Preliminary preprocessing of functional datasets: " +
@@ -685,7 +796,7 @@ def gen_script(options):
     for echo in range(len(options.tes.split(','))):
         # Determine dataset name
         dataset, _setname = format_inset(options.input_ds,
-                                         options.tes.split(','),
+                                         options.tes,
                                          e=echo)
         dsin = 'e' + str(echo+1)
         if echo == 0:
@@ -980,7 +1091,7 @@ def gen_script(options):
 
         # Determine dataset name
         dataset, _setname = format_inset(options.input_ds,
-                                         options.tes.split(','),
+                                         options.tes,
                                          e=echo)
         dsin = 'e' + str(echo+1)  # Note using same dsin as in time shifting
 
@@ -1411,7 +1522,7 @@ if __name__ == '__main__':
     script_list = gen_script(options)
 
     _dsname, setname = format_inset(options.input_ds,
-                                    options.tes.split(','))
+                                    options.tes)
     if options.label != '': setname = setname + options.label
 
     with open("_meica_{}.sh".format(setname), 'w') as file:

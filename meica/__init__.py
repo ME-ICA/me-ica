@@ -1,1 +1,1 @@
-import meica
+from .meica import *
