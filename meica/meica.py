@@ -105,25 +105,27 @@ def format_dset(inset):
         file type for the acquired functional datasets
     """
 
-    if '[' in inset:  # parse shorthand file spec
-    # love this option as an end user, hate it as a dev
-        fparts = re.split(r'[\[\],]',inset)
-        datasets_in = glob.glob(fparts[0] + '*')
-        prefix, trailing, ftype = fparse(datasets_in)
+    if len(inset) == 1:  
+        inset = inset[0]
 
-    else:  # parse longhand file spec
-        if isinstance(inset, str):  
+        if '[' in inset:  # parse shorthand file spec
+        # love this option as an end user, hate it as a dev
+            fparts = re.split(r'[\[\],]',inset)
+            datasets_in = glob.glob(fparts[0] + '*')
+            prefix, trailing, ftype = fparse(datasets_in)
+
+        else:  # parse longhand file spec
             datasets_in   = inset.split(',')
             prefix, trailing, ftype = fparse(datasets_in)
 
-        elif isinstance(inset, list):
+    elif len(inset) > 1:
             prefix, trailing, ftype = fparse(inset)
 
-        else:
-          print("*+ Can't understand dataset specification. " +
+    else:
+        print("*+ Can't understand dataset specification. " +
                 "Datasets must match format 'Dset1,Dset2,Dset3' or " +
                 "'Dset1 Dset2 Dset3'")
-          raise TypeError
+        raise TypeError
 
     return prefix, trailing, ftype
 
@@ -145,10 +147,11 @@ def format_tes(tes):
         a list of the number of echoes collected (e.g., [1, 2])
     """
 
-    if isinstance(tes, list):  # if provided with a list of tes
+    if len(tes) > 1:  # if provided with a list of tes
         echo_nums = [str(te+1) for te in range(len(tes))]
 
-    elif isinstance(tes, str): # if provided with a string of tes
+    elif len(tes) == 1: # if provided with a string of tes
+        tes = tes[0]
         tes       = tes.split(',') # split into a list before taking range
         echo_nums = [str(te+1) for te in range(len(tes))]
 
@@ -185,20 +188,23 @@ def format_inset(inset, tes, e=2):
     setname : str
         name to be "set" for any output files
     """
-    try:
-        echo_nums = format_tes(tes)
-        prefix, trailing, ftype = format_dset(inset)
+    echo_nums = format_tes(tes)
+    prefix, trailing, ftype = format_dset(inset)
+    index = int(e)-1
 
-        dsname    = prefix + echo_nums[e-1] + trailing + ftype
-        setname   = prefix + ''.join(echo_nums) + trailing
+    dsname    = prefix + str(echo_nums[index]) + trailing + ftype
+    setname   = prefix + ''.join(echo_nums) + trailing
 
-        datasets = glob.glob(prefix + '*')
+    datasets = glob.glob(prefix + '*')
+
+    try:    
         assert len(echo_nums) == len(datasets)
 
     except AssertionError as err:
         print("*+ Can't understand input specification. "            +
               "Number of TEs and input datasets must be equal and "  +
-              "matched in order.")
+              "in format 'input1,input2,input3' or "                 +
+              "'input1 input2 input3'.")
         raise err
 
     return dsname, setname
@@ -292,7 +298,7 @@ def get_options(_debug=None):
                         dest='tes',
                         nargs='+',
                         help="Echo times in ms. ex: -e 14.5 38.5 62.5",
-                        default="")
+                        default='')
     parser.add_argument('-d',
                         dest='input_ds',
                         nargs='+',
@@ -530,7 +536,7 @@ def gen_script(options):
     # script_list.append('# Selected Options: ' + args)
 
     # Generate output filenames
-    _dsname, setname = format_inset(options.input_ds,
+    dsname, setname = format_inset(options.input_ds,
                                     options.tes)
     if options.label != '':
         setname = setname + options.label
@@ -540,7 +546,7 @@ def gen_script(options):
     # Parse timing arguments
     if options.TR is not '': tr = float(options.TR)
     else:
-        inf = nib.load(dataset).header  # Fix that function!
+        inf = nib.load(dsname).header  # Fix that function!
         tr  = float(round(inf.get_slice_duration() * inf.get_n_slices(),3))
 
     if 'v' in str(options.basetime):
@@ -603,14 +609,14 @@ def gen_script(options):
         raise OSError("Need at least dataset inputs and TEs. Try meica.py -h")
 
     # Check for already created meica directories
-    # meicas = glob.glob('meica.*')
-    # if any(os.path.isdir(m) for i, m in enumerate(meicas)):
-    #     meica_exists   = True
-    # else: meica_exists = False
+    meicas = glob.glob('meica.derivatives')
+    if any(os.path.isdir(m) for i, m in enumerate(meicas)):
+        meica_exists   = True
+    else: meica_exists = False
 
-    # if not options.overwrite and meica_exists:
-    #     raise OSError("*+ A ME-ICA directory already exists! " +
-    #                   "Use '--OVERWRITE' flag to overwrite it.")
+    if not options.overwrite and meica_exists:
+        raise OSError("*+ A ME-ICA directory already exists! " +
+                      "Use '--OVERWRITE' flag to overwrite it.")
 
     if os.getenv('DYLD_FALLBACK_LIBRARY_PATH') is None:
         raise OSError("*+ AFNI environmental variables not set! Set " +
@@ -662,7 +668,7 @@ def gen_script(options):
         script_list.append("cp _meica_{0}.sh meica.{0}/".format(setname))
     script_list.append("cd meica.{}".format(setname))
 
-    echo_nums = range(len(options.tes.split(',')))
+    echo_nums = format_tes(options.tes)
     ica_datasets = sorted(echo_nums)
 
     # Parse anatomical processing options, process anatomical
@@ -672,7 +678,7 @@ def gen_script(options):
                            "autobox anatomical, in starting directory (may " +
                            "take a little while)")
         ns_mprage = options.anat
-        anat_prefix, anat_ftype = fparse(options.anat)
+        anat_prefix, _anat_trailing, anat_ftype = fparse(options.anat)
         path_anat_prefix        = "{}/{}".format(startdir,anat_prefix)
         if oblique_mode:
             script_list.append("if [ ! -e "                             +
@@ -702,12 +708,14 @@ def gen_script(options):
 
     # Copy in functional datasets as NIFTI (if not in NIFTI already) and
     # calculate rigid body alignment
-    vrbase, ftype = fparse(options.input_ds)
+    vrbase, trailing, ftype = fparse(dsname)
     script_list.append("")
     script_list.append("# Copy in functional datasets, reset NIFTI tags " +
                        "as needed")
-    for echo in range(len(options.tes.split(','))):
-        dsname, setname = format_inset(options.input_ds, options.tes, echo)
+    for echo in format_tes(options.tes):
+        dsname, setname = format_inset(options.input_ds,
+                                       options.tes,
+                                       e=echo)
         script_list.append("3dcalc -a {}/{} -expr 'a' ".format(startdir,
                                                                dsname) +
                            "-prefix ./{}.nii".format(setname))
@@ -793,21 +801,20 @@ def gen_script(options):
                        "despike, tshift, deoblique, and/or axialize")
 
     # Do preliminary preproc for this run
-    for echo in range(len(options.tes.split(','))):
-        # Determine dataset name
-        dataset, _setname = format_inset(options.input_ds,
-                                         options.tes,
-                                         e=echo)
-        dsin = 'e' + str(echo+1)
-        if echo == 0:
-            e0_dsin = dsin
+    for echo in format_tes(options.tes):
+        dataset, setname = format_inset(options.input_ds,
+                                        options.tes,
+                                        e=echo)
+        echo = int(echo)
+        dsin = 'e' + str(echo)
+        if echo == 1:
+            e1_dsin = dsin
         script_list.append("")
         script_list.append("# Preliminary preprocessing dataset " +
-                           "{} of TE=".format(dataset) +
-                           "{}ms ".format(str(options.tes.split(',')[echo])) +
+                           "{} of echo {}".format(dataset, echo) +
                            "to produce {}_ts+orig".format(dsin))
         # Pre-treat datasets: De-spike, RETROICOR in the future?
-        pfix, ftype = fparse(dataset)
+        pfix, trailing, ftype = fparse(dataset)
         if not options.no_despike:
             ints_name = "./{}_pt.nii.gz".format(pfix)
             script_list.append("3dDespike -overwrite " +
@@ -850,9 +857,12 @@ def gen_script(options):
 
     # Do preliminary preproc for this run
     stackline = []
-    for echo in range(len(options.tes.split(','))):
-        # Determine dataset name
-        dsin = 'e' + str(echo+1)
+    for echo in format_tes(options.tes):
+        dataset, setname = format_inset(options.input_ds,
+                                        options.tes,
+                                        e=echo)
+        echo = int(echo)
+        dsin = 'e' + str(echo)
 
         script_list.append("3dAllineate -overwrite -final NN -NN -float "    +
                            "-1Dmatrix_apply {}_vrmat.aff12.1D'".format(pfix) +
@@ -901,7 +911,7 @@ def gen_script(options):
         script_list.append("# Copy anatomical into ME-ICA directory and " +
                            "process warps")
         script_list.append("cp {}/{}* .".format(startdir, ns_mprage))
-        pfix_ns_mprage, ftype_ns_mprage = fparse(ns_mprage)
+        pfix_ns_mprage, trailing_ns_mprage, ftype_ns_mprage = fparse(ns_mprage)
         if options.space:
             script_list.append("afnibin_loc=`which 3dSkullStrip`")
 
@@ -1072,7 +1082,7 @@ def gen_script(options):
     # Compute grand mean scaling factor
     script_list.append("3dBrickStat -mask eBbase.nii.gz "          +
                        "-percentile 50 1 50 "                      +
-                       "{}_ts+orig[{:d}] ".format(e0_dsin, basebrik) +
+                       "{}_ts+orig[{:d}] ".format(e1_dsin, basebrik) +
                        "> gms.1D")
     script_list.append("gms=`cat gms.1D`; gmsa=($gms); p50=${gmsa[1]}")
 
@@ -1087,15 +1097,14 @@ def gen_script(options):
     script_list.append("echo $voxdims > voxdims.1D")
     script_list.append("echo $voxsize > voxsize.1D")
 
-    for echo in range(len(options.tes.split(','))):
+    for echo in format_tes(options.tes):
+        dsname, setname = format_inset(options.input_ds,
+                                       options.tes,
+                                       e=echo)
+        echo = int(echo)
+        dsin = 'e' + str(echo)  # Note using same dsin as in time shifting
 
-        # Determine dataset name
-        dataset, _setname = format_inset(options.input_ds,
-                                         options.tes,
-                                         e=echo)
-        dsin = 'e' + str(echo+1)  # Note using same dsin as in time shifting
-
-        if echo == 0:
+        if echo == 1:
             script_list.append("")
             script_list.append("# Preparing functional masking for this " +
                                "ME-EPI run")
@@ -1235,7 +1244,7 @@ def gen_script(options):
                            "eBvrmask.nii.gz -input {}_ts+orig ".format(dsin) +
                            "-prefix ./{}_vr.nii.gz".format(dsin))
 
-        if echo == 0:
+        if echo == 1:
             script_list.append("3dTstat -min -prefix "            +
                                "./{}_vr_min.nii.gz ".format(dsin) +
                                "./{}_vr.nii.gz".format(dsin))
@@ -1304,7 +1313,7 @@ def gen_script(options):
     ica_mask   = "zcat_mask.nii.gz"
     zcatstring = ""
     for echo in ica_datasets:
-        dsin = 'e' + str(echo+1)
+        dsin = 'e' + str(echo)
         zcatstring = "{} ./{}_in.nii.gz".format(zcatstring,dsin)
     script_list.append("3dZcat -overwrite -prefix {} {}".format(ica_input,
                                                                 zcatstring))
