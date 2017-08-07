@@ -281,13 +281,13 @@ def find_CM(fname):
     return cx, cy, cz
 
 
-def get_options(_debug=None):
+def get_options(args):
     """
     Parses command line inputs
 
     Returns
     -------
-    argparse dic
+    parser.parse_args() : argparse dic
     """
 
     # Configure options and help dialog
@@ -298,12 +298,12 @@ def get_options(_debug=None):
                         dest='tes',
                         nargs='+',
                         help="Echo times in ms. ex: -e 14.5 38.5 62.5",
-                        default='')
+                        required=True)
     parser.add_argument('-d',
                         dest='input_ds',
                         nargs='+',
                         help="Input datasets. ex: -d RESTe[123].nii.gz",
-                        default='')
+                        required=True)
     parser.add_argument('-a',
                         dest='anat',
                         help="(Optional) anatomical dataset. " +
@@ -501,8 +501,7 @@ def get_options(_debug=None):
                          default=False)
     parser.add_argument_group(runopts)
 
-    if _debug is not None: return parser.parse_args(_debug)
-    else: return parser.parse_args()
+    return parser.parse_args(args)
 
 
 def gen_script(options):
@@ -1527,10 +1526,10 @@ def gen_script(options):
 
 
 if __name__ == '__main__':
-    options = get_options()
+    options = get_options(sys.argv[1:])
     script_list = gen_script(options)
 
-    _dsname, setname = format_inset(options.input_ds,
+    dsname, setname = format_inset(options.input_ds,
                                     options.tes)
     if options.label != '': setname = setname + options.label
 

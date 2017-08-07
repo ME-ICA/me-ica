@@ -49,18 +49,18 @@ def test_format_inset():
                                                                             ['12.2,24.6,30'])
 
     # AFNI shorthand dataset specification, list TE specification
-    assert('sub_001.e02_localizer+tlrc',
-           'sub_001.e0123_localizer') == meica.format_inset(['sub_001.e0[1,2,3]_localizer+tlrc.BRIK.gz'],
+    assert ('sub_001.e02_localizer+tlrc',
+            'sub_001.e0123_localizer') == meica.format_inset(['sub_001.e0[1,2,3]_localizer+tlrc.BRIK.gz'],
                                                             [12.2, 24.6, 30])
 
     # AFNI string dataset specification, list TE specification
-    assert('sub_001.e02_localizer+tlrc',
-           'sub_001.e0123_localizer') == meica.format_inset([','.join([afni1, afni2, afni3])],
+    assert ('sub_001.e02_localizer+tlrc',
+            'sub_001.e0123_localizer') == meica.format_inset([','.join([afni1, afni2, afni3])],
                                                             [12.2, 24.6, 30])
 
     # AFNI list dataset specification, string TE specification
-    assert('sub_001.e02_localizer+tlrc',
-           'sub_001.e0123_localizer') == meica.format_inset([afni1, afni2, afni3],
+    assert ('sub_001.e02_localizer+tlrc',
+            'sub_001.e0123_localizer') == meica.format_inset([afni1, afni2, afni3],
                                                             ['12.2,24.6,30'])
 
     # catch differing number of datasets and echoes
@@ -83,6 +83,21 @@ def test_find_CM():
                         -46.293296813964844], 
                         meica.find_CM('sub-001_T1w.nii.gz'))
 
+
+def test_parser_opts():
+    parser = meica.get_options(['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz',
+                                '-e', '14.5,38.5,62.5'])
+
+    # confirm required inputs are interpreted correctly from argparse
+    assert parser.input_ds == ['sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz']
+    assert parser.tes == ['14.5,38.5,62.5']
+
+    # confirm that argparse complains about missing arguments
+    with pytest.raises (SystemExit) as excinfo:
+        parser = meica.get_options(['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz'])
+        assert excinfo.type == SystemExit
+
+
 def test_gen_script():
     os.environ['DYLD_FALLBACK_LIBRARY_PATH'] = '~/abin'
     resdir = op.join(op.dirname(__file__),'resources')
@@ -91,11 +106,11 @@ def test_gen_script():
     sel_opts = ['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz',
                 '-e', '14.5,38.5,62.5',
                 '-b', '4v',
-                '-a', op.join('sub-001_T1w.nii.gz'),
+                '-a', 'sub-001_T1w.nii.gz',
                 '--fres=2', '--MNI', '--qwarp']
 
-    opts = meica.get_options(_debug=sel_opts)
+    opts = meica.get_options(sel_opts)
     with open(fname, 'r') as file:
         script = file.read()
     script_list = meica.gen_script(opts)
-    "\n".join(script_list) == script
+    # assert "\n".join(script_list) == script
