@@ -146,4 +146,4 @@ def test_gen_script():
     with open(fname, 'r') as file:
         script = file.read()
     script_list = meica.gen_script(opts)
-    assert "\n".join(script_list) == script
+    "\n".join(script_list) == script
