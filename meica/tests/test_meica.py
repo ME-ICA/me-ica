@@ -19,20 +19,47 @@ afni2 = 'sub_001.e02_localizer+tlrc.BRIK.gz'
 afni3 = 'sub_001.e03_localizer+tlrc.BRIK.gz'
 
 
-def test_fparse():
+def test_afni_fname_parse():
+
+    # identify prefix, trailing file part, and file type for AFNI file type
+    assert ('sub_001.e0',
+            '_localizer',
+            '+tlrc')   == meica.afni_fname_parse(afni1, echo_ind=10)
+
+
+def test_nii_fname_parse():
+
     # identify prefix, trailing file part, and file type for nii file type
     assert ('sub-001_task-rest_run-01_echo-',
             '_bold', 
-            '.nii.gz') == meica.fparse([nii1, nii2, nii3])
+            '.nii.gz') == meica.nii_fname_parse(nii1, echo_ind=30)
+
+
+def test_fname_parse():
 
     # identify prefix, trailing file part, and file type for AFNI file type
-    assert ('sub.001_e0',
+    assert ('sub_001.e0',
             '_localizer',
-            '+tlrc')   == meica.fparse(['sub.001_e01_localizer+tlrc.BRIK.gz', 
-                                        'sub.001_e02_localizer+tlrc.BRIK.gz'])
+            '+tlrc')   == meica.fname_parse([afni1, afni2])
+
+    # identify prefix, trailing file part, and file type for nii file type
+    assert ('sub-001_task-rest_run-01_echo-',
+            '_bold', 
+            '.nii.gz') == meica.fname_parse([nii1, nii2, nii3])
+
+    # identify prefix, trailing file part, and file type for anatomical
+    assert ('sub-001_T1w',
+            '', 
+            '.nii.gz') == meica.fname_parse('sub-001_T1w.nii.gz')
+
+    # catch incorrect file list input
+    with pytest.raises(TypeError):
+        meica.fname_parse(845907)
+        assert err.type == TypeError
 
 
 def test_format_inset():
+
     # NIFTI list dataset specification, string TE specification
     assert (nii2,
             'sub-001_task-rest_run-01_echo-123_bold') == meica.format_inset([nii1,nii2,nii3],
@@ -64,20 +91,24 @@ def test_format_inset():
                                                             ['12.2,24.6,30'])
 
     # catch differing number of datasets and echoes
-    with pytest.raises(AssertionError):
+    with pytest.raises(AssertionError) as err:
         meica.format_inset([','.join([nii1, nii2 ,nii3])],
                            [12.2, 24.6])
+        assert err.type == AssertionError
 
     # catch incorrect echo input
-    with pytest.raises(TypeError):
-        meica.format_tes(12.2)
+    with pytest.raises(TypeError) as err:
+        meica.format_tes(520885)
+        assert err.type == TypeError
 
     # catch incorrect dataset input
-    with pytest.raises(TypeError):
-        meica.format_dset(3)
+    with pytest.raises(TypeError) as err:
+        meica.format_dset(3258.27)
+        assert err.type == TypeError
 
 
 def test_find_CM():
+
     assert np.allclose([1.1718978881835938,
                         -41.01300048828125,
                         -46.293296813964844], 
@@ -85,6 +116,7 @@ def test_find_CM():
 
 
 def test_parser_opts():
+
     parser = meica.get_options(['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz',
                                 '-e', '14.5,38.5,62.5'])
 
@@ -93,16 +125,17 @@ def test_parser_opts():
     assert parser.tes == ['14.5,38.5,62.5']
 
     # confirm that argparse complains about missing arguments
-    with pytest.raises (SystemExit) as excinfo:
+    with pytest.raises (SystemExit) as err:
         parser = meica.get_options(['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz'])
-        assert excinfo.type == SystemExit
+        assert err.type == SystemExit
 
 
 def test_gen_script():
+
     os.environ['DYLD_FALLBACK_LIBRARY_PATH'] = '~/abin'
     resdir = op.join(op.dirname(__file__),'resources')
     fname = op.join(resdir,
-                    '_meica_sub-001_task-rest_echo-123_run-01_meepi.sh')
+                    '_meica_sub-001_task-rest_run-01_echo-123_bold.sh')
     sel_opts = ['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz',
                 '-e', '14.5,38.5,62.5',
                 '-b', '4v',
@@ -113,4 +146,4 @@ def test_gen_script():
     with open(fname, 'r') as file:
         script = file.read()
     script_list = meica.gen_script(opts)
-    # assert "\n".join(script_list) == script
+    assert "\n".join(script_list) == script

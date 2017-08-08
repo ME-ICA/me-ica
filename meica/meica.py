@@ -10,71 +10,149 @@ import nibabel as nib
 import numpy as np
 
 
-def fparse(flist):
+def afni_fname_parse(f, echo_ind=None):
     """
-    Filename parser for AFNI and NIFTI files
-
-    Returns prefix from input datafiles (e.g., sub_001) and filetype extension
-    (e.g., .nii). If AFNI format is supplied, should extract space (+tlrc,
-    +orig, or +mni) as filetype.
+    Filename parser for AFNI file types (.BRIK/.HEAD).
+    For AFNI file types, the space (e.g., +tlrc) is considered
+    as the file type. 
 
     Parameters
     ----------
-    flist : list
-        list of filenames for acquired functional datasets
+    f : string
+        the filename represented as a string
 
     Returns
     -------
     prefix : str
         the prefix for each filename, up to the echo number
     trailing : str
-        any part of filename after echo (in BIDS spec, '_bold') up to extension
+        any part of filename after echo up to extension
     ftype : str
         file type for the acquired functional datasets
     """
 
-    # find string index of echo number in filename by comparing where two file
-    # names differ. needs a single index, so if you have 10+ echos... 
-    # what? how? also, then this won't work.
-    echo_ind = [i for i in range(len(flist[0])) 
-                if flist[0][i] != flist[1][i]][0]
+    fname      = f.split('+')[0]  # everything before the +
+    suffix     = ''.join(f.split('+')[-1:])
+    # dropping .BRIK/.HEAD, take AFNI space (e.g., +tlrc) as ftype
+    ftype      = '+' + suffix.split('.')[0]
+    
+    if echo_ind is None:
+        prefix     = fname
+        trailing   = ''
+
+    elif echo_ind is not None:
+        # need to calculate indices to remove for 
+        # trailing file part
+        suffix_ind = len(f) - (len(suffix) + 1) 
+        prefix     = fname[:echo_ind]
+        trailing   = fname[echo_ind+1:suffix_ind]
+
+    return prefix, trailing, ftype
+
+
+def nii_fname_parse(f, echo_ind=None):
+    """
+    Filename parser for NIfTI file types (.nii; can also handle
+    gzipped nii files). Untested for ANALYZE file types, but 
+    should in principle work. 
+
+    Parameters
+    ----------
+    f : string
+        the filename represented as a string
+
+    Returns
+    -------
+    prefix : str
+        the prefix for each filename, up to the echo number
+    trailing : str
+        any part of filename after echo up to extension
+    ftype : str
+        file type for the acquired functional datasets
+    """
+
+    if f.endswith('.gz'):  # if gzipped, two matches for ftype
+        fname    = '.'.join(f.split('.')[:-2])
+        ftype    = '.' + '.'.join(f.split('.')[-2:])
+
+    else:  # only one associated ftype (e.g., .nii)
+        fname    = '.'.join(f.split('.')[:-1])
+        ftype    = '.' + ''.join(f.split('.')[-1:])
+
+    if echo_ind is None:
+        prefix     = fname
+        trailing   = ''
+
+    elif echo_ind is not None:
+        # need to calculate indices to remove for 
+        # trailing file part
+        ftype_ind = len(f) - len(ftype)
+        prefix   = fname[:echo_ind]
+        trailing = fname[echo_ind+1:ftype_ind]
+
+    return prefix, trailing, ftype
+
+
+def fname_parse(flist):
+    """
+    Filename parser for AFNI and NIFTI files
+
+    Returns prefix from input datafiles (e.g., sub_001), trailing file part 
+    (e.g., in BIDS spec, '_bold'), and filetype extension (e.g., .nii). 
+    If AFNI format is supplied, will extract space (+tlrc, +orig, or +mni) 
+    as filetype. 
+
+    Parameters
+    ----------
+    flist : str / list
+        list of filenames for acquired functional datasets. 
+        if provided with a string, will coerce to list of length 1. 
+
+    Returns
+    -------
+    prefix : str
+        the prefix for each filename, up to the echo number
+    trailing : str
+        any part of filename after echo number, up to file extension
+    ftype : str
+        extension or file type for the acquired functional datasets
+    """
+
+    # find string index of echo number in filename by comparing where 
+    # two file names differ. needs a single index, so if you have 
+    # 10+ echos... what? how? also, then this won't work.
+    if isinstance(flist, list):
+        echo_ind = [i for i in range(len(flist[0])) 
+                    if flist[0][i] != flist[1][i]][0]
+    
+    elif isinstance(flist, str):
+        flist = [flist]
+        echo_ind = None
+    
+    else:
+        print("*+ Must provide a list of files! "   +
+              "Provided with {}".format(type(flist)))
+        raise TypeError
 
     for i, f in enumerate(flist):
 
         if '.' in f:  # if file name has an assoc. file type
             if '+' in f:  # i.e., if AFNI format
-                fname      = f.split('+')[0]  # everything before the +
-                suffix     = ''.join(f.split('+')[-1:])
-                # need to calculate indices to remove for trailing filepart
-                suffix_ind = len(f) - (len(suffix) + 1) 
-                # dropping .BRIK/.HEAD, take AFNI space (e.g., +tlrc) as ftype
-                ftype      = '+' + suffix.split('.')[0]
-                prefix     = fname[:echo_ind]
-                trailing   = fname[echo_ind+1:suffix_ind]
+                prefix, trailing, ftype = afni_fname_parse(f, echo_ind)
 
             else:
-                if f.endswith('.gz'):  # if gzipped, two matches for ftype
-                    fname    = '.'.join(f.split('.')[:-2])
-                    ftype    = '.' + '.'.join(f.split('.')[-2:])
-                    # need to calculate indices to remove for trailing filepart
-                    ftype_ind = len(f) - len(ftype)
-                    prefix   = fname[:echo_ind]
-                    trailing = fname[echo_ind+1:ftype_ind]
-                    
-                else:  # only one associated ftype (e.g., .nii)
-                    fname    = '.'.join(f.split('.')[:-1])
-                    ftype    = '.' + ''.join(f.split('.')[-1:])
-                    # need to calculate indices to remove for trailing filepart
-                    ftype_ind = len(f) - len(ftype)
-                    prefix   = fname[:echo_ind]
-                    trailing = fname[echo_ind+1:ftype_ind]
-
+                prefix, trailing, ftype = nii_fname_parse(f, echo_ind)
 
         else:  # if this happens...?
-            prefix = f[:echo_ind]
-            trailing = f[echo_ind:]
-            ftype  = ''
+            if echo_ind is None:
+                prefix = f
+                trailing = ''
 
+            elif echo_ind is not None:
+                prefix = f[:echo_ind]
+                trailing = f[echo_ind:]
+            
+            ftype  = ''
 
     return prefix, trailing, ftype
 
@@ -112,14 +190,14 @@ def format_dset(inset):
         # love this option as an end user, hate it as a dev
             fparts = re.split(r'[\[\],]',inset)
             datasets_in = glob.glob(fparts[0] + '*')
-            prefix, trailing, ftype = fparse(datasets_in)
+            prefix, trailing, ftype = fname_parse(datasets_in)
 
         else:  # parse longhand file spec
             datasets_in   = inset.split(',')
-            prefix, trailing, ftype = fparse(datasets_in)
+            prefix, trailing, ftype = fname_parse(datasets_in)
 
     elif len(inset) > 1:
-            prefix, trailing, ftype = fparse(inset)
+            prefix, trailing, ftype = fname_parse(inset)
 
     else:
         print("*+ Can't understand dataset specification. " +
@@ -229,7 +307,7 @@ def check_obliquity(fname):
     aff = nib.load(fname).affine[:3,:-1]
 
     # generate offset (rads) and convert to degrees
-    fig_merit = np.min(np.sqrt((aff**2).sum(axis=0)) / np.abs(aff).max(axis=0))
+    fig_merit = np.min(np.abs(aff).max(axis=0) / np.sqrt((aff**2).sum(axis=0)))
     ang_merit = (np.arccos(fig_merit) * 180) / np.pi
 
     return ang_merit
@@ -275,7 +353,13 @@ def find_CM(fname):
     affine = im.affine * [[-1],[-1],[1],[1]]             # fix affine
     orient = np.abs(affine).argsort(axis=0)[-1,:3]       # get orientation
     affine = affine[orient]                              # reindex affine
-    cx, cy, cz = affine[:,-1] + cm * np.diag(affine)     # calculate centers
+
+    # check if dataset is oblique and get correct voxel size
+    is_oblique = check_obliquity(fname)
+    if is_oblique: zooms = np.array(im.header.get_zooms()[:3],dtype='float64')
+    else: zooms = np.diag(affine)
+
+    cx, cy, cz = affine[:,-1] + cm * zooms               # calculate centers
     cx, cy, cz = np.array([cx,cy,cz])[orient.argsort()]  # reorient centers
 
     return cx, cy, cz
@@ -520,11 +604,14 @@ def gen_script(options):
 
     # Check for required input data
     for echo in format_tes(options.tes):
-        dataset, _setname = format_inset(options.input_ds,
-                                         options.tes,
-                                         e=echo)
-        if not os.path.isfile(dataset):
-            raise OSError("*+ Can't find dataset {}!".format(dataset))
+
+        try:
+            dataset, _setname = format_inset(options.input_ds,
+                                             options.tes,
+                                             e=echo)
+        except IndexError:
+            print("*+ Can't find datasets! Are they in the " +
+                  "present working directory?")
 
     # Set current paths, create logfile for use as shell script
     startdir  = str(os.getcwd())
@@ -545,7 +632,7 @@ def gen_script(options):
     # Parse timing arguments
     if options.TR is not '': tr = float(options.TR)
     else:
-        inf = nib.load(dsname).header  # Fix that function!
+        inf = nib.load(dsname).header
         tr  = float(round(inf.get_slice_duration() * inf.get_n_slices(),3))
 
     if 'v' in str(options.basetime):
@@ -582,10 +669,9 @@ def gen_script(options):
                     abs(epi_cm[1] - anat_cm[1]),
                     abs(epi_cm[2] - anat_cm[2])]
 
-        # cm_dist  = 20 + sum([dd**2. for dd in deltas])**.5
-        cm_dif   = max(deltas)
-        voxsz = list(img.header.get_zooms())
-        maxvoxsz = float(max(voxsz))
+        cm_dif            = max(deltas)
+        voxsz             = list(img.header.get_zooms())
+        maxvoxsz          = float(max(voxsz))
         addslabs          = abs(int(cm_dif/maxvoxsz)) + 10
         zeropad_opts      = " -I {0} -S {0} -A {0} -P {0} -L {0} -R {0} ".format(addslabs)
         oblique_anat_read = check_obliquity(options.anat) != 0
@@ -677,7 +763,7 @@ def gen_script(options):
                            "autobox anatomical, in starting directory (may " +
                            "take a little while)")
         ns_mprage = options.anat
-        anat_prefix, _anat_trailing, anat_ftype = fparse(options.anat)
+        anat_prefix, _anat_trailing, anat_ftype = fname_parse(options.anat)
         path_anat_prefix        = "{}/{}".format(startdir,anat_prefix)
         if oblique_mode:
             script_list.append("if [ ! -e "                             +
@@ -690,6 +776,7 @@ def gen_script(options):
             deobliq_anat = "{}_do.nii.gz".format(anat_prefix)
         else:
             deobliq_anat = options.anat
+
         if not options.no_skullstrip:
             script_list.append("if [ ! -e "                                   +
                                "{}_ns.nii.gz ]; ".format(path_anat_prefix)    +
@@ -707,7 +794,7 @@ def gen_script(options):
 
     # Copy in functional datasets as NIFTI (if not in NIFTI already) and
     # calculate rigid body alignment
-    vrbase, trailing, ftype = fparse(dsname)
+    vrbase, trailing, ftype = fname_parse(dsname)
     script_list.append("")
     script_list.append("# Copy in functional datasets, reset NIFTI tags " +
                        "as needed")
@@ -728,8 +815,8 @@ def gen_script(options):
                        "parameters, despiking first if not disabled, and " +
                        "separately save and mask the base volume")
     # Determine input to volume registration
-    vrAinput = "./{}.nii".format(format_inset(options.input_ds,
-                                              options.tes, 0)[0])
+    vrAinput = "./{}".format(format_inset(options.input_ds,
+                                          options.tes, 1)[0])
     # Compute obliquity matrix
     if oblique_mode:
         if options.anat is not '':
@@ -810,10 +897,10 @@ def gen_script(options):
             e1_dsin = dsin
         script_list.append("")
         script_list.append("# Preliminary preprocessing dataset " +
-                           "{} of echo {}".format(dataset, echo) +
+                           "{} of echo {} ".format(dataset, echo) +
                            "to produce {}_ts+orig".format(dsin))
         # Pre-treat datasets: De-spike, RETROICOR in the future?
-        pfix, trailing, ftype = fparse(dataset)
+        pfix, trailing, ftype = fname_parse(dataset)
         if not options.no_despike:
             ints_name = "./{}_pt.nii.gz".format(pfix)
             script_list.append("3dDespike -overwrite " +
@@ -880,7 +967,7 @@ def gen_script(options):
                                                  'meica.libs',
                                                  't2smap.py')) +
                        "-d basestack.nii.gz "                  +
-                       "-e {}".format(options.tes))
+                       "-e {}".format(options.tes[0]))
     script_list.append("3dUnifize -prefix ./ocv_uni+orig ocv.nii")
     script_list.append("3dSkullStrip -no_avoid_eyes -prefix ./ocv_ss.nii.gz " +
                        "-overwrite -input ocv_uni+orig")
@@ -910,7 +997,7 @@ def gen_script(options):
         script_list.append("# Copy anatomical into ME-ICA directory and " +
                            "process warps")
         script_list.append("cp {}/{}* .".format(startdir, ns_mprage))
-        pfix_ns_mprage, trailing_ns_mprage, ftype_ns_mprage = fparse(ns_mprage)
+        pfix_ns_mprage, trailing_ns_mprage, ftype_ns_mprage = fname_parse(ns_mprage)
         if options.space:
             script_list.append("afnibin_loc=`which 3dSkullStrip`")
 
@@ -1337,7 +1424,7 @@ def gen_script(options):
         script_list.append("{} {} ".format(sys.executable,
                                            os.path.join(meicadir,
                                                         tedanapath))   +
-                           "-e {} ".format(options.tes)                +
+                           "-e {} ".format(options.tes[0])             +
                            "-d {} ".format(ica_input)                  +
                            "--sourceTEs={} ".format(options.sourceTEs) +
                            "--kdaw={} ".format(options.daw)            +
