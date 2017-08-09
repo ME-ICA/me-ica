@@ -4,6 +4,7 @@ import os
 import os.path as op
 import numpy as np
 import meica
+from nipype.interfaces.traits_extension import TraitError
 import pytest
 
 # change into the resources directory
@@ -53,13 +54,15 @@ def test_fname_parse():
             '.nii.gz') == meica.fname_parse('sub-001_T1w.nii.gz')
 
     # catch incorrect file list input
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError) as err:
         meica.fname_parse(845907)
         assert err.type == TypeError
 
 
 def test_nii_convert():
-    assert 'sub_001.e01_localizer+tlrc.nii.gz' == nii_convert(afni1)
+
+    assert nii1 == meica.nii_convert(nii1)
+
 
 def test_format_inset():
 
@@ -133,20 +136,20 @@ def test_parser_opts():
         assert err.type == SystemExit
 
 
-def test_gen_script():
+# def test_gen_script():
 
-    os.environ['DYLD_FALLBACK_LIBRARY_PATH'] = '~/abin'
-    resdir = op.join(op.dirname(__file__),'resources')
-    fname = op.join(resdir,
-                    '_meica_sub-001_task-rest_run-01_echo-123_bold.sh')
-    sel_opts = ['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz',
-                '-e', '14.5,38.5,62.5',
-                '-b', '4v',
-                '-a', 'sub-001_T1w.nii.gz',
-                '--fres=2', '--MNI', '--qwarp']
+    # os.environ['DYLD_FALLBACK_LIBRARY_PATH'] = '~/abin'
+    # resdir = op.join(op.dirname(__file__),'resources')
+    # fname = op.join(resdir,
+    #                 '_meica_sub-001_task-rest_run-01_echo-123_bold.sh')
+    # sel_opts = ['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz',
+    #             '-e', '14.5,38.5,62.5',
+    #             '-b', '4v',
+    #             '-a', 'sub-001_T1w.nii.gz',
+    #             '--fres=2', '--MNI', '--qwarp']
 
-    opts = meica.get_options(sel_opts)
-    with open(fname, 'r') as file:
-        script = file.read()
-    script_list = meica.gen_script(opts)
-    "\n".join(script_list) == script
+    # opts = meica.get_options(sel_opts)
+    # with open(fname, 'r') as file:
+    #     script = file.read()
+    # script_list = meica.gen_script(opts)
+    # "\n".join(script_list) == script

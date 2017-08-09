@@ -9,6 +9,7 @@ import argparse
 import numpy as np
 import nibabel as nib
 from nipype.interfaces import afni
+from nipype.interfaces.traits_extension import TraitError
 
 
 
@@ -182,9 +183,15 @@ def nii_convert(f):
         nii_f = f
 
     if f.endswith('.nii'):
-        with open(f, 'rb') as in_file, gzip.open(f + '.gz', 'wb') as out_file:
-            shutil.copyfileobj(in_file, out_file)
-        nii_f = out_file
+        try:
+            with open(f, 'rb') as in_file, gzip.open(f + '.gz', 'wb') as out_file:
+                shutil.copyfileobj(in_file, out_file)
+            nii_f = out_file
+
+        except FileNotFoundError as err:
+                print("*+ Not a valid file type for conversion! " +
+                      "Confirm file type.")
+                raise err
 
     for s in spaces:
         if s in f:
@@ -195,8 +202,14 @@ def nii_convert(f):
             afni2nii.inputs.in_file = f
             afni2nii.inputs.out_file = fname + space + 'nii.gz'
             afni2nii.outputtype = 'NIFTI_GZ'
-
-            nii_f = afni2nii.run()
+            
+            try:
+                nii_f = afni2nii.run()
+            
+            except TraitError as err:
+                print("*+ Not a valid file type for conversion! " +
+                      "Confirm file type.")
+                raise err
 
     return nii_f
 
@@ -654,9 +667,10 @@ def gen_script(options):
                                              options.tes,
                                              e=echo)
             dataset = nii_convert(dataset)
-        except IndexError:
+        except IndexError as err:
             print("*+ Can't find datasets! Are they in the " +
                   "present working directory?")
+            raise err
 
     # Set current paths, create logfile for use as shell script
     startdir  = str(os.getcwd())
