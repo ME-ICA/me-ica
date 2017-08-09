@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 
+import re
 import os
 import sys
 import glob
-import re
 import argparse
 
-import nibabel as nib
 import numpy as np
+import nibabel as nib
+from nipype.interfaces import afni
+
 
 
 def afni_fname_parse(f, echo_ind=None):
@@ -53,8 +55,7 @@ def afni_fname_parse(f, echo_ind=None):
 def nii_fname_parse(f, echo_ind=None):
     """
     Filename parser for NIfTI file types (.nii; can also handle
-    gzipped nii files). Untested for ANALYZE file types, but 
-    should in principle work. 
+    gzipped nii files).
 
     Parameters
     ----------
@@ -155,6 +156,49 @@ def fname_parse(flist):
             ftype  = ''
 
     return prefix, trailing, ftype
+
+
+def nii_convert(f):
+    """
+    Converts a given file type to a gzipped-nifti.
+
+     Parameters
+    ----------
+    fname : str
+        The full filename of the file to be converted
+
+    Returns
+    -------
+    nii_fname : str
+        The .nii.gz filename to be returned 
+    """
+
+    import gzip
+    import shutil
+
+    spaces = ['+mni.', '+orig.', '+tlrc.']
+
+    if f.endswith('.nii.gz'):
+        nii_f = f
+
+    if f.endswith('.nii'):
+        with open(f, 'rb') as in_file, gzip.open(f + '.gz', 'wb') as out_file:
+            shutil.copyfileobj(in_file, out_file)
+        nii_f = out_file
+
+    for s in spaces:
+        if s in f:
+            fname = f.split(s)[0]
+            space = s
+            
+            afni2nii = afni.AFNItoNIFTI()
+            afni2nii.inputs.in_file = f
+            afni2nii.inputs.out_file = fname + space + 'nii.gz'
+            afni2nii.outputtype = 'NIFTI_GZ'
+
+            nii_f = afni2nii.run()
+
+    return nii_f
 
 
 def format_dset(inset):
@@ -609,6 +653,7 @@ def gen_script(options):
             dataset, _setname = format_inset(options.input_ds,
                                              options.tes,
                                              e=echo)
+            dataset = nii_convert(dataset)
         except IndexError:
             print("*+ Can't find datasets! Are they in the " +
                   "present working directory?")
@@ -636,10 +681,12 @@ def gen_script(options):
         tr  = float(round(inf.get_slice_duration() * inf.get_n_slices(),3))
 
     if 'v' in str(options.basetime):
-        basebrik   = int(options.basetime.strip('v'))
+        basetime   = int(options.basetime.strip('v'))
     elif 's' in str(options.basetime):
         timetoclip = float(options.basetime.strip('s'))
-        basebrik   = int(round(timetoclip/tr))
+        basetime   = int(round(timetoclip/tr))
+    else:
+        basetime   = options.basetime
 
     # Parse normalization, masking arguments
     if options.mni: options.space = 'MNI_caez_N27+tlrc'
@@ -653,7 +700,7 @@ def gen_script(options):
     # Parse alignment arguments
     if options.coreg_mode == 'aea': options.t2salign   = False
     elif 'lp' in options.coreg_mode : options.t2salign = True
-    # align_base         = basebrik
+    # align_base         = basetime
     align_interp       = 'cubic'
     align_interp_final = 'wsinc5'
 
@@ -804,11 +851,11 @@ def gen_script(options):
                                        e=echo)
         script_list.append("3dcalc -a {}/{} -expr 'a' ".format(startdir,
                                                                dsname) +
-                           "-prefix ./{}.nii".format(setname))
+                           "-prefix ./{}".format(dsname))
         if '.nii' in ftype:
             script_list.append("nifti_tool -mod_hdr -mod_field sform_code 1 " +
                                "-mod_field qform_code 1 -infiles "            +
-                               "./{}.nii -overwrite".format(setname))
+                               "./{} -overwrite".format(dsname))
 
     script_list.append("")
     script_list.append("# Calculate and save motion and obliquity "        +
@@ -816,7 +863,7 @@ def gen_script(options):
                        "separately save and mask the base volume")
     # Determine input to volume registration
     vrAinput = "./{}".format(format_inset(options.input_ds,
-                                          options.tes, 1)[0])
+                                          options.tes, 1))
     # Compute obliquity matrix
     if oblique_mode:
         if options.anat is not '':
@@ -853,9 +900,9 @@ def gen_script(options):
         else:
             basevol = options.align_base
             external_eBbase = True
-    else:
-        basevol = '{}[{}]'.format(vrAinput,
-                                  basebrik)
+
+    basevol = '{}[{}]'.format(vrAinput,
+                              basetime)
     script_list.append("3dcalc -a {}  -expr 'a' -prefix ".format(basevol) +
                        "eBbase.nii.gz ")
     if external_eBbase:
@@ -877,7 +924,7 @@ def gen_script(options):
                                                          vrAinput))
     vrAinput = "./{}_vrA.nii.gz".format(setname)
     script_list.append("1dcat './{}_vrA.1D[1..6]{{{}..$}}' ".format(setname,
-                                                                    basebrik) +
+                                                                    basetime) +
                        "> motion.1D ")
     e2dsin, _setname = format_inset(options.input_ds,
                                     options.tes,
@@ -952,19 +999,18 @@ def gen_script(options):
 
         script_list.append("3dAllineate -overwrite -final NN -NN -float "    +
                            "-1Dmatrix_apply {}_vrmat.aff12.1D'".format(pfix) +
-                           "{%i..%i}' " % (int(basebrik),
-                                           int(basebrik)+20)     +
+                           "{%i..%i}' " % (int(basetime),
+                                           int(basetime)+20)     +
                            "-base eBbase.nii.gz " +
                            "-input {}_ts+orig'".format(dsin) +
-                           "[{:d}..{:d}]' ".format(basebrik,
-                                                   basebrik+20) +
+                           "[{}..{}]' ".format(int(basetime),
+                                                   (int(basetime)+20)) +
                            "-prefix {}_vrA.nii.gz".format(dsin))
         stackline.append("{}_vrA.nii.gz".format(dsin))
     script_list.append("3dZcat -prefix basestack.nii.gz "+
                        "{}".format(' '.join(stackline)))
     script_list.append("{} ".format(sys.executable)            +
                        "{} ".format(os.path.join(meicadir,
-                                                 'meica.libs',
                                                  't2smap.py')) +
                        "-d basestack.nii.gz "                  +
                        "-e {}".format(options.tes[0]))
@@ -1106,7 +1152,7 @@ def gen_script(options):
                 script_list.append("3daxialize -overwrite " +
                                    "-prefix ./{} {}".format(ama_alns_mprage,
                                                             alns_mprage))
-            t2salignpath = 'meica.libs/alignp_mepi_anat.py'
+            t2salignpath = 'alignp_mepi_anat.py'
             script_list.append("{} ".format(sys.executable) +
                                "{} -t ".format(os.path.join(meicadir,
                                                             t2salignpath)) +
@@ -1168,7 +1214,7 @@ def gen_script(options):
     # Compute grand mean scaling factor
     script_list.append("3dBrickStat -mask eBbase.nii.gz "          +
                        "-percentile 50 1 50 "                      +
-                       "{}_ts+orig[{:d}] ".format(e1_dsin, basebrik) +
+                       "{}_ts+orig[{}] ".format(e1_dsin, basetime) +
                        "> gms.1D")
     script_list.append("gms=`cat gms.1D`; gmsa=($gms); p50=${gmsa[1]}")
 
@@ -1200,10 +1246,10 @@ def gen_script(options):
             else: almaster = ""
             # print 'almaster line is', almaster  # DEBUG
             # print 'refanat line is', refanat  # DEBUG
-            script_list.append("3dZeropad {} ".format(zeropad_opts) +
-                               "-prefix eBvrmask.nii.gz ocv_ss.nii.gz[0]")
 
             if options.anat:
+                script_list.append("3dZeropad {} ".format(zeropad_opts) +
+                               "-prefix eBvrmask.nii.gz ocv_ss.nii.gz[0]")
                 script_list.append("3dAllineate -overwrite -final NN -NN "  +
                                    "-float -1Dmatrix_apply "                +
                                    "{}_wmat.aff12.1D ".format(setname)      +
@@ -1344,7 +1390,7 @@ def gen_script(options):
         if options.FWHM=='0mm':
             script_list.append("3dcalc -float -overwrite -a eBvrmask.nii.gz " +
                                "-b ./{}_vr.nii.gz[{}..$] ".format(dsin,
-                                                                  basebrik) +
+                                                                  basetime) +
                                "-expr 'step(a)*b' "  +
                                "-prefix ./{}_sm.nii.gz ".format(dsin))
         else:
@@ -1352,7 +1398,7 @@ def gen_script(options):
                                "-mask eBvrmask.nii.gz "                       +
                                "-prefix ./{}_sm.nii.gz ".format(dsin)         +
                                "./{}_vr.nii.gz[{}..$]".format(dsin,
-                                                              basebrik))
+                                                              basetime))
 
         script_list.append("3dcalc -float -overwrite -a "       +
                            "./{}_sm.nii.gz ".format(dsin)       +
@@ -1413,8 +1459,8 @@ def gen_script(options):
     strict_setting = ''
     if options.strict: strict_setting = '--strict'
 
-    if os.path.exists('{}/meica.libs'.format(meicadir)):
-        tedanapath = 'meica.libs/tedana.py'
+    if os.path.exists('{}'.format(meicadir)):
+        tedanapath = 'tedana.py'
     else: tedanapath = 'tedana.py'
 
     if not options.preproc_only:

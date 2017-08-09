@@ -58,6 +58,9 @@ def test_fname_parse():
         assert err.type == TypeError
 
 
+def test_nii_convert():
+    assert 'sub_001.e01_localizer+tlrc.nii.gz' == nii_convert(afni1)
+
 def test_format_inset():
 
     # NIFTI list dataset specification, string TE specification
