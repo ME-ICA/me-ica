@@ -1,8 +1,8 @@
 # ME-ICA
 
-Core code for Multi-Echo Independent Components Analysis (ME-ICA). 
+Core code for Multi-Echo Independent Components Analysis (ME-ICA).
 
-[![Build Status](https://travis-ci.org/emdupre/me-ica.svg?branch=py3)](https://travis-ci.org/emdupre/me-ica) [![Coverage Status](https://coveralls.io/repos/github/emdupre/me-ica/badge.svg?branch=py3)](https://coveralls.io/github/emdupre/me-ica?branch=master) [![License](https://img.shields.io/badge/License-LGPL%202.0-blue.svg)](https://opensource.org/licenses/LGPL-2.1)
+[![Build Status](https://travis-ci.org/emdupre/me-ica.svg?branch=py3)](https://travis-ci.org/emdupre/me-ica) [![codecov](https://codecov.io/gh/emdupre/me-ica/branch/py3/graph/badge.svg)](https://codecov.io/gh/emdupre/me-ica) [![License](https://img.shields.io/badge/License-LGPL%202.0-blue.svg)](https://opensource.org/licenses/LGPL-2.1)
 
 
 ## Usage
@@ -19,7 +19,7 @@ Where:
 `-d 'sub-001_task-rest_echo-[1,2,3]_run-01_meep1.nii.gz'`  are the 4-D multi-echo fMRI datasets. Can supply each dataset individually or with bash shell expansion  
 `-a 'sub-001_T1w.nii.gz'`  is an anatomical image with skull  
 `-b 12s`  means drop first 12 seconds of data for equilibration  
-`--MNI`  warp anatomical to MNI space using AFNI's MNI_caez_N27 (Colin 27) template. 
+`--MNI`  warp anatomical to MNI space using AFNI's MNI_caez_N27 (Colin 27) template.
 
 Additional, optional parameters support situations such as: anatomical with no skull, applying FWHM smoothing, non-linear warping, etc.
 
@@ -39,7 +39,7 @@ order
 - `*_tsoc.nii.gz` : 'Raw' BOLD time series dataset after: basic preprocessing and T2* weighted averaging of echoes (i.e. 'optimal combination'). 'Standard' denoising or task analyses can be assessed on this dataset (e.g. motion regression, physio correction, scrubbing, blah...) for comparison to ME-ICA denoising.
 - `*_mefc.nii.gz` : Component maps (in units of \delta S) of accepted BOLD ICA components. Use this dataset for ME-ICR seed-based connectivity analysis.
 - `*_mefl.nii.gz` : Component maps (in units of \delta S) of ALL ICA components.
-- `*_ctab.nii.gz` : Table of component Kappa, Rho, and variance explained values, plus listing of component classifications. 
+- `*_ctab.nii.gz` : Table of component Kappa, Rho, and variance explained values, plus listing of component classifications.
 
 ## Some Notes
 
