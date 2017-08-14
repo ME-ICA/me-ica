@@ -12,12 +12,11 @@ from nipype.interfaces import afni
 from nipype.interfaces.traits_extension import TraitError
 
 
-
 def afni_fname_parse(f, echo_ind=None):
     """
     Filename parser for AFNI file types (.BRIK/.HEAD).
     For AFNI file types, the space (e.g., +tlrc) is considered
-    as the file type. 
+    as the file type.
 
     Parameters
     ----------
@@ -38,15 +37,15 @@ def afni_fname_parse(f, echo_ind=None):
     suffix     = ''.join(f.split('+')[-1:])
     # dropping .BRIK/.HEAD, take AFNI space (e.g., +tlrc) as ftype
     ftype      = '+' + suffix.split('.')[0]
-    
+
     if echo_ind is None:
         prefix     = fname
         trailing   = ''
 
     elif echo_ind is not None:
-        # need to calculate indices to remove for 
+        # need to calculate indices to remove for
         # trailing file part
-        suffix_ind = len(f) - (len(suffix) + 1) 
+        suffix_ind = len(f) - (len(suffix) + 1)
         prefix     = fname[:echo_ind]
         trailing   = fname[echo_ind+1:suffix_ind]
 
@@ -86,7 +85,7 @@ def nii_fname_parse(f, echo_ind=None):
         trailing   = ''
 
     elif echo_ind is not None:
-        # need to calculate indices to remove for 
+        # need to calculate indices to remove for
         # trailing file part
         ftype_ind = len(f) - len(ftype)
         prefix   = fname[:echo_ind]
@@ -99,16 +98,16 @@ def fname_parse(flist):
     """
     Filename parser for AFNI and NIFTI files
 
-    Returns prefix from input datafiles (e.g., sub_001), trailing file part 
-    (e.g., in BIDS spec, '_bold'), and filetype extension (e.g., .nii). 
-    If AFNI format is supplied, will extract space (+tlrc, +orig, or +mni) 
-    as filetype. 
+    Returns prefix from input datafiles (e.g., sub_001), trailing file part
+    (e.g., in BIDS spec, '_bold'), and filetype extension (e.g., .nii).
+    If AFNI format is supplied, will extract space (+tlrc, +orig, or +mni)
+    as filetype.
 
     Parameters
     ----------
     flist : str / list
-        list of filenames for acquired functional datasets. 
-        if provided with a string, will coerce to list of length 1. 
+        list of filenames for acquired functional datasets.
+        if provided with a string, will coerce to list of length 1.
 
     Returns
     -------
@@ -120,17 +119,17 @@ def fname_parse(flist):
         extension or file type for the acquired functional datasets
     """
 
-    # find string index of echo number in filename by comparing where 
-    # two file names differ. needs a single index, so if you have 
+    # find string index of echo number in filename by comparing where
+    # two file names differ. needs a single index, so if you have
     # 10+ echos... what? how? also, then this won't work.
     if isinstance(flist, list):
-        echo_ind = [i for i in range(len(flist[0])) 
+        echo_ind = [i for i in range(len(flist[0]))
                     if flist[0][i] != flist[1][i]][0]
-    
+
     elif isinstance(flist, str):
         flist = [flist]
         echo_ind = None
-    
+
     else:
         print("*+ Must provide a list of files! "   +
               "Provided with {}".format(type(flist)))
@@ -153,7 +152,7 @@ def fname_parse(flist):
             elif echo_ind is not None:
                 prefix = f[:echo_ind]
                 trailing = f[echo_ind:]
-            
+
             ftype  = ''
 
     return prefix, trailing, ftype
@@ -171,7 +170,7 @@ def nii_convert(f):
     Returns
     -------
     nii_fname : str
-        The .nii.gz filename to be returned 
+        The .nii.gz filename to be returned
     """
 
     import gzip
@@ -186,7 +185,8 @@ def nii_convert(f):
         try:
             with open(f, 'rb') as in_file, gzip.open(f + '.gz', 'wb') as out_file:
                 shutil.copyfileobj(in_file, out_file)
-            nii_f = out_file
+            nii_f = f + '.gz'
+            assert os.path.isfile(nii_f)
 
         except FileNotFoundError as err:
                 print("*+ Not a valid file type for conversion! " +
@@ -197,15 +197,16 @@ def nii_convert(f):
         if s in f:
             fname = f.split(s)[0]
             space = s
-            
+
             afni2nii = afni.AFNItoNIFTI()
             afni2nii.inputs.in_file = f
-            afni2nii.inputs.out_file = fname + space + 'nii.gz'
+            afni2nii.inputs.out_file = fname + '.nii.gz'
             afni2nii.outputtype = 'NIFTI_GZ'
-            
+
             try:
-                nii_f = afni2nii.run()
-            
+                afni2nii.run()
+                nii_f = fname + '.nii.gz'
+
             except TraitError as err:
                 print("*+ Not a valid file type for conversion! " +
                       "Confirm file type.")
@@ -240,13 +241,18 @@ def format_dset(inset):
         file type for the acquired functional datasets
     """
 
-    if len(inset) == 1:  
+    if len(inset) == 1:
         inset = inset[0]
 
         if '[' in inset:  # parse shorthand file spec
         # love this option as an end user, hate it as a dev
             fparts = re.split(r'[\[\],]',inset)
             datasets_in = glob.glob(fparts[0] + '*')
+
+            for i, d in enumerate(datasets_in):
+                if '.HEAD' in d:
+                    datasets_in = glob.glob(fparts[0] + '*.BRIK.gz')
+
             prefix, trailing, ftype = fname_parse(datasets_in)
 
         else:  # parse longhand file spec
@@ -290,7 +296,7 @@ def format_tes(tes):
         tes       = tes.split(',') # split into a list before taking range
         echo_nums = [str(te+1) for te in range(len(tes))]
 
-    else: 
+    else:
         print("*+ Can't understand TEs specification. " +
               "TEs must match format 'TE1,TE2,TE3' or " +
               "'TE1 TE2 TE3'")
@@ -301,10 +307,10 @@ def format_tes(tes):
 
 def format_inset(inset, tes, e=2):
     """
-    Parse and create a setname for all output files. 
+    Parse and create a setname for all output files.
 
-    Requires that files are available in the present working directory (in 
-    order to assert that number of identified input datasets match the 
+    Requires that files are available in the present working directory (in
+    order to assert that number of identified input datasets match the
     specified number of echoes.)
 
     Parameters
@@ -330,9 +336,14 @@ def format_inset(inset, tes, e=2):
     dsname    = prefix + str(echo_nums[index]) + trailing + ftype
     setname   = prefix + ''.join(echo_nums) + trailing
 
-    datasets = glob.glob(prefix + '*')
+    if '+' in ftype:
+        datasets = glob.glob(prefix + '*' + '.BRIK.gz')
+    else:
+        datasets = glob.glob(prefix + '*')
+    print(datasets)
+    print(echo_nums)
 
-    try:    
+    try:
         assert len(echo_nums) == len(datasets)
 
     except AssertionError as err:
@@ -666,7 +677,7 @@ def gen_script(options):
             dataset, _setname = format_inset(options.input_ds,
                                              options.tes,
                                              e=echo)
-            dataset = nii_convert(dataset)
+            dataset = nii_convert(dataset) # Set gzip NIFTI as default filetype
         except IndexError as err:
             print("*+ Can't find datasets! Are they in the " +
                   "present working directory?")
@@ -675,7 +686,6 @@ def gen_script(options):
     # Set current paths, create logfile for use as shell script
     startdir  = str(os.getcwd())
     meicadir  = str(os.path.dirname(os.path.realpath(__file__)))
-    # out_ftype = '.nii.gz'  # Set NIFTI as default output filetype
 
     script_list = []
     # script_list.append('# Selected Options: ' + args)
