@@ -7,6 +7,11 @@ import meica
 from nipype.interfaces.traits_extension import TraitError
 import pytest
 
+try:
+    FileNotFoundError
+except NameError: # working in python 2
+    FileNotFoundError = IOError
+
 # change into the resources directory
 os.chdir(op.join(op.dirname(op.abspath(__file__)), 'resources'))
 
