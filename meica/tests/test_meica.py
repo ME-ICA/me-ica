@@ -78,8 +78,10 @@ def test_nii_convert():
     assert 'nii_convert_test.nii.gz' == meica.nii_convert('nii_convert_test.nii')
     os.remove('nii_convert_test.nii.gz')
 
-    assert 'sub-001_task-rest_run-02_echo-1_bold.nii.gz' == meica.nii_convert(afni1)
-    os.remove('sub-001_task-rest_run-02_echo-1_bold.nii.gz')
+    try: # if 3dAFNItoNIFTI is available...
+        assert 'sub-001_task-rest_run-02_echo-1_bold.nii.gz' == meica.nii_convert(afni1)
+        os.remove('sub-001_task-rest_run-02_echo-1_bold.nii.gz')
+    except: pass # unless AFNI is not in the current path
 
 
 def test_format_inset():

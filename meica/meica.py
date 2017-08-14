@@ -11,6 +11,11 @@ import nibabel as nib
 from nipype.interfaces import afni
 from nipype.interfaces.traits_extension import TraitError
 
+try:
+    FileNotFoundError
+except NameError: # working in python 2
+    FileNotFoundError = IOError
+
 
 def afni_fname_parse(f, echo_ind=None):
     """
