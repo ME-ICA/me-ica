@@ -1111,7 +1111,7 @@ def gen_script(options):
         script_list.append("")
         script_list.append("# Copy anatomical into ME-ICA directory and " +
                            "process warps")
-        script_list.append("cp {}/{}* .".format(startdir, ns_mprage))
+        script_list.append("cp {}/{} .".format(startdir, ns_mprage))
         (pfix_ns_mprage,
         trailing_ns_mprage,
         ftype_ns_mprage) = fname_parse(ns_mprage)
