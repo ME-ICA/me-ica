@@ -360,6 +360,52 @@ def format_inset(inset, tes, e=2):
 
     return dsname, setname
 
+def get_dsname(inset, tes, e):
+    """
+    Return the filename for the specified echo.
+
+    Parameters
+    ----------
+    inset : str
+        filenames for acquired functional datasets
+    tes : str
+        acquired TEs in milliseconds
+    e : int
+        echo to find filename, default second acquired echo
+
+    Returns
+    -------
+    dsname : str
+        filename name of specified echo
+    """
+    dsname, _setname = format_inset(inset, tes, e)
+
+    return dsname
+
+
+def get_setname(inset, tes):
+    """
+    Return the dataset prefix for any created derivatives
+
+    Parameters
+    ----------
+    inset : str
+        filenames for acquired functional datasets
+    tes : str
+        acquired TEs in milliseconds
+    e : int
+        echo to find filename, default second acquired echo
+
+    Returns
+    -------
+    setname : str
+        prefix to be "set" for any created output files
+    """
+
+    _dsname, setname = format_inset(inset, tes, e=2)
+
+    return setname
+
 
 def check_obliquity(fname):
     """
@@ -679,9 +725,9 @@ def gen_script(options):
     for echo in format_tes(options.tes):
 
         try:
-            dataset, _setname = format_inset(options.input_ds,
-                                             options.tes,
-                                             e=echo)
+            dataset = get_dsname(options.input_ds,
+                                 options.tes,
+                                 e=echo)
             dataset = nii_convert(dataset) # Set gzip NIFTI as default filetype
         except IndexError as err:
             print("*+ Can't find datasets! Are they in the " +
@@ -696,8 +742,8 @@ def gen_script(options):
     # script_list.append('# Selected Options: ' + args)
 
     # Generate output filenames
-    dsname, setname = format_inset(options.input_ds,
-                                    options.tes)
+    setname = get_setname(options.input_ds, options.tes)
+
     if options.label != '':
         setname = setname + options.label
 
@@ -706,6 +752,7 @@ def gen_script(options):
     # Parse timing arguments
     if options.TR is not '': tr = float(options.TR)
     else:
+        dsname  = get_dsname(options.input_ds, options.tes,e=2)
         inf = nib.load(dsname).header
         tr  = float(round(inf.get_slice_duration() * inf.get_n_slices(),3))
 
@@ -734,8 +781,6 @@ def gen_script(options):
     align_interp_final = 'wsinc5'
 
     if options.anat is not '':
-        dsname, _setname   = format_inset(options.input_ds,
-                                          options.tes)
 
         img = nib.load(dsname)
         epi_cm   = find_CM(dsname)
@@ -770,13 +815,13 @@ def gen_script(options):
         raise OSError("Need at least dataset inputs and TEs. Try meica.py -h")
 
     # Check for already created meica directories
-    meicas = glob.glob('meica.derivatives')
+    meicas = glob.glob('derivatives')
     if any(os.path.isdir(m) for i, m in enumerate(meicas)):
         meica_exists   = True
     else: meica_exists = False
 
     if not options.overwrite and meica_exists:
-        raise OSError("*+ A ME-ICA directory already exists! " +
+        raise OSError("*+ A derivatives directory already exists! " +
                       "Use '--OVERWRITE' flag to overwrite it.")
 
     if os.getenv('DYLD_FALLBACK_LIBRARY_PATH') is None:
@@ -815,32 +860,32 @@ def gen_script(options):
             options.tedica_only and
             options.select_only and
             options.export_only):
-        script_list.append('mkdir -p meica.{}'.format(setname))
+        script_list.append('mkdir -p derivatives')
 
     if options.resume:
         script_list = []
-        script_list.append('if [ ! -e '                                  +
-                           'meica.{}/_meica.orig.sh ]; '.format(setname) +
-                           'then mv '                                    +
-                           '`ls meica.{}/_meica*sh` '.format(setname)    +
-                           'meica.{}/_meica.orig.sh; fi'.format(setname))
+        script_list.append('if [ ! -e derivatives/_meica.orig.sh ]; ' +
+                           'then mv `ls derivatives/_meica*.sh` '     +
+                           'derivatives/_meica.orig.sh; fi')
 
     if not options.tedica_only and not options.select_only:
-        script_list.append("cp _meica_{0}.sh meica.{0}/".format(setname))
-    script_list.append("cd meica.{}".format(setname))
+        script_list.append("cp _meica_{}.sh derivatives/".format(setname))
+    script_list.append("cd derivatives")
 
     echo_nums = format_tes(options.tes)
     ica_datasets = sorted(echo_nums)
 
     # Parse anatomical processing options, process anatomical
     if options.anat is not '':
+        mprage = nii_convert(options.anat)
+
         script_list.append("")
         script_list.append("# Deoblique, unifize, skullstrip, and/or  "      +
                            "autobox anatomical, in starting directory (may " +
                            "take a little while)")
-        ns_mprage = options.anat
-        anat_prefix, _anat_trailing, anat_ftype = fname_parse(options.anat)
+        anat_prefix, _anat_trailing, anat_ftype = fname_parse(mprage)
         path_anat_prefix        = "{}/{}".format(startdir,anat_prefix)
+
         if oblique_mode:
             script_list.append("if [ ! -e "                             +
                                "{}_do.nii.gz ".format(path_anat_prefix) +
@@ -848,10 +893,11 @@ def gen_script(options):
                                "{}_do.nii.gz ".format(path_anat_prefix) +
                                "-deoblique "                            +
                                "{}/{}; fi".format(startdir,
-                                                  options.anat))
+                                                  mprage))
             deobliq_anat = "{}_do.nii.gz".format(anat_prefix)
+
         else:
-            deobliq_anat = options.anat
+            deobliq_anat = mprage
 
         if not options.no_skullstrip:
             script_list.append("if [ ! -e "                                   +
@@ -868,6 +914,9 @@ def gen_script(options):
                                "{}_ns.nii.gz; fi".format(path_anat_prefix))
             ns_mprage     = "{}_ns.nii.gz".format(anat_prefix)
 
+        elif options.no_skullstrip:
+            ns_mprage = mprage
+
     # Copy in functional datasets as NIFTI (if not in NIFTI already) and
     # calculate rigid body alignment
     vrbase, trailing, ftype = fname_parse(dsname)
@@ -875,24 +924,20 @@ def gen_script(options):
     script_list.append("# Copy in functional datasets, reset NIFTI tags " +
                        "as needed")
     for echo in format_tes(options.tes):
-        dsname, setname = format_inset(options.input_ds,
-                                       options.tes,
-                                       e=echo)
-        script_list.append("3dcalc -a {}/{} -expr 'a' ".format(startdir,
-                                                               dsname) +
-                           "-prefix ./{}".format(dsname))
-        if '.nii' in ftype:
-            script_list.append("nifti_tool -mod_hdr -mod_field sform_code 1 " +
-                               "-mod_field qform_code 1 -infiles "            +
-                               "./{} -overwrite".format(dsname))
+
+        dsname = get_dsname(options.input_ds, options.tes, e=echo)
+        script_list.append("nifti_tool -mod_hdr -mod_field sform_code 1 " +
+                           "-mod_field qform_code 1 -infiles "            +
+                           "./{} -overwrite".format(dsname))
 
     script_list.append("")
     script_list.append("# Calculate and save motion and obliquity "        +
                        "parameters, despiking first if not disabled, and " +
                        "separately save and mask the base volume")
+
     # Determine input to volume registration
-    vrAinput = "./{}".format(format_inset(options.input_ds,
-                                          options.tes, 1))
+    vrAinput = "./{}".format(get_dsname(options.input_ds, options.tes, e=1))
+
     # Compute obliquity matrix
     if oblique_mode:
         if options.anat is not '':
@@ -924,14 +969,12 @@ def gen_script(options):
     external_eBbase = False
     if options.align_base is not '':
         if options.align_base.isdigit():
-            basevol = '{}[{}]'.format(vrAinput,
-                                      options.align_base)
+            basevol = '{}[{}]'.format(vrAinput, options.align_base)
         else:
             basevol = options.align_base
             external_eBbase = True
 
-    basevol = '{}[{}]'.format(vrAinput,
-                              basetime)
+    basevol = '{}[{}]'.format(vrAinput, basetime)
     script_list.append("3dcalc -a {}  -expr 'a' -prefix ".format(basevol) +
                        "eBbase.nii.gz ")
     if external_eBbase:
@@ -955,18 +998,16 @@ def gen_script(options):
     script_list.append("1dcat './{}_vrA.1D[1..6]{{{}..$}}' ".format(setname,
                                                                     basetime) +
                        "> motion.1D ")
-    e2dsin, _setname = format_inset(options.input_ds,
-                                    options.tes,
-                                    e=0)
+
     script_list.append("")
     script_list.append("# Preliminary preprocessing of functional datasets: " +
                        "despike, tshift, deoblique, and/or axialize")
 
     # Do preliminary preproc for this run
     for echo in format_tes(options.tes):
-        dataset, setname = format_inset(options.input_ds,
-                                        options.tes,
-                                        e=echo)
+        dataset = get_dsname(options.input_ds,
+                             options.tes,
+                             e=echo)
         echo = int(echo)
         dsin = 'e' + str(echo)
         if echo == 1:
@@ -1020,9 +1061,8 @@ def gen_script(options):
     # Do preliminary preproc for this run
     stackline = []
     for echo in format_tes(options.tes):
-        dataset, setname = format_inset(options.input_ds,
-                                        options.tes,
-                                        e=echo)
+
+        dataset = get_dsname(options.input_ds, options.tes, e=echo)
         echo = int(echo)
         dsin = 'e' + str(echo)
 
@@ -1067,26 +1107,26 @@ def gen_script(options):
     # Calculate affine anatomical warp if anatomical provided, then combine
     # motion correction and coregistration parameters
     if options.anat is not '':
-        # Copy in anatomical and make sure its in +ORIG space
+        # Copy in anatomical
         script_list.append("")
         script_list.append("# Copy anatomical into ME-ICA directory and " +
                            "process warps")
         script_list.append("cp {}/{}* .".format(startdir, ns_mprage))
-        pfix_ns_mprage, trailing_ns_mprage, ftype_ns_mprage = fname_parse(ns_mprage)
+        (pfix_ns_mprage,
+        trailing_ns_mprage,
+        ftype_ns_mprage) = fname_parse(ns_mprage)
+
         if options.space:
             script_list.append("afnibin_loc=`which 3dSkullStrip`")
 
             if '/' in options.space:
                 template_loc, template = os.path.split(options.space)
                 script_list.append("templateloc={}".format(template_loc))
+
             else:
                 script_list.append("templateloc=${afnibin_loc%/*}")
             at_ns_mprage = "{}_at.nii.gz".format(pfix_ns_mprage)
 
-            if 'nii' not in ftype_ns_mprage:
-                script_list.append("3dcalc -float -a {} ".format(ns_mprage) +
-                                   "-expr 'a' "                             +
-                                   "-prefix {}.nii.gz".format(pfix_ns_mprage))
             script_list.append("")
             script_list.append("# If can't find affine-warped anatomical, "   +
                                "copy native anatomical here, compute warps "  +
@@ -1098,28 +1138,25 @@ def gen_script(options):
                                "then \@auto_tlrc -no_ss "                 +
                                "-init_xform AUTO_CENTER -base "           +
                                "${{templateloc}}/{} ".format(options.space) +
-                               "-input {}.nii.gz ".format(pfix_ns_mprage) +
+                               "-input {} ".format(ns_mprage) +
                                "-suffix _at")
 
-            script_list.append("cp {}.nii {}".format(pfix_ns_mprage + '_at',
-                                                     startdir))
+            script_list.append("cp {} {}".format(at_ns_mprage,
+                                                 startdir))
             script_list.append("gzip -f {}/{}.nii".format(startdir,
-                                                          pfix_ns_mprage +
-                                                          '_at'))
+                                                          at_ns_mprage))
             script_list.append("else if [ ! -e {}/{} ]; ".format(startdir,
                                                                  at_ns_mprage)+
                                "then ln "                                     +
                                "-s {}/{} .; fi".format(startdir,
                                                        at_ns_mprage))
-            refanat = '{}/{}'.format(startdir,at_ns_mprage)
+            refanat = '{}/{}'.format(startdir, at_ns_mprage)
             script_list.append("fi")
 
             script_list.append("3dcopy "                                      +
-                               "{0}/{1}.nii.gz".format(startdir,
-                                                       pfix_ns_mprage +
-                                                       '_at')+
-                               " {}".format(pfix_ns_mprage +
-                                            '_at'))
+                               "{0}/{1}".format(startdir,
+                                                at_ns_mprage)+
+                               " {}".format(at_ns_mprage))
 
             script_list.append("rm -f {}+orig.*; ".format(pfix_ns_mprage +
                                                           '_at') +
@@ -1147,8 +1184,8 @@ def gen_script(options):
                                    "space using 3dQwarp (get lunch, takes a " +
                                    "while) ")
                 script_list.append("3dUnifize -overwrite -GM -prefix " +
-                                   "./{}u.nii.gz ".format(pfix_ns_mprage +
-                                                          '_at') +
+                                   "./{}_u.nii.gz ".format(pfix_ns_mprage +
+                                                           '_at') +
                                    "{}/{}".format(startdir,
                                                   at_ns_mprage))
                 script_list.append("3dQwarp -iwarp -overwrite -resample "             +
@@ -1259,9 +1296,8 @@ def gen_script(options):
     script_list.append("echo $voxsize > voxsize.1D")
 
     for echo in format_tes(options.tes):
-        dsname, setname = format_inset(options.input_ds,
-                                       options.tes,
-                                       e=echo)
+
+        dsname = get_dsname(options.input_ds, options.tes, e=echo)
         echo = int(echo)
         dsin = 'e' + str(echo)  # Note using same dsin as in time shifting
 
@@ -1691,8 +1727,7 @@ if __name__ == '__main__':
     options = get_options(sys.argv[1:])
     script_list = gen_script(options)
 
-    dsname, setname = format_inset(options.input_ds,
-                                    options.tes)
+    setname = get_setname(options.input_ds, options.tes)
     if options.label != '': setname = setname + options.label
 
     with open("_meica_{}.sh".format(setname), 'w') as file:
