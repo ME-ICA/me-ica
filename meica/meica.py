@@ -192,6 +192,7 @@ def nii_convert(f):
                 shutil.copyfileobj(in_file, out_file)
             nii_f = f + '.gz'
             assert os.path.isfile(nii_f)
+            os.remove(f)
 
         except FileNotFoundError as err:
                 print("*+ Not a valid file type for conversion! " +
@@ -211,6 +212,7 @@ def nii_convert(f):
             try:
                 afni2nii.run()
                 nii_f = fname + '.nii.gz'
+                os.remove(f)
 
             except TraitError as err:
                 print("*+ Not a valid file type for conversion! " +
@@ -345,8 +347,6 @@ def format_inset(inset, tes, e=2):
         datasets = glob.glob(prefix + '*' + '.BRIK.gz')
     else:
         datasets = glob.glob(prefix + '*')
-    print(datasets)
-    print(echo_nums)
 
     try:
         assert len(echo_nums) == len(datasets)
@@ -722,17 +722,23 @@ def gen_script(options):
     """
 
     # Check for required input data
-    for echo in format_tes(options.tes):
+    echoes = format_tes(options.tes)
+    dnames = []
 
+    for echo in echoes:
         try:
             dataset = get_dsname(options.input_ds,
                                  options.tes,
                                  e=echo)
-            dataset = nii_convert(dataset) # Set gzip NIFTI as default filetype
+
         except IndexError as err:
             print("*+ Can't find datasets! Are they in the " +
                   "present working directory?")
             raise err
+
+        prefix, trailing, ftype = fname_parse(dataset)
+        dname = prefix + trailing + ftype
+        dnames.append(dname)
 
     # Set current paths, create logfile for use as shell script
     startdir  = str(os.getcwd())
@@ -870,6 +876,12 @@ def gen_script(options):
 
     if not options.tedica_only and not options.select_only:
         script_list.append("cp _meica_{}.sh derivatives/".format(setname))
+
+    # Set gzip NIFTI as default filetype
+    for dname in dnames:
+        dataset = nii_convert(dname)
+        script_list.append("cp {} derivatives/".format(dataset))
+
     script_list.append("cd derivatives")
 
     echo_nums = format_tes(options.tes)
@@ -926,9 +938,10 @@ def gen_script(options):
     for echo in format_tes(options.tes):
 
         dsname = get_dsname(options.input_ds, options.tes, e=echo)
-        script_list.append("nifti_tool -mod_hdr -mod_field sform_code 1 " +
-                           "-mod_field qform_code 1 -infiles "            +
-                           "./{} -overwrite".format(dsname))
+        # PK, Is this really necessary ? - ED
+        # script_list.append("nifti_tool -mod_hdr -mod_field sform_code 1 " +
+        #                    "-mod_field qform_code 1 -infiles "            +
+        #                    "./{} -overwrite".format(dsname))
 
     script_list.append("")
     script_list.append("# Calculate and save motion and obliquity "        +
@@ -1066,14 +1079,15 @@ def gen_script(options):
         echo = int(echo)
         dsin = 'e' + str(echo)
 
-        script_list.append("3dAllineate -overwrite -final NN -NN -float "    +
-                           "-1Dmatrix_apply {}_vrmat.aff12.1D'".format(pfix) +
+        script_list.append("3dAllineate -overwrite -final NN -NN -float "  +
+                           "-1Dmatrix_apply "                              +
+                           "{}_vrmat.aff12.1D'".format(setname)            +
                            "{%i..%i}' " % (int(basetime),
-                                           int(basetime)+20)     +
-                           "-base eBbase.nii.gz " +
-                           "-input {}_ts+orig'".format(dsin) +
+                                           int(basetime)+20)               +
+                           "-base eBbase.nii.gz "                          +
+                           "-input {}_ts+orig'".format(dsin)               +
                            "[{}..{}]' ".format(int(basetime),
-                                                   (int(basetime)+20)) +
+                                                   (int(basetime)+20))     +
                            "-prefix {}_vrA.nii.gz".format(dsin))
         stackline.append("{}_vrA.nii.gz".format(dsin))
     script_list.append("3dZcat -prefix basestack.nii.gz "+
@@ -1140,11 +1154,9 @@ def gen_script(options):
                                "${{templateloc}}/{} ".format(options.space) +
                                "-input {} ".format(ns_mprage) +
                                "-suffix _at")
-
+            script_list.append("gzip -f {}".format(at_ns_mprage[:-3]))
             script_list.append("cp {} {}".format(at_ns_mprage,
                                                  startdir))
-            script_list.append("gzip -f {}/{}.nii".format(startdir,
-                                                          at_ns_mprage))
             script_list.append("else if [ ! -e {}/{} ]; ".format(startdir,
                                                                  at_ns_mprage)+
                                "then ln "                                     +
@@ -1153,10 +1165,10 @@ def gen_script(options):
             refanat = '{}/{}'.format(startdir, at_ns_mprage)
             script_list.append("fi")
 
-            script_list.append("3dcopy "                                      +
-                               "{0}/{1}".format(startdir,
-                                                at_ns_mprage)+
-                               " {}".format(at_ns_mprage))
+            # script_list.append("3dcopy "                                      +
+            #                    "{0}/{1}".format(startdir,
+            #                                     at_ns_mprage)+
+            #                    " {}".format(at_ns_mprage))
 
             script_list.append("rm -f {}+orig.*; ".format(pfix_ns_mprage +
                                                           '_at') +
@@ -1196,7 +1208,7 @@ def gen_script(options):
                                                           pfix_ns_mprage              +
                                                           '_atnl')                    +
                                    "-source "                                         +
-                                   "./{}u.nii.gz".format(pfix_ns_mprage               +
+                                   "./{}_u.nii.gz".format(pfix_ns_mprage               +
                                                          '_at'))
                 script_list.append("fi")
                 script_list.append("if " +
