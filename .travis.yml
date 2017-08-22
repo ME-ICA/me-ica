@@ -45,6 +45,7 @@ script:
 
 after_success:
 - codecov
+- coveralls
 
 before_cache:
 # clean unused packages & installed files from conda cache
