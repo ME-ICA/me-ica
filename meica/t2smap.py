@@ -4,10 +4,10 @@ __version__="v3.1 beta1"
 welcome_block="""
 # Multi-Echo ICA, Version %s
 # See http://dx.doi.org/10.1016/j.neuroimage.2011.12.028
-# Kundu, P., Inati, S.J., Evans, J.W., Luh, W.M. & Bandettini, P.A. Differentiating 
+# Kundu, P., Inati, S.J., Evans, J.W., Luh, W.M. & Bandettini, P.A. Differentiating
 #   BOLD and non-BOLD signals in fMRI time series using multi-echo EPI. NeuroImage (2011).
 #
-# Kundu, P., Inati, S.J., Evans, J.W., Luh, W.M. & Bandettini, P.A. Differentiating 
+# Kundu, P., Inati, S.J., Evans, J.W., Luh, W.M. & Bandettini, P.A. Differentiating
 #   BOLD and non-BOLD signals in fMRI time series using multi-echo EPI. NeuroImage (2011).
 # http://dx.doi.org/10.1016/j.neuroimage.2011.12.028
 #
@@ -24,7 +24,7 @@ from sys import stdout,argv
 
 import scipy.stats as stats
 
-if 'DEBUG' in argv: 
+if 'DEBUG' in argv:
     import ipdb
     debug_mode = True
 else: debug_mode = False
@@ -56,8 +56,8 @@ def scoreatpercentile(a, per, limit=(), interpolation_method='lower'):
 
 def niwrite(data,affine, name , header=None):
     data[np.isnan(data)]=0
-    stdout.write(" + Writing file: %s ...." % name) 
-    
+    stdout.write(" + Writing file: %s ...." % name)
+
     thishead = header
     if thishead == None:
         thishead = head.copy()
@@ -66,7 +66,7 @@ def niwrite(data,affine, name , header=None):
     outni = nib.Nifti1Image(data,affine,header=thishead)
     outni.set_data_dtype('float64')
     outni.to_filename(name)
-    
+
 
     print('done.')
 
@@ -85,6 +85,13 @@ def cat2echos(data,Ne):
         nt = data.shape[3]
     else:
         nt = 1
+    
+    nx = round(nx)
+    ny = round(ny)
+    nz = round(nz)
+    Ne = round(Ne)
+    nt = round(nt)
+
     return np.reshape(data,(nx,ny,nz,Ne,nt),order='F')
 
 def uncat2echos(data,Ne):
@@ -94,7 +101,7 @@ def uncat2echos(data,Ne):
     Input:
     data shape is (nx,ny,Ne,nz,nt)
     """
-        nx,ny = data.shape[0:2]
+    nx,ny = data.shape[0:2]
     nz = data.shape[2]*Ne
     if len(data.shape) >4:
         nt = data.shape[4]
@@ -118,10 +125,10 @@ def makemask(cdat,min=True,getsum=False):
         emeans = cdat[:,:,:,:,:].mean(-1)
         medv = emeans[:,:,:,0] == stats.scoreatpercentile(emeans[:,:,:,0][emeans[:,:,:,0]!=0],33,interpolation_method='higher')
         lthrs = np.squeeze(np.array([ emeans[:,:,:,ee][medv]/3 for ee in range(Ne) ]))
-        
+
         if len(lthrs.shape)==1: lthrs = np.atleast_2d(lthrs).T
         lthrs = lthrs[:,lthrs.sum(0).argmax()]
-        
+
         mthr = np.ones([nx,ny,nz,ne])
         for ee in range(Ne): mthr[:,:,:,ee]*=lthrs[ee]
         mthr = np.abs(emeans[:,:,:,:])>mthr
@@ -262,7 +269,7 @@ def t2sadmap(catd,mask,tes):
 
     t2sa = unmask(t2ss[fl],masksum>1)
     s0va = unmask(s0vs[fl],masksum>1)
-    
+
     return t2sa,s0va,t2ss,s0vs
 
 def optcom(data,t2s,tes,mask):
@@ -280,19 +287,19 @@ def optcom(data,t2s,tes,mask):
 
     out.shape = (nx,ny,nz,Nt)
     """
-    nx,ny,nz,Ne,Nt = data.shape 
+    nx,ny,nz,Ne,Nt = data.shape
 
     fdat = fmask(data,mask)
     ft2s = fmask(t2s,mask)
-    
+
     tes = tes[np.newaxis,:]
     ft2s = ft2s[:,np.newaxis]
-    
+
     if options.combmode == 'ste':
         alpha = fdat.mean(-1)*tes
-    else: 
+    else:
         alpha = tes * np.exp(-tes /ft2s)
-    
+
     alpha = np.tile(alpha[:,:,np.newaxis],(1,1,Nt))
 
     fout  = np.average(fdat,axis = 1,weights=alpha)
@@ -308,7 +315,7 @@ if __name__=='__main__':
 
     parser=OptionParser()
     parser.add_option('-d',"--orig_data",dest='data',help="Spatially Concatenated Multi-Echo Dataset",default=None)
-    parser.add_option('-c',"--combmode",dest='combmode',help="Combination scheme for TEs: t2s (Posse 1999),ste(Poser,2006 default)",default='ste')  
+    parser.add_option('-c',"--combmode",dest='combmode',help="Combination scheme for TEs: t2s (Posse 1999),ste(Poser,2006 default)",default='ste')
     parser.add_option('-l',"--label",dest='label',help="Optional label to tag output files with",default=None)
     parser.add_option('-e',"--TEs",dest='tes',help="Echo times (in ms) ex: 15,39,63",default=None)
 
@@ -316,8 +323,8 @@ if __name__=='__main__':
 
     print("-- T2* Map Component for ME-ICA %s --" % (__version__))
 
-    if options.tes==None or options.data==None: 
-        print("*+ Need at least data and TEs, use -h for help.")        
+    if options.tes==None or options.data==None:
+        print("*+ Need at least data and TEs, use -h for help.")
         sys.exit()
 
     if options.label!=None:
@@ -328,7 +335,7 @@ if __name__=='__main__':
     print("++ Loading Data")
     tes = np.fromstring(options.tes,sep=',',dtype=np.float32)
     ne = tes.shape[0]
-    catim  = nib.load(options.data) 
+    catim  = nib.load(options.data)
     head   = catim.get_header()
     head.extensions = []
     head.set_sform(head.get_sform(),code=1)
@@ -337,7 +344,7 @@ if __name__=='__main__':
     nx,ny,nz,Ne,nt = catd.shape
     mu  = catd.mean(axis=-1)
     sig  = catd.std(axis=-1)
-    
+
     print("++ Computing Mask")
     mask,masksum  = makemask(catd,min=False,getsum=True)
 
@@ -364,14 +371,3 @@ if __name__=='__main__':
     niwrite(s0,aff,'s0v%s.nii' % suf)
     niwrite(t2s,aff,'t2sv%s.nii' % suf )
     niwrite(t2sm,aff,'t2svm%s.nii' % suf )
-    
-    
-
-    
-
-
-    
-
-
-
-

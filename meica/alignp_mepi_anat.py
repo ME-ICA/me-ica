@@ -4,30 +4,29 @@ __version__="v3.0 beta1"
 # Multi-Echo ICA, Version %s
 # See http://dx.doi.org/10.1016/j.neuroimage.2011.12.028
 #
-# Kundu, P., Brenowitz, N.D., Voon, V., Worbe, Y., Vertes, P.E., Inati, S.J., Saad, Z.S., 
-# Bandettini, P.A. & Bullmore, E.T. Integrated strategy for improving functional 
+# Kundu, P., Brenowitz, N.D., Voon, V., Worbe, Y., Vertes, P.E., Inati, S.J., Saad, Z.S.,
+# Bandettini, P.A. & Bullmore, E.T. Integrated strategy for improving functional
 # connectivity mapping using multiecho fMRI. PNAS (2013).
 #
-# Kundu, P., Inati, S.J., Evans, J.W., Luh, W.M. & Bandettini, P.A. Differentiating 
+# Kundu, P., Inati, S.J., Evans, J.W., Luh, W.M. & Bandettini, P.A. Differentiating
 #   BOLD and non-BOLD signals in fMRI time series using multi-echo EPI. NeuroImage (2011).
 #
 # meica.py version 2.5 (c) 2014 Prantik Kundu
 # PROCEDURE 1c : Preprocess multi-echo datasets and apply multi-echo ICA based on spatial concatenation
 # -Calcluation of functional-anatomical coregistration using EPI gray matter + local Pearson correlation method
 #
-#alignp_mepi_anat.py V.1.0 
+#alignp_mepi_anat.py V.1.0
 #Compute warp parameters for co-registration from anatomical (skullstripped) to S0 and T2* volume (not skullstripped)
 #S0 and T2* volumes should be exactly in register
 #
 """ % (__version__)
 
 import sys
-import commands
+import subprocess
 from re import split as resplit
 import re
 from os import system,getcwd,mkdir,chdir,popen
 import os.path
-from string import rstrip,split
 from optparse import OptionParser,OptionGroup
 
 parser=OptionParser()
@@ -54,14 +53,14 @@ sl.append("cd %s " % walignp_dirname)
 
 def dsprefix(idn):
     def prefix(datasetname):
-        return split(datasetname,'+')[0]
-    if len(split(idn,'.'))!=0:
-        if split(idn,'.')[-1]=='HEAD' or split(idn,'.')[-1]=='BRIK' or split(idn,'.')[-2:]==['BRIK','gz']:
+        return datasetname.split('+')[0]
+    if len(idn.split('.'))!=0:
+        if idn.split('.')[-1]=='HEAD' or idn.split('.')[-1]=='BRIK' or idn.split('.')[-2:]==['BRIK','gz']:
             return prefix(idn)
-        elif split(idn,'.')[-1]=='nii' and not split(idn,'.')[-1]=='nii.gz':
-            return '.'.join(split(idn,'.')[:-1])
-        elif split(idn,'.')[-2:]==['nii','gz']:
-            return '.'.join(split(idn,'.')[:-2])
+        elif idn.split('.')[-1]=='nii' and not idn.split('.')[-1]=='nii.gz':
+            return '.'.join(idn.split('.')[:-1])
+        elif idn.split('.')[-2:]==['nii','gz']:
+            return '.'.join(idn.split('.')[:-2])
         else:
             return prefix(idn)
     else:
@@ -84,14 +83,14 @@ def import_datasets(dsets):
     """
     outnames = []
     for dset in dsets:
-        if dset!='' and dset!=None: 
+        if dset!='' and dset!=None:
             indir=''
             if dset[0]!='/': indir = startdir
             sl.append("3dcopy -overwrite %s/%s %s/%s/%s" % (indir,dset,startdir,walignp_dirname,dsprefix(os.path.basename(dset))))
             sl.append("3drefit -view orig `ls %s/%s/%s+*.HEAD`" % (startdir,walignp_dirname,dsprefix(os.path.basename(dset))))
             impdset = '%s+orig' % dsprefix(os.path.basename(dset))
-            outnames.append(niibrik(impdset))   
-        else: 
+            outnames.append(niibrik(impdset))
+        else:
             outnames.append('')
     return outnames
 
@@ -109,7 +108,7 @@ def makeflat(dset):
 def graywt(t2sname,s0name):
     basevol='align_base.nii.gz'
     weightvol='align_weight.nii.gz'
-    if s0name!='': 
+    if s0name!='':
         sl.append("3dcalc -overwrite -a %s -b %s -expr 'a*ispositive(a)*step(b)' -prefix t2svm_ss.nii.gz" % (t2sname,s0name) )
         t2sname='t2svm_ss.nii.gz'
     sl.append("3dBrickStat -mask %s -percentile 50 1 50 %s > graywt_thr.1D" %  (t2sname,t2sname) )
@@ -123,7 +122,7 @@ def graywt(t2sname,s0name):
 def allineate(sourcevol, weight, targetvol, prefix, maxrot, maxshf,maxscl,do_cmass):
     """
     source should be anatomical
-    target should be T2* 
+    target should be T2*
     """
     outvol_prefix = "%s_al"  % prefix
     outmat_prefix = "%s_al_mat"  % prefix
@@ -134,7 +133,7 @@ def allineate(sourcevol, weight, targetvol, prefix, maxrot, maxshf,maxscl,do_cma
     align_opts = "-lpc -weight %s -maxshf %s -maxrot %s -maxscl %s %s" % (weightvol, maxrot, maxshf,maxscl,cmass_opt)
     sl.append("3dAllineate -overwrite -weight_frac 1.0 -VERB -warp aff -source_automask+2 -master SOURCE -source %s -base %s -prefix ./%s -1Dmatrix_save ./%s %s " \
         % (sourcevol,targetvol,outvol_prefix,outmat_prefix,align_opts))
-    if options.autocmass: 
+    if options.autocmass:
         cmass_opt=''
         align_opts = "-lpc -weight %s -maxshf %s -maxrot %s -maxscl %s %s" % (weightvol, maxrot, maxshf,maxscl,cmass_opt)
     sl.append("3dAllineate -overwrite -weight_frac 1.0 -VERB -warp aff -source_automask+2 -master SOURCE -source %s -base %s -prefix ./ncm_%s -1Dmatrix_save ./ncm_%s %s " \
@@ -175,13 +174,3 @@ cmselect(basevol,allin_volume)
 
 """Run procedure"""
 runproc(options.prefix, sl)
-
-
-
-
-
-
-
-
-
-
