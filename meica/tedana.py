@@ -1,45 +1,30 @@
 #!/usr/bin/env python
-from __future__ import print_function
-__version__="v3.2 beta1"
-welcome_block="""
-# Multi-Echo ICA, Version %s
-#
-# Kundu, P., Brenowitz, N.D., Voon, V., Worbe, Y., Vertes, P.E., Inati, S.J., Saad, Z.S.,
-# Bandettini, P.A. & Bullmore, E.T. Integrated strategy for improving functional
-# connectivity mapping using multiecho fMRI. PNAS (2013).
-#
-# Kundu, P., Inati, S.J., Evans, J.W., Luh, W.M. & Bandettini, P.A. Differentiating
-#   BOLD and non-BOLD signals in fMRI time series using multi-echo EPI. NeuroImage (2011).
-# http://dx.doi.org/10.1016/j.neuroimage.2011.12.028
-#
-# PROCEDURE 2 : Computes ME-PCA and ME-ICA
-# -Computes T2* map
-# -Computes PCA of concatenated ME data, then computes TE-dependence of PCs
-# -Computes ICA of TE-dependence PCs
-# -Identifies TE-dependent ICs, outputs high-\kappa (BOLD) component
-#    and denoised time series
-# -or- Computes TE-dependence of each component of a general linear model
-#    specified by input (includes MELODIC FastICA mixing matrix)
-# PROCEDURE 2a: Model fitting and component selection routines
-""" % (__version__)
 
 import os
 import sys
-from optparse import OptionParser
+import gzip
+import pickle
 import numpy as np
 import nibabel as nib
-from sys import stdout,argv
-import scipy.stats as stats
-import time
-import datetime
-import pickle
-import gzip
-import scipy.stats as stats
-import scipy.signal as SS
-from numpy import random
-from sklearn import svm
-import sklearn.decomposition
 import scipy.optimize
+from sklearn import svm
+import scipy.signal as SS
+import scipy.stats as stats
+import sklearn.decomposition
+from optparse import OptionParser
+
+
+"""
+PROCEDURE 2 : Computes ME-PCA and ME-ICA
+-Computes T2* map
+-Computes PCA of concatenated ME data, then computes TE-dependence of PCs
+-Computes ICA of TE-dependence PCs
+-Identifies TE-dependent ICs, outputs high-\kappa (BOLD) component
+   and denoised time series
+-or- Computes TE-dependence of each component of a general linear model
+   specified by input (includes MELODIC FastICA mixing matrix)
+PROCEDURE 2a: Model fitting and component selection routines
+"""
 
 F_MAX=500
 Z_MAX = 8
@@ -224,7 +209,6 @@ def fitmodels_direct(catd,mmix,mask,t2s,tes,fout=None,reindex=False,mmixN=None,f
 
         if debugout or ('DEBUGOUT' in args):
             #Package for debug
-            import pickle
             import zlib
             try: os.system('mkdir compsel.debug')
             except: pass
@@ -237,6 +221,29 @@ def fitmodels_direct(catd,mmix,mask,t2s,tes,fout=None,reindex=False,mmixN=None,f
 
     return seldict,comptab,betas,mmix_new
 
+# def _scoreatpercentile(a, per, limit=(), interpolation_method='lower'):
+#
+#     values = np.sort(a, axis=0)
+#     if limit:
+#         values = values[(limit[0] <= values) & (values <= limit[1])]
+#
+#     idx = per /100. * (values.shape[0] - 1)
+#     if (idx % 1 == 0):
+#         idx = int(idx)
+#         score = values[idx]
+#     else:
+#         if interpolation_method == 'fraction':
+#             score = _interpolate(values[int(idx)], values[int(idx) + 1],
+#                                  idx % 1)
+#         elif interpolation_method == 'lower':
+#             score = values[int(np.floor(idx))]
+#         elif interpolation_method == 'higher':
+#             score = values[int(np.ceil(idx))]
+#         else:
+#             raise ValueError("interpolation_method can only be 'fraction', " \
+#                              "'lower' or 'higher'")
+#     return score
+
 
 def do_svm(train_set,train_labs,test_set,svmtype=0):
     if svmtype==2: probability=True
@@ -246,17 +253,20 @@ def do_svm(train_set,train_labs,test_set,svmtype=0):
     clf.fit(train_set,train_labs)
     return clf.predict(test_set),clf
 
+
 def fft_variance(fproj_arr,fproj_arr_val,A,B):
     fproj_sel_T = stats.ttest_ind(fproj_arr[:,A].T,fproj_arr[:,B].T)
     fproj_sel_A = (andb([fproj_sel_T[0]>0,fproj_sel_T[1]<0.05])==2).reshape(mask.shape[0:2])
     fproj_sel_B = (andb([fproj_sel_T[0]<0,fproj_sel_T[1]<0.05])==2).reshape(mask.shape[0:2])
     return fproj_arr_val[fproj_sel_A.flatten()].sum(0),fproj_arr_val[fproj_sel_B.flatten()].sum(0)
 
+
 def gaussian(height, center_x, center_y, width_x, width_y):
     """Returns a gaussian function with the given parameters"""
     width_x = float(width_x)
     width_y = float(width_y)
     return lambda x,y: height*np.exp(-(((center_x-x)/width_x)**2+((center_y-y)/width_y)**2)/2)
+
 
 def moments(data):
     """Returns (height, x, y, width_x, width_y)
@@ -273,6 +283,7 @@ def moments(data):
     height = data.max()
     return height, x, y, width_x, width_y
 
+
 def fitgaussian(data):
     """Returns (height, x, y, width_x, width_y)
     the gaussian parameters of a 2D distribution found by a fit"""
@@ -281,12 +292,12 @@ def fitgaussian(data):
     p, success = scipy.optimize.leastsq(errorfunction, params)
     return p
 
+
 def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=False,savecsdiag=True,group0_only=False,strict_mode=False):
 
     selmodelversion='fft20e.062517'
 
     import numpy.fft as fft
-    from sklearn import svm
     from sklearn.cluster import DBSCAN
 
     try:
@@ -295,7 +306,6 @@ def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=Fal
         pass
 
     if filecsdata:
-        import pickle
         import bz2
         if seldict!=None:
             print("Saving component selection data")
@@ -438,7 +448,7 @@ def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=Fal
     #Make an initial guess as to number of good components based on consensus of control points across Rhos and Kappas
     KRcutguesses = [getelbow(Rhos),getelbow2(Rhos),getelbow3(Rhos),getelbow(Kappas),getelbow2(Kappas),getelbow3(Kappas)]
     Kelbowval = np.median([getelbow(Kappas,True),getelbow2(Kappas,True),getelbow3(Kappas,True)]+list(getfbounds(ne)))
-    Khighelbowval = stats.scoreatpercentile([getelbow(Kappas,True),getelbow2(Kappas,True),getelbow3(Kappas,True)]+list(getfbounds(ne)),75)
+    Khighelbowval = stats.scoreatpercentile([getelbow(Kappas,True),getelbow2(Kappas,True),getelbow3(Kappas,True)]+list(getfbounds(ne)),75, interpolation_method='lower')
     KRcut = np.median(KRcutguesses)
     #only use exclusive when inclusive is extremely inclusive - double KRcut
     if getelbow2(Kappas) > KRcut*2 and getelbow(Kappas,True)<F01: Kcut = getelbow(Kappas,True)
@@ -449,7 +459,8 @@ def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=Fal
     if Rcut > Kcut: Kcut = Rcut #Rcut should never be higher than Kcut
     KRelbow = andb([Kappas>Kcut,Rhos<Rcut ] )
     #Make guess of Kundu et al 2011 plus remove high frequencies, generally high variance, and high variance given low Kappa
-    tt_lim = scoreatpercentile(tt_table[tt_table[:,0]>0,0],75)/3
+    # tt_lim = _scoreatpercentile(tt_table[tt_table[:,0]>0,0],75, interpolation_method='lower')/3
+    tt_lim = stats.scoreatpercentile(tt_table[tt_table[:,0]>0,0],75, interpolation_method='lower')/3
     KRguess = np.setdiff1d(np.setdiff1d(nc[KRelbow==2],rej),np.union1d(nc[tt_table[:,0]<tt_lim],np.union1d(np.union1d(nc[spz>1],nc[Vz>2]),nc[andb([varex>0.5*sorted(varex)[::-1][int(KRcut)],Kappas<2*Kcut])==2])))
     guessmask = np.zeros(len(nc))
     guessmask[KRguess] = 1
@@ -471,7 +482,7 @@ def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=Fal
     dbscanfailed=False
     if len(epsmap)!=0 :
         #Select index that maximizes Dice with guessmask but first minimizes number of higher Rho components
-        ii = epsmap[np.argmax(epsmap[epsmap[:,2]==np.min(epsmap[:,2]),1],0),0]
+        ii = int(epsmap[np.argmax(epsmap[epsmap[:,2]==np.min(epsmap[:,2]),1],0),0])
         print('Component selection tuning: ' , epsmap[:,1].max())
         db = DBSCAN(eps=.005+ii*.005, min_samples=3).fit(fz.T)
         ncl = nc[db.labels_==0]
@@ -550,15 +561,10 @@ def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=Fal
     """
     tsoc_B_Zcl = np.zeros(tsoc_B.shape)
     tsoc_B_Zcl[Z_clmaps!=0] = np.abs(tsoc_B)[Z_clmaps!=0]
-    print("tsoc_B_Zcl shape is: {}".format(tsoc_B_Zcl.shape))
-    print("tsoc_B shape is: {}".format(tsoc_B.shape))
     sig_B = [ stats.scoreatpercentile(tsoc_B_Zcl[tsoc_B_Zcl[:,ii]!=0,ii],25) if len(tsoc_B_Zcl[tsoc_B_Zcl[:,ii]!=0,ii]) != 0  else 0 for ii in nc   ]
-    print("sig_B shape 1 is: {}".format(len(sig_B)))
     sig_B = np.abs(tsoc_B)>np.tile(sig_B,[tsoc_B.shape[0],1])
-    print("sig_B shape 2 is: {}".format(sig_B.shape))
-    print("t2s shape is: {}".format(t2s.shape))
-    veinmask = andb([t2s<scoreatpercentile(t2s[t2s!=0],15),t2s!=0])==2
-    print("veinmask shape is: {}".format(veinmask.shape))
+    # veinmask = andb([t2s<_scoreatpercentile(t2s[t2s!=0],15, interpolation_method='lower'),t2s!=0])==2
+    veinmask = andb([t2s<stats.scoreatpercentile(t2s[t2s!=0],15, interpolation_method='lower'),t2s!=0])==2
     veinmaskf = veinmask[t2s!=0]
 
     veinR = np.array(sig_B[veinmaskf].sum(0),dtype=float)/sig_B[~veinmaskf].sum(0)
@@ -567,7 +573,8 @@ def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=Fal
     rej_veinRZ = ((veinR-veinR[veinc].mean())/veinR[veinc].std())[veinc]
     rej_veinRZ[rej_veinRZ<0] = 0
     rej_veinRZ[ countsigFR2[veinc] > np.array(veinmaskf,dtype=int).sum()] =0
-    t2s_lim = [stats.scoreatpercentile(t2s[t2s!=0],50),stats.scoreatpercentile(t2s[t2s!=0],80)/2]
+    t2s_lim = [stats.scoreatpercentile(t2s[t2s!=0],50, interpolation_method='lower'),
+               stats.scoreatpercentile(t2s[t2s!=0],80, interpolation_method='lower')/2]
     phys_var_zs = []
     for t2sl_i in range(len(t2s_lim)):
         t2sl = t2s_lim[t2sl_i]
@@ -640,33 +647,6 @@ def _interpolate(a, b, fractionepsmap):
     return a + (b - a)*fraction;
 
 
-def scoreatpercentile(a, per, limit=(), interpolation_method='lower'):
-    """
-    This function is grabbed from scipy
-
-    """
-    values = np.sort(a, axis=0)
-    if limit:
-        values = values[(limit[0] <= values) & (values <= limit[1])]
-
-    idx = per /100. * (values.shape[0] - 1)
-    if (idx % 1 == 0):
-        idx = int(idx)
-        score = values[idx]
-    else:
-        if interpolation_method == 'fraction':
-            score = _interpolate(values[int(idx)], values[int(idx) + 1],
-                                 idx % 1)
-        elif interpolation_method == 'lower':
-            score = values[int(np.floor(idx))]
-        elif interpolation_method == 'higher':
-            score = values[int(np.ceil(idx))]
-        else:
-            raise ValueError("interpolation_method can only be 'fraction', " \
-                             "'lower' or 'higher'")
-    return score
-
-
 def MAD(data, axis=None):
     return np.median(np.abs(data - np.median(data, axis)), axis)
 
@@ -694,14 +674,16 @@ def spatclust(data,mask,csize,thr,header,aff,infile=None,dindex=0,tindex=0):
     clustered = fmask(nib.load('__clout.nii.gz').get_data(),mask)!=0
     return clustered
 
+
 def rankvec(vals):
     asort = np.argsort(vals)
     ranks = np.zeros(vals.shape[0])
     ranks[asort]=np.arange(vals.shape[0])+1
     return ranks
 
+
 def niwrite(data,affine, name , header=None):
-    stdout.write(" + Writing file: %s ...." % name)
+    sys.stdout.write(" + Writing file: %s ...." % name)
 
     thishead = header
     if thishead == None:
@@ -712,6 +694,7 @@ def niwrite(data,affine, name , header=None):
     outni.to_filename(name)
     print('done.')
 
+
 def cat2echos(data,Ne):
     """
     cat2echos(data,Ne)
@@ -720,12 +703,14 @@ def cat2echos(data,Ne):
     data shape is (nx,ny,Ne*nz,nt)
     """
     nx,ny = data.shape[0:2]
-    nz = round(data.shape[2]/Ne)
+    nz = data.shape[2]//Ne
     if len(data.shape) >3:
         nt = data.shape[3]
     else:
         nt = 1
+
     return np.reshape(data,(nx,ny,nz,Ne,nt),order='F')
+
 
 def uncat2echos(data,Ne):
     """
@@ -742,6 +727,7 @@ def uncat2echos(data,Ne):
         nt = 1
     return np.reshape(data,(nx,ny,nz,nt),order='F')
 
+
 def makemask(cdat):
 
     nx,ny,nz,Ne,nt = cdat.shape
@@ -753,6 +739,7 @@ def makemask(cdat):
         mask = mask & tmpmask
 
     return mask
+
 
 def makeadmask(cdat,min=True,getsum=False):
 
@@ -779,6 +766,7 @@ def makeadmask(cdat,min=True,getsum=False):
         mask = masksum!=0
         if getsum: return mask,masksum
         else: return mask
+
 
 def fmask(data,mask):
     """
@@ -807,6 +795,7 @@ def fmask(data,mask):
 
     return fdata.squeeze()
 
+
 def unmask (data,mask):
     """
     unmask (data,mask)
@@ -831,6 +820,7 @@ def unmask (data,mask):
     out[M,:] = np.reshape(data,(Nm,nt))
 
     return np.squeeze(np.reshape(out,(nx,ny,nz,nt)))
+
 
 def t2smap(catd,mask,tes):
     """
@@ -866,6 +856,7 @@ def t2smap(catd,mask,tes):
     out = np.squeeze(unmask(t2s,mask)),np.squeeze(unmask(s0,mask)),unmask(t2s_fit,mask)
 
     return out
+
 
 def t2sadmap(catd,mask,tes):
     """
@@ -922,6 +913,7 @@ def t2sadmap(catd,mask,tes):
     s0vaf[masksum==1] = s0vs[masksum==1,0]
 
     return t2sa,s0va,t2ss,s0vs,t2saf,s0vaf
+
 
 def get_coeffs(data,mask,X,add_const=False):
     """
@@ -997,6 +989,7 @@ def optcom(data,t2s,tes,mask,useG=True):
     print('Out shape is ', out.shape)
     return out
 
+
 def getelbow(ks,val=False):
     #Elbow using linear projection method - moderate
     ks = np.sort(ks)[::-1]
@@ -1011,6 +1004,7 @@ def getelbow(ks,val=False):
     k_min  = ks[k_min_ind]
     if val: return ks[k_min_ind]
     else: return k_min_ind
+
 
 def getelbow2(ks,val=False):
     #Elbow using mean/variance method - conservative
@@ -1027,6 +1021,7 @@ def getelbow2(ks,val=False):
     if val: return ks[elind]
     else: return elind
 
+
 def getelbow3(ks,val=False):
     #Elbow using curvature - aggressive
     ks = np.sort(ks)[::-1]
@@ -1038,23 +1033,28 @@ def getelbow3(ks,val=False):
     if val: return(ks[maxcurv])
     else:return maxcurv
 
+
 def getfbounds(ne):
     F05s=[None,None,18.5,10.1,7.7,6.6,6.0,5.6,5.3,5.1,5.0]
     F025s=[None,None,38.5,17.4,12.2,10,8.8,8.1,7.6,7.2,6.9]
     F01s=[None,None,98.5,34.1,21.2,16.2,13.8,12.2,11.3,10.7,10.]
     return F05s[ne-1],F025s[ne-1],F01s[ne-1]
 
+
 def eimask(dd,ees=None):
     if ees==None: ees=range(dd.shape[1])
     imask = np.zeros([dd.shape[0],len(ees)])
     for ee in ees:
         print(ee)
-        lthr = 0.001*scoreatpercentile(dd[:,ee,:].flatten(),98)
-        hthr = 5*scoreatpercentile(dd[:,ee,:].flatten(),98)
+        # lthr = 0.001 * _scoreatpercentile(dd[:,ee,:].flatten(),98, interpolation_method='lower')
+        # hthr = 5 * _scoreatpercentile(dd[:,ee,:].flatten(),98, interpolation_method='lower')
+        lthr = 0.001 * stats.scoreatpercentile(dd[:,ee,:].flatten(),98, interpolation_method='lower')
+        hthr = 5 * stats.scoreatpercentile(dd[:,ee,:].flatten(),98, interpolation_method='lower')
         print(lthr,hthr)
         imask[dd[:,ee,:].mean(1) > lthr,ee]=1
         imask[dd[:,ee,:].mean(1) > hthr,ee]=0
     return imask
+
 
 def dwtmat(mmix):
     print("++Wavelet transforming data")
@@ -1067,6 +1067,7 @@ def dwtmat(mmix):
         mmix_wt[ii] = np.hstack(wtx)
     return mmix_wt,cAlen
 
+
 def idwtmat(mmix_wt,cAl):
     print("++Inverse wavelet transforming")
     lt = len(pywt.idwt(mmix_wt[0,:cAl],mmix_wt[0,cAl:],'db2',correct_size=True))
@@ -1074,6 +1075,7 @@ def idwtmat(mmix_wt,cAl):
     for ii in range(mmix_iwt.shape[0]):
         mmix_iwt[ii] = pywt.idwt(mmix_wt[ii,:cAl],mmix_wt[ii,cAl:],'db2',correct_size=True)
     return mmix_iwt
+
 
 def tedpca(ste=0,mlepca=True):
     nx,ny,nz,ne,nt = catd.shape
@@ -1164,7 +1166,10 @@ def tedpca(ste=0,mlepca=True):
         print("Loading PCA")
         pcastate_f = gzip.open(pcastate_fn,'rb')
         pcastate = pickle.load(pcastate_f)
-        for key,val in pcastate.items(): exec(key + '=' + val)
+        (u, s, v, ctb,
+         eigelb, spmin, spcum) = (pcastate['u'], pcastate['s'], pcastate['v'],
+                                  pcastate['ctb'], pcastate['eigelb'],
+                                  pcastate['spmin'], pcastate['spcum'])
 
     np.savetxt('comp_table_pca.txt',ctb[ctb[:,1].argsort(),:][::-1])
     np.savetxt('mepca_mix.1D',v[ctb[:,1].argsort()[::-1],:].T)
@@ -1192,13 +1197,13 @@ def tedpca(ste=0,mlepca=True):
     pcrej = np.array(pcscore==0,dtype=np.int)*np.array(ctb[:,3]>spmin,dtype=np.int) > 0
 
     """
-kdaw=15
-rdaw=5
-kappa_thr = np.average(sorted([fmin,getelbow(kappas,True)/2,fmid]),weights=[kdaw,1,1])
-rho_thr = np.average(sorted([fmin,getelbow2(rhos,True)/2,fmid]),weights=[rdaw,1,1])
-print kappa_thr, rho_thr
-pcscore = (np.array(ctb[:,1]>kappa_thr,dtype=np.int)+np.array(ctb[:,2]>rho_thr,dtype=np.int)+np.array(ctb[:,3]>eigelb,dtype=np.int))*np.array(ctb[:,3]>spmin,dtype=np.int)*np.array(ctb[:,1]!=F_MAX,dtype=np.int)*np.array(ctb[:,2]!=F_MAX,dtype=np.int)
-np.array(pcscore>0).sum()
+    kdaw=15
+    rdaw=5
+    kappa_thr = np.average(sorted([fmin,getelbow(kappas,True)/2,fmid]),weights=[kdaw,1,1])
+    rho_thr = np.average(sorted([fmin,getelbow2(rhos,True)/2,fmid]),weights=[rdaw,1,1])
+    print kappa_thr, rho_thr
+    pcscore = (np.array(ctb[:,1]>kappa_thr,dtype=np.int)+np.array(ctb[:,2]>rho_thr,dtype=np.int)+np.array(ctb[:,3]>eigelb,dtype=np.int))*np.array(ctb[:,3]>spmin,dtype=np.int)*np.array(ctb[:,1]!=F_MAX,dtype=np.int)*np.array(ctb[:,2]!=F_MAX,dtype=np.int)
+    np.array(pcscore>0).sum()
     """
 
     dd = u.dot(np.diag(s*np.array(pcsel,dtype=np.int))).dot(v)
@@ -1216,6 +1221,7 @@ np.array(pcscore>0).sum()
 
     return nc,dd
 
+
 def tedica(dd,cost):
     """
     Input is dimensionally reduced spatially concatenated multi-echo time series dataset from tedpca()
@@ -1225,12 +1231,13 @@ def tedica(dd,cost):
     import mdp
     climit = float("%s" % options.conv)
     #icanode = mdp.nodes.FastICANode(white_comp=nc, white_parm={'svd':True},approach='symm', g=cost, fine_g=options.finalcost, limit=climit, verbose=True)
-    icanode = mdp.nodes.FastICANode(white_comp=nc,approach='symm', g=cost, fine_g=options.finalcost, limit=climit, verbose=True)
+    icanode = mdp.nodes.FastICANode(white_comp=nc,approach='symm', g=cost, fine_g=options.finalcost, primary_limit=climit*100, limit=climit, verbose=True)
     icanode.train(dd)
     smaps = icanode.execute(dd)
     mmix = icanode.get_recmatrix().T
     mmix = (mmix-mmix.mean(0))/mmix.std(0)
     return mmix
+
 
 def write_split_ts(data,comptable,mmix,suffix=''):
     mdata = fmask(data,mask)
@@ -1249,6 +1256,7 @@ def write_split_ts(data,comptable,mmix,suffix=''):
     niwrite(unmask(fmask(data,mask)-lowkts-midkts,mask),aff,'_'.join(['dn_ts',suffix])+'.nii')
     return varexpl
 
+
 def split_ts(data,comptable,mmix):
     cbetas = get_coeffs(data-data.mean(-1)[:,:,:,np.newaxis],mask,mmix)
     betas = fmask(cbetas,mask)
@@ -1257,6 +1265,7 @@ def split_ts(data,comptable,mmix):
     else:
         hikts = None
     return hikts,data-hikts
+
 
 def writefeats(cbetas,comptable,mmix,suffix=''):
     #Write signal changes (dS)
@@ -1280,6 +1289,7 @@ def writefeats(cbetas,comptable,mmix,suffix=''):
 
     niwrite(unmask(cbetam,mask),aff,'_'.join(['feats',suffix])+'.nii')
 
+
 def computefeats2(data,mmix,mask,normalize=True):
     #Write feature versions of components
     data = data[mask]
@@ -1294,25 +1304,25 @@ def computefeats2(data,mmix,mask,normalize=True):
         data_Z = (((data_Z.T-data_Z.mean(0)[:,np.newaxis])/data_Z.std(0)[:,np.newaxis])  + (data_Z.mean(0)/data_Z.std(0))[:,np.newaxis]).T
     return data_Z
 
+
 def writefeats2(data,mmix,mask,suffix=''):
     #Write feature versions of components
     feats = computefeats2(data,mmix,mask)
     niwrite(unmask(feats,mask),aff,'_'.join(['feats',suffix])+'.nii')
+
 
 def writect(comptable,ctname='',varexpl='-1',classarr=[]):
     global acc,rej,midk,empty
     if len(classarr)!=0:
         acc,rej,midk,empty = classarr
     nc = comptable.shape[0]
-    ts = time.time()
-    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
     sortab = comptable[comptable[:,1].argsort()[::-1],:]
     if ctname=='': ctname = 'comp_table.txt'
     open('accepted.txt','w').write(','.join([str(int(cc)) for cc in acc]))
     open('rejected.txt','w').write(','.join([str(int(cc)) for cc in rej]))
     open('midk_rejected.txt','w').write(','.join([str(int(cc)) for cc in midk]))
     with open(ctname,'w') as f:
-        f.write("#\n#ME-ICA Component statistics table for: %s \n#Run on %s \n#\n" % (os.path.abspath(os.path.curdir),st) )
+        f.write("#\n#ME-ICA Component statistics table for: %s #\n" % (os.path.abspath(os.path.curdir)) )
         f.write("#Dataset variance explained by ICA (VEx): %.02f \n" %  ( varexpl ) )
         f.write("#Total components generated by decomposition (TCo): %i \n" %  ( nc ) )
         f.write("#No. accepted BOLD-like components, i.e. effective degrees of freedom for correlation (lower bound; DFe): %i\n" %  ( len(acc) ) )
@@ -1327,6 +1337,7 @@ def writect(comptable,ctname='',varexpl='-1',classarr=[]):
         f.write("#  comp    Kappa   Rho %%Var   %%Var(norm) \n")
         for i in range(nc):
             f.write('%d\t%f\t%f\t%.2f\t%.2f\n'%(sortab[i,0],sortab[i,1],sortab[i,2],sortab[i,3],sortab[i,4]))
+
 
 def gscontrol_raw(OCcatd, dtrank=4):
     """
@@ -1445,6 +1456,7 @@ def dwtmat(mmix):
         mmix_wt[ii] = np.hstack(wtx)
     return mmix_wt,cAlen
 
+
 def idwtmat(mmix_wt,cAl):
     print("++Inverse wavelet transforming")
     lt = len(pywt.idwt(mmix_wt[0,:cAl],mmix_wt[0,cAl:],'db2',correct_size=True))
@@ -1453,11 +1465,13 @@ def idwtmat(mmix_wt,cAl):
         mmix_iwt[ii] = pywt.idwt(mmix_wt[ii,:cAl],mmix_wt[ii,cAl:],'db2',correct_size=True)
     return mmix_iwt
 
+
 def dwtcatd():
     stackmask = tile(mask,[1,1,ne])
     maskin = uncat2echos(catd,ne)[stackmask]
     trans_mask_catd,newlen = dwtmat(uncat2echos(catd,ne)[stackmask])
     newcatd = unmask(trans_mask_catd,stackmask)
+
 
 def writeresults():
     print("++ Writing optimally combined time series")
@@ -1475,10 +1489,12 @@ def writeresults():
     print("++ Writing component table")
     writect(comptable,'comp_table.txt',varexpl)
 
+
 def writeresults_echoes():
     for ii in range(ne):
         print("++ Writing Kappa-filtered TE#%i timeseries" % (ii+1))
         write_split_ts(catd[:,:,:,ii,:],comptable,mmix,'e%i' % (ii+1))
+
 
 def ctabsel(ctabfile):
     ctlines = open(ctabfile).readlines()
@@ -1522,7 +1538,7 @@ if __name__=='__main__':
     (options,args) = parser.parse_args()
     args = list(set(args) - set(['DEBUG']))
 
-    print("-- ME-PCA/ME-ICA Component for ME-ICA %s--" % __version__)
+    print("-- ME-PCA/ME-ICA Component for ME-ICA--")
 
     if options.tes==None or options.data==None:
         print("*+ Need at least data and TEs, use -h for help.")
@@ -1565,7 +1581,8 @@ if __name__=='__main__':
     t2s,s0,t2ss,s0s,t2sG,s0G = t2sadmap(catd,mask,tes)
 
     #Condition values
-    cap_t2s = scoreatpercentile(t2s.flatten(),99.5)
+    # cap_t2s = _scoreatpercentile(t2s.flatten(),99.5, interpolation_method='lower')
+    cap_t2s = stats.scoreatpercentile(t2s.flatten(),99.5, interpolation_method='lower')
     t2s[t2s>cap_t2s*10]=cap_t2s
     niwrite(s0,aff,'s0v.nii')
     niwrite(t2s,aff,'t2sv.nii')
