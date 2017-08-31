@@ -221,29 +221,6 @@ def fitmodels_direct(catd,mmix,mask,t2s,tes,fout=None,reindex=False,mmixN=None,f
 
     return seldict,comptab,betas,mmix_new
 
-# def _scoreatpercentile(a, per, limit=(), interpolation_method='lower'):
-#
-#     values = np.sort(a, axis=0)
-#     if limit:
-#         values = values[(limit[0] <= values) & (values <= limit[1])]
-#
-#     idx = per /100. * (values.shape[0] - 1)
-#     if (idx % 1 == 0):
-#         idx = int(idx)
-#         score = values[idx]
-#     else:
-#         if interpolation_method == 'fraction':
-#             score = _interpolate(values[int(idx)], values[int(idx) + 1],
-#                                  idx % 1)
-#         elif interpolation_method == 'lower':
-#             score = values[int(np.floor(idx))]
-#         elif interpolation_method == 'higher':
-#             score = values[int(np.ceil(idx))]
-#         else:
-#             raise ValueError("interpolation_method can only be 'fraction', " \
-#                              "'lower' or 'higher'")
-#     return score
-
 
 def do_svm(train_set,train_labs,test_set,svmtype=0):
     if svmtype==2: probability=True
@@ -307,7 +284,7 @@ def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=Fal
 
     if filecsdata:
         import bz2
-        if seldict!=None:
+        if seldict is not None:
             print("Saving component selection data")
             csstate_f = bz2.BZ2File('compseldata.pklbz','wb')
             pickle.dump(seldict,csstate_f)
@@ -343,7 +320,7 @@ def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=Fal
     """
     Set knobs
     """
-    if knobargs!='':
+    if knobargs is not '':
         for knobarg in ''.join(knobargs).split(','): exec(knobarg)
 
     """
@@ -389,7 +366,6 @@ def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=Fal
     mmix_dt = (mmix[:-1]-mmix[1:])
     mmix_kurt = stats.kurtosis(mmix_dt)
     mmix_std = np.std(mmix_dt,0)
-
 
     """
     Step 1: Reject anything that's obviously an artifact
@@ -459,7 +435,6 @@ def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=Fal
     if Rcut > Kcut: Kcut = Rcut #Rcut should never be higher than Kcut
     KRelbow = andb([Kappas>Kcut,Rhos<Rcut ] )
     #Make guess of Kundu et al 2011 plus remove high frequencies, generally high variance, and high variance given low Kappa
-    # tt_lim = _scoreatpercentile(tt_table[tt_table[:,0]>0,0],75, interpolation_method='lower')/3
     tt_lim = stats.scoreatpercentile(tt_table[tt_table[:,0]>0,0],75, interpolation_method='lower')/3
     KRguess = np.setdiff1d(np.setdiff1d(nc[KRelbow==2],rej),np.union1d(nc[tt_table[:,0]<tt_lim],np.union1d(np.union1d(nc[spz>1],nc[Vz>2]),nc[andb([varex>0.5*sorted(varex)[::-1][int(KRcut)],Kappas<2*Kcut])==2])))
     guessmask = np.zeros(len(nc))
@@ -563,12 +538,12 @@ def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=Fal
     tsoc_B_Zcl[Z_clmaps!=0] = np.abs(tsoc_B)[Z_clmaps!=0]
     sig_B = [ stats.scoreatpercentile(tsoc_B_Zcl[tsoc_B_Zcl[:,ii]!=0,ii],25) if len(tsoc_B_Zcl[tsoc_B_Zcl[:,ii]!=0,ii]) != 0  else 0 for ii in nc   ]
     sig_B = np.abs(tsoc_B)>np.tile(sig_B,[tsoc_B.shape[0],1])
-    # veinmask = andb([t2s<_scoreatpercentile(t2s[t2s!=0],15, interpolation_method='lower'),t2s!=0])==2
-    veinmask = andb([t2s<stats.scoreatpercentile(t2s[t2s!=0],15, interpolation_method='lower'),t2s!=0])==2
-    veinmaskf = veinmask[t2s!=0]
 
+    veinmask = andb([t2s<stats.scoreatpercentile(t2s[t2s != 0],15, interpolation_method='lower'),t2s != 0]) == 2
+    veinmaskf = veinmask[t2s != 0]
     veinR = np.array(sig_B[veinmaskf].sum(0),dtype=float)/sig_B[~veinmaskf].sum(0)
     veinR[np.isnan(veinR)] = 0
+
     veinc = np.union1d(rej,midk)
     rej_veinRZ = ((veinR-veinR[veinc].mean())/veinR[veinc].std())[veinc]
     rej_veinRZ[rej_veinRZ<0] = 0
@@ -1046,8 +1021,6 @@ def eimask(dd,ees=None):
     imask = np.zeros([dd.shape[0],len(ees)])
     for ee in ees:
         print(ee)
-        # lthr = 0.001 * _scoreatpercentile(dd[:,ee,:].flatten(),98, interpolation_method='lower')
-        # hthr = 5 * _scoreatpercentile(dd[:,ee,:].flatten(),98, interpolation_method='lower')
         lthr = 0.001 * stats.scoreatpercentile(dd[:,ee,:].flatten(),98, interpolation_method='lower')
         hthr = 5 * stats.scoreatpercentile(dd[:,ee,:].flatten(),98, interpolation_method='lower')
         print(lthr,hthr)
@@ -1216,8 +1189,8 @@ def tedpca(ste=0,mlepca=True):
     print(pcsel)
     print("--Selected %i components. Minimum Kappa=%0.2f Rho=%0.2f" % (nc,kappa_thr,rho_thr))
 
-    dd = ((dd.T-dd.T.mean(0))/dd.T.std(0)).T #Variance normalize timeseries
-    dd = (dd-dd.mean())/dd.std() #Variance normalize everything
+    dd = ((dd.T-dd.T.mean(0))/dd.T.std(0)).T  # Variance normalize timeseries
+    dd = (dd-dd.mean())/dd.std()  # Variance normalize everything
 
     return nc,dd
 
@@ -1231,7 +1204,7 @@ def tedica(dd,cost):
     import mdp
     climit = float("%s" % options.conv)
     #icanode = mdp.nodes.FastICANode(white_comp=nc, white_parm={'svd':True},approach='symm', g=cost, fine_g=options.finalcost, limit=climit, verbose=True)
-    icanode = mdp.nodes.FastICANode(white_comp=nc,approach='symm', g=cost, fine_g=options.finalcost, primary_limit=climit*100, limit=climit, verbose=True)
+    icanode = mdp.nodes.FastICANode(white_comp=nc,approach='symm', g=cost, fine_g=options.finalcost, coarse_limit=climit*100, limit=climit, verbose=True)
     icanode.train(dd)
     smaps = icanode.execute(dd)
     mmix = icanode.get_recmatrix().T
@@ -1581,7 +1554,6 @@ if __name__=='__main__':
     t2s,s0,t2ss,s0s,t2sG,s0G = t2sadmap(catd,mask,tes)
 
     #Condition values
-    # cap_t2s = _scoreatpercentile(t2s.flatten(),99.5, interpolation_method='lower')
     cap_t2s = stats.scoreatpercentile(t2s.flatten(),99.5, interpolation_method='lower')
     t2s[t2s>cap_t2s*10]=cap_t2s
     niwrite(s0,aff,'s0v.nii')
