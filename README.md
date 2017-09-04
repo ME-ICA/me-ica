@@ -2,8 +2,7 @@
 
 Core code for Multi-Echo Independent Components Analysis (ME-ICA).
 
-[![Build Status](https://travis-ci.org/emdupre/me-ica.svg?branch=py3)](https://travis-ci.org/emdupre/me-ica) [![CircleCI](https://circleci.com/gh/emdupre/me-ica.svg?style=svg)](https://circleci.com/gh/emdupre/me-ica) [![codecov](https://codecov.io/gh/emdupre/me-ica/branch/py3/graph/badge.svg)](https://codecov.io/gh/emdupre/me-ica) [![License](https://img.shields.io/badge/License-LGPL%202.0-blue.svg)](https://opensource.org/licenses/LGPL-2.1)
-
+[![Build Status](https://travis-ci.org/emdupre/me-ica.svg?branch=shotgun)](https://travis-ci.org/emdupre/me-ica) [![CircleCI](https://circleci.com/gh/emdupre/me-ica.svg?style=svg)](https://circleci.com/gh/emdupre/me-ica) [![codecov](https://codecov.io/gh/emdupre/me-ica/branch/shotgun/graph/badge.svg)](https://codecov.io/gh/emdupre/me-ica) [![License](https://img.shields.io/badge/License-LGPL%202.0-blue.svg)](https://opensource.org/licenses/LGPL-2.1)
 
 ## Usage
 
