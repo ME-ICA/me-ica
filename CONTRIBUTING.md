@@ -1,5 +1,5 @@
 # Contributing to ME-ICA
---
+
 Welcome to the ME-ICA repository! We're excited you're here and want to contribute.  
 
 These guidelines are designed to make it as easy as possible to get involved. If you have any questions that aren't discussed below, please let us know by opening an [issue][link_issues]!
@@ -7,7 +7,7 @@ These guidelines are designed to make it as easy as possible to get involved. If
 Before you start you'll need to set up a free [GitHub][link_github] account and sign in. Here are some [instructions][link_signupinstructions].
 
 ### Labels
---
+
 The current list of labels are [here][link_labels] and include:
 
 * [![Help Wanted](https://img.shields.io/badge/-help%20wanted-159818.svg)][link_helpwanted] These issues contain a task that a member of the team has determined we need additional help with.
@@ -22,7 +22,7 @@ The current list of labels are [here][link_labels] and include:
     Please try to make sure that your requested feature is distinct from any others that have already been requested or implemented. If you find one that's similar but there are subtle differences please reference the other request in your issue.
 
 ## Make a change
---
+
 We appreciate all contributions to ME-ICA, but those that will be accepted fastest will follow a workflow similar to the following:
 
 **1. Comment on an existing issue or open a new issue referencing your addition.**
@@ -44,10 +44,6 @@ Try to keep the changes focused. If you feel tempted to branch out then please m
 **4. Submit a [pull request][link_pullrequest].**
 
 A member of the development team will review your changes to confirm that they can be merged into the main codebase!
-
-## How to get in touch
---
-If you have a question or a comment please [open an issue][link_issues], so that we can get back to you as quickly as possible!
 
 ## Thank you!
 
