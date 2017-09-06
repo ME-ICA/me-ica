@@ -61,7 +61,8 @@ You're awesome. :wave::smiley:
 [link_helpwanted]: https://github.com/ME-ICA/me-ica/labels/help%20wanted
 [link_requests]: https://github.com/ME-ICA/me-ica/labels/requests
 
-[link_pullrequest]: https://help.github.com/articles/proposing-changes-to-a-project-with-pull-requests/
+[link_pullrequest]: https://help.github.com/articles/creating-a-pull-request/
 [link_fork]: https://help.github.com/articles/fork-a-repo/
 [link_pushpullblog]: https://www.igvita.com/2011/12/19/dont-push-your-pull-requests/
 [link_branches]: https://help.github.com/articles/creating-and-deleting-branches-within-your-repository/
+[link_updateupstreamwiki]: https://help.github.com/articles/syncing-a-fork/
