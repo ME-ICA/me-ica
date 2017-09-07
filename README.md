@@ -58,3 +58,10 @@ http://dx.doi.org/10.1073/pnas.1301725110
 Differentiating BOLD and non-BOLD signals in fMRI time series using
 multi-echo EPI. NeuroImage (2011).
 http://dx.doi.org/10.1016/j.neuroimage.2011.12.028
+
+## Contributors
+
+| [<img src="https://avatars.githubusercontent.com/emdupre?s=100" width="100" alt="Elizabeth DuPre" /><br /><sub>Elizabeth DuPre</sub>](http://emdupre.me)<br />[💻](https://github.com/emdupre/me-ica/commits?author=emdupre) [📖](https://github.com/emdupre/me-ica/commits?author=emdupre) | [<img src="https://avatars.githubusercontent.com/KirstieJane?s=100" width="100" alt="Kirstie Whitaker" /><br /><sub>Kirstie Whitaker</sub>](http://whitakerlab.github.io)<br />[📖]((https://github.com/emdupre/me-ica/commits?author=KirstieJane) |
+| :---: | :---: |
+
+This project follows the [all-contributors](https://github.com/kentcdodds/all-contributors) specification.
