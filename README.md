@@ -45,20 +45,6 @@ order
 - Make sure your datasets have slice timing information in the header. If not sure, specify a `--tpattern` option to `meica.py`. Check AFNI documentation of [3dTshift](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dTshift.html) to see slice timing codes.
 - FWHM smoothing is not recommended. tSNR boost is provided by optimal combination of echoes. For better overlap of 'blobs' across subjects, use non-linear standard space normalization instead with `meica.py ... --qwarp`
 
-## Citations
-
-If you use ME-ICA in publications, please cite:
-
-> Kundu, P., Brenowitz, N.D., Voon, V., Worbe, Y., Vertes, P.E., Inati, S.J.,
-Saad, Z.S., Bandettini, P.A. & Bullmore, E.T. Integrated strategy for
-improving functional connectivity mapping using multiecho fMRI. PNAS (2013).
-http://dx.doi.org/10.1073/pnas.1301725110
-
-> Kundu, P., Inati, S.J., Evans, J.W., Luh, W.M. & Bandettini, P.A.
-Differentiating BOLD and non-BOLD signals in fMRI time series using
-multi-echo EPI. NeuroImage (2011).
-http://dx.doi.org/10.1016/j.neuroimage.2011.12.028
-
 ## Contributors
 
 | [<img src="https://avatars.githubusercontent.com/emdupre?s=100" width="100" alt="Elizabeth DuPre" /><br /><sub>Elizabeth DuPre</sub>](http://emdupre.me)<br />[💻](https://github.com/emdupre/me-ica/commits?author=emdupre) [📖](https://github.com/emdupre/me-ica/commits?author=emdupre) | [<img src="https://avatars.githubusercontent.com/KirstieJane?s=100" width="100" alt="Kirstie Whitaker" /><br /><sub>Kirstie Whitaker</sub>](http://whitakerlab.github.io)<br />[📖](https://github.com/emdupre/me-ica/commits?author=KirstieJane) |
