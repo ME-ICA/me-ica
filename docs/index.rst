@@ -8,7 +8,8 @@
 ME-ICA: Multi-Echo Independent Components Analysis
 ==================================================
 
-ME-ICA is implemented in the ``meica`` pipeline, which handles preprocessing and analysis of multi-echo functional magnetic resonance imaging (fMRI) data.
+The ``meica`` pipeline handles preprocessing and analysis of multi-echo functional magnetic resonance imaging (fMRI) data
+and is distributed as open-source software.
 
 .. image:: https://circleci.com/gh/emdupre/me-ica/tree/py3.svg?style=shield&circle-token=:circle-token
    :target: https://circleci.com/gh/emdupre/me-ica/tree/py3
@@ -17,7 +18,7 @@ ME-ICA is implemented in the ``meica`` pipeline, which handles preprocessing and
    :target: https://opensource.org/licenses/LGPL-2.1
 
 About
-=====
+-----
 
 The ``meica`` pipeline primarily utilizes `AFNI`_ software for standard preprocessing, wrapped in the highly extensible `nipype`_ framework.
 
@@ -25,7 +26,7 @@ The ``meica`` pipeline primarily utilizes `AFNI`_ software for standard preproce
 .. _nipype: http://nipype.readthedocs.io/en/latest/
 
 Citations
-=========
+---------
 
 When using ME-ICA, please include the following citations:
 
@@ -44,7 +45,7 @@ Kundu, P., Inati, S.J., Evans, J.W., Luh, W.M. & Bandettini, P.A.
 .. _Differentiating BOLD and non-BOLD signals in fMRI time series using multi-echo EPI.: http://dx.doi.org/10.1016/j.neuroimage.2011.12.028
 
 License Information
-===================
+-------------------
 
 ME-ICA is licensed under GNU Lesser General Public License version 2.1.
 All trademarks referenced herein are property of their respective holders.
@@ -56,10 +57,12 @@ Copyright |copy| 2011-2017, Prantik Kundu. All rights reserved.
    :maxdepth: 2
    :caption: Contents:
 
+   introduction
+   installation
 
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
