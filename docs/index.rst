@@ -17,14 +17,6 @@ and is distributed as open-source software.
 .. image:: http://img.shields.io/badge/License-LGPL%202.0-blue.svg
    :target: https://opensource.org/licenses/LGPL-2.1
 
-About
------
-
-The ``meica`` pipeline primarily utilizes `AFNI`_ software for standard preprocessing, wrapped in the highly extensible `nipype`_ framework.
-
-.. _AFNI: https://afni.nimh.nih.gov/
-.. _nipype: http://nipype.readthedocs.io/en/latest/
-
 Citations
 ---------
 
@@ -59,6 +51,7 @@ Copyright |copy| 2011-2017, Prantik Kundu. All rights reserved.
 
    introduction
    installation
+   usage
 
 
 Indices and tables
