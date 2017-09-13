@@ -23,9 +23,9 @@ The current list of labels are [here][link_labels] and include:
 
     Please try to make sure that your requested feature is distinct from any others that have already been requested or implemented. If you find one that's similar but there are subtle differences please reference the other request in your issue.
 
-## Make a change
+## Making a change
 
-We appreciate all contributions to ME-ICA, but those that will be accepted fastest will follow a workflow similar to the following:
+We appreciate all contributions to ME-ICA, but those accepted fastest will follow a workflow similar to the following:
 
 **1. Comment on an existing issue or open a new issue referencing your addition.**
 
@@ -47,9 +47,9 @@ Try to keep the changes focused. If you feel tempted to "branch out" then please
 
 A member of the development team will review your changes to confirm that they can be merged into the main codebase.
 
-## Recognizing contributions 
+## Recognizing contributions
 
-ME-ICA follows the [all-contributors][link_allcontributors] specification, so we welcome and recognize all contributions from documentation to testing to code development. 
+ME-ICA follows the [all-contributors][link_allcontributors] specification, so we welcome and recognize all contributions from documentation to testing to code development.
 You can see a list of current contributors in our [README][link_readme].
 
 ## Thank you!
@@ -79,4 +79,4 @@ You're awesome. :wave::smiley:
 [link_updateupstreamwiki]: https://help.github.com/articles/syncing-a-fork/
 [link_allcontributors]: https://github.com/kentcdodds/all-contributors#emoji-key
 [link_stemmrolemodels]: https://github.com/KirstieJane/STEMMRoleModels
-[link_readme]: https://github.com/ME-ICA/me-ica/README.md
+[link_readme]: https://github.com/ME-ICA/me-ica/blob/py3/README.md
