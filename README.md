@@ -21,8 +21,8 @@ https://me-ica.readthedocs.io/
 
 ## Contributors
 
-| [<img src="https://avatars.githubusercontent.com/emdupre?s=100" width="100" alt="Elizabeth DuPre" /><br /><sub>Elizabeth DuPre</sub>](http://emdupre.me)<br />[💻](https://github.com/emdupre/me-ica/commits?author=emdupre) [📖](https://github.com/emdupre/me-ica/commits?author=emdupre) | [<img src="https://github.com/prantikk" width="100" alt="Prantik Kundu" /><br /><sub>Prantik Kundu</sub>](http://www.mountsinai.org/profiles/prantik-kundu)<br />[💻](https://github.com/emdupre/me-ica/commits?author=prantikk) |[<img src="https://avatars.githubusercontent.com/KirstieJane?s=100" width="100" alt="Kirstie Whitaker" /><br /><sub>Kirstie Whitaker</sub>](http://whitakerlab.github.io)<br />[📖](https://github.com/emdupre/me-ica/commits?author=KirstieJane) |
-| :---: | :---: |
+| [<img src="https://avatars.githubusercontent.com/emdupre?s=100" width="100" alt="Elizabeth DuPre" /><br /><sub>Elizabeth DuPre</sub>](http://emdupre.me)<br />[💻](https://github.com/emdupre/me-ica/commits?author=emdupre) [📖](https://github.com/emdupre/me-ica/commits?author=emdupre) | [<img src="https://avatars.githubusercontent.com/prantikk?s=100" width="100" alt="Prantik Kundu" /><br /><sub>Prantik Kundu</sub>](http://www.mountsinai.org/profiles/prantik-kundu)<br />[💻](https://github.com/emdupre/me-ica/commits?author=prantikk) | [<img src="https://avatars.githubusercontent.com/KirstieJane?s=100" width="100" alt="Kirstie Whitaker" /><br /><sub>Kirstie Whitaker</sub>](http://whitakerlab.github.io)<br />[📖](https://github.com/emdupre/me-ica/commits?author=KirstieJane) |
+| :---: | :---: |  :---: |
 
 
 This project follows the [all-contributors](https://github.com/kentcdodds/all-contributors) specification.
