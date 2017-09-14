@@ -6,7 +6,7 @@ ME-ICA minimally requires:
 #. acquired echo times (in milliseconds), and
 #. functional datasets equal to the number of acquired echoes.
 
-But you can supply many other options, viewable with ``meica.py -h``.
+But you can supply many other options, viewable with ``meica -h``.
 
 Command line options
 --------------------
