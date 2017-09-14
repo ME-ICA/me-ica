@@ -484,7 +484,7 @@ def find_CM(fname):
     return cx, cy, cz
 
 
-def get_options(args):
+def get_parser():
     """
     Parses command line inputs
 
@@ -704,7 +704,7 @@ def get_options(args):
                          default=False)
     parser.add_argument_group(runopts)
 
-    return parser.parse_args(args)
+    return parser
 
 
 def gen_script(options):
@@ -1735,8 +1735,10 @@ def gen_script(options):
     return script_list
 
 
-if __name__ == '__main__':
-    options = get_options(sys.argv[1:])
+def main(*args):
+    """
+    """
+    options = get_parser().parse_args(*args)
     script_list = gen_script(options)
 
     setname = get_setname(options.input_ds, options.tes)
@@ -1744,3 +1746,8 @@ if __name__ == '__main__':
 
     with open("_meica_{}.sh".format(setname), 'w') as file:
         file.write("\n".join(script_list))
+
+
+if __name__ == '__main__':
+    raise RuntimeError("meica.py should not be run directly;\n"
+                       "Please `pip install` meica and use the `meica` command")

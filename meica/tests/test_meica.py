@@ -153,8 +153,7 @@ def test_find_CM():
 def test_parser_opts():
     """
     """
-
-    parser = meica.get_options(['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz',
+    parser = meica.get_parser().parse_args(['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz',
                                 '-e', '14.5,38.5,62.5'])
 
     # confirm required inputs are interpreted correctly from argparse
@@ -163,7 +162,7 @@ def test_parser_opts():
 
     # confirm that argparse complains about missing arguments
     with pytest.raises (SystemExit) as err:
-        parser = meica.get_options(['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz'])
+        parser = meica.get_parser().parse_args(['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz'])
         assert err.type == SystemExit
 
 

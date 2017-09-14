@@ -11,7 +11,7 @@ But you can supply many other options, viewable with ``meica.py -h``.
 Command line options
 --------------------
 .. argparse::
-   :ref: meica.get_options(*)
+   :ref: meica.get_parser
    :prog: meica
    :nodefault:
    :nodefaultconst:
