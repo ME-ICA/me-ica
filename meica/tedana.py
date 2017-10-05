@@ -540,7 +540,7 @@ def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=Fal
     sig_B = np.abs(tsoc_B)>np.tile(sig_B,[tsoc_B.shape[0],1])
 
     veinmask = andb([t2s<stats.scoreatpercentile(t2s[t2s != 0],15, interpolation_method='lower'),t2s != 0]) == 2
-    veinmaskf = veinmask[t2s != 0]
+    veinmaskf = veinmask[mask]
     veinR = np.array(sig_B[veinmaskf].sum(0),dtype=float)/sig_B[~veinmaskf].sum(0)
     veinR[np.isnan(veinR)] = 0
 
@@ -556,7 +556,7 @@ def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=Fal
         veinW = sig_B[:,veinc]*np.tile(rej_veinRZ,[sig_B.shape[0],1])
         veincand = fmask(unmask(andb([s0[t2s!=0]<np.median(s0[t2s!=0]),t2s[t2s!=0]<t2sl])>=1,t2s!=0),mask)
         veinW[~veincand]=0
-        invein = veinW.sum(1)[fmask(unmask(veinmaskf,t2s!=0)*unmask(veinW.sum(1)>1,mask),mask)]
+        invein = veinW.sum(1)[fmask(unmask(veinmaskf,mask)*unmask(veinW.sum(1)>1,mask),mask)]
         minW = 10*(np.log10(invein).mean())-1*10**(np.log10(invein).std())
         veinmaskB = veinW.sum(1)>minW
         tsoc_Bp = tsoc_B.copy()
