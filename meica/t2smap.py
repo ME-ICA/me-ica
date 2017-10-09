@@ -1,33 +1,11 @@
 #!/usr/bin/env python
-from __future__ import print_function
-__version__="v3.1 beta1"
-welcome_block="""
-# Multi-Echo ICA, Version %s
-# See http://dx.doi.org/10.1016/j.neuroimage.2011.12.028
-# Kundu, P., Inati, S.J., Evans, J.W., Luh, W.M. & Bandettini, P.A. Differentiating
-#   BOLD and non-BOLD signals in fMRI time series using multi-echo EPI. NeuroImage (2011).
-#
-# Kundu, P., Inati, S.J., Evans, J.W., Luh, W.M. & Bandettini, P.A. Differentiating
-#   BOLD and non-BOLD signals in fMRI time series using multi-echo EPI. NeuroImage (2011).
-# http://dx.doi.org/10.1016/j.neuroimage.2011.12.028
-#
-# t2smap.py version %s  (c) 2014 Prantik Kundu, Noah Brenowitz, Souheil Inati
-#
-#Computes T2* map
-""" % (__version__,__version__)
 
 import os
-from optparse import OptionParser
 import numpy as np
 import nibabel as nib
-from sys import stdout,argv
-
 import scipy.stats as stats
-
-if 'DEBUG' in argv:
-    import ipdb
-    debug_mode = True
-else: debug_mode = False
+from sys import stdout,argv
+from optparse import OptionParser
 
 def scoreatpercentile(a, per, limit=(), interpolation_method='lower'):
     """
@@ -85,7 +63,7 @@ def cat2echos(data,Ne):
         nt = data.shape[3]
     else:
         nt = 1
-    
+
     nx = round(nx)
     ny = round(ny)
     nz = round(nz)
@@ -265,8 +243,6 @@ def t2sadmap(catd,mask,tes):
         fl[:,:,:,ne] = fl_
     fl = np.array(fl,dtype=bool)
 
-    if debug_mode : ipdb.set_trace()
-
     t2sa = unmask(t2ss[fl],masksum>1)
     s0va = unmask(s0vs[fl],masksum>1)
 
@@ -307,9 +283,6 @@ def optcom(data,t2s,tes,mask):
     print('Out shape is ', out.shape)
     return out
 
-###################################################################################################
-#                       Begin Main
-###################################################################################################
 
 if __name__=='__main__':
 
@@ -320,8 +293,6 @@ if __name__=='__main__':
     parser.add_option('-e',"--TEs",dest='tes',help="Echo times (in ms) ex: 15,39,63",default=None)
 
     (options,args) = parser.parse_args()
-
-    print("-- T2* Map Component for ME-ICA %s --" % (__version__))
 
     if options.tes==None or options.data==None:
         print("*+ Need at least data and TEs, use -h for help.")

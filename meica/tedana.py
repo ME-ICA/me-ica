@@ -272,8 +272,6 @@ def fitgaussian(data):
 
 def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=False,savecsdiag=True,group0_only=False,strict_mode=False):
 
-    selmodelversion='fft20e.062517'
-
     import numpy.fft as fft
     from sklearn.cluster import DBSCAN
 
@@ -604,7 +602,7 @@ def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs='',filecsdata=Fal
         orphan = np.setdiff1d(nc,list(ncl)+list(to_ign)+list(midk)+list(rej))
 
     if savecsdiag:
-        diagstepkeys=['selmodelversion','rej','KRcut','Kcut','Rcut','dbscanfailed','KRguess','group0','dice_rej','rej_supp','to_clf','midk', 'svm_acc_fail', 'toacc_hi','toacc_lo','field_art','phys_art','misc_art','ncl','ign']
+        diagstepkeys=['rej','KRcut','Kcut','Rcut','dbscanfailed','KRguess','group0','dice_rej','rej_supp','to_clf','midk', 'svm_acc_fail', 'toacc_hi','toacc_lo','field_art','phys_art','misc_art','ncl','ign']
         diagstepout=[]
         for ddk in diagstepkeys: diagstepout.append("%s: %s" %  (ddk,eval('str(%s)' % ddk) ) )
         with open('csstepdata.txt','w') as ofh:
@@ -1204,6 +1202,8 @@ def tedica(dd,cost):
     import mdp
     climit = float("%s" % options.conv)
     #icanode = mdp.nodes.FastICANode(white_comp=nc, white_parm={'svd':True},approach='symm', g=cost, fine_g=options.finalcost, limit=climit, verbose=True)
+    fixed_seed = 42
+    mdp.numx_rand.seed(fixed_seed)
     icanode = mdp.nodes.FastICANode(white_comp=nc,approach='symm', g=cost, fine_g=options.finalcost, coarse_limit=climit*100, limit=climit, verbose=True)
     icanode.train(dd)
     smaps = icanode.execute(dd)
@@ -1480,10 +1480,6 @@ def ctabsel(ctabfile):
     return tuple([np.array(class_dict[kk],dtype=int) for kk in class_tags])
 
 
-###################################################################################################
-#                       Begin Main
-###################################################################################################
-
 if __name__=='__main__':
 
     parser=OptionParser()
@@ -1509,7 +1505,7 @@ if __name__=='__main__':
     parser.add_option('',"--label",dest='label',help="Label for output directory.",default=None)
 
     (options,args) = parser.parse_args()
-    args = list(set(args) - set(['DEBUG']))
+    args = list(set(args))
 
     print("-- ME-PCA/ME-ICA Component for ME-ICA--")
 

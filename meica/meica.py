@@ -360,6 +360,7 @@ def format_inset(inset, tes, e=2):
 
     return dsname, setname
 
+
 def get_dsname(inset, tes, e):
     """
     Return the filename for the specified echo.
