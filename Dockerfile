@@ -90,38 +90,30 @@ RUN echo "Downloading Miniconda installer ..." \
     && conda update -y -q --all && sync \
     && conda clean -tipsy && sync
 
-#-------------------------
-# Create conda environment
-#-------------------------
+#-----------------------------
+# Create py3 conda environment
+#-----------------------------
 RUN conda create -y -q --name default --channel vida-nyu python=3.6.1 \
     	numpy pandas reprozip traits \
     && sync && conda clean -tipsy && sync \
     && /bin/bash -c "source activate default \
     	&& pip install -q --no-cache-dir \
-    	nipype ipython sklearn mdp" \
+    	nipype ipython sklearn scipy ipdb mdp" \
     && sync
 ENV PATH=/opt/conda/envs/default/bin:$PATH
 
-#-------------------------
-# Create conda environment
-#-------------------------
+#------------------------------
+# Create py27 conda environment
+#------------------------------
 RUN conda create -y -q --name py27 python=2.7 \
     numpy pandas reprozip traits \
     && sync && conda clean -tipsy && sync \
     && /bin/bash -c "source activate default \
         && pip install -q --no-cache-dir \
-        nipype ipython sklearn mdp" \
+        nipype ipython sklearn scipy ipdb mdp" \
     && sync
 
 USER root
-
-#----------------
-# Install MRtrix3
-#----------------
-RUN echo "Downloading MRtrix3 ..." \
-    && curl -sSL --retry 5 https://dl.dropbox.com/s/2g008aaaeht3m45/mrtrix3-Linux-centos6.tar.gz \
-    | tar zx -C /opt
-ENV PATH=/opt/mrtrix3/bin:$PATH
 
 # User-defined instruction
 RUN mkdir /home/neuro/code
