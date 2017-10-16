@@ -681,7 +681,6 @@ def cat2echos(data,Ne):
         nt = data.shape[3]
     else:
         nt = 1
-
     return np.reshape(data,(nx,ny,nz,Ne,nt),order='F')
 
 
@@ -1355,11 +1354,11 @@ def gscontrol_raw(OCcatd, dtrank=4):
     niwrite(OCcatd,aff,'tsoc_nogs.nii',head)
 
     #Project glbase out of each echo
-    for ii in range(Ne):
-        dat = catd[:,:,:,ii,:][Gmask]
-        sol = np.linalg.lstsq(np.atleast_2d(glbase),dat.T)
-        e_nogs = dat - np.dot(np.atleast_2d(sol[0][dtrank]).T,np.atleast_2d(glbase.T[dtrank]))
-        catd[:,:,:,ii,:] = unmask(e_nogs,Gmask)
+    # for ii in range(Ne):
+    #     dat = catd[:,:,:,ii,:][Gmask]
+    #     sol = np.linalg.lstsq(np.atleast_2d(glbase),dat.T)
+    #     e_nogs = dat - np.dot(np.atleast_2d(sol[0][dtrank]).T,np.atleast_2d(glbase.T[dtrank]))
+    #     catd[:,:,:,ii,:] = unmask(e_nogs,Gmask)
 
 
 def gscontrol_mmix():
@@ -1517,6 +1516,7 @@ if __name__=='__main__':
     tes = np.fromstring(options.tes,sep=',',dtype=np.float32)
     ne = tes.shape[0]
     catim  = nib.load(options.data)
+
     head   = catim.get_header()
     head.extensions = []
     head.set_sform(head.get_sform(),code=1)
@@ -1570,6 +1570,7 @@ if __name__=='__main__':
         print("++ Doing ME-PCA and ME-ICA")
 
         nc,dd = tedpca(options.ste)
+
         mmix_orig = tedica(dd,cost=options.initcost)
         np.savetxt('__meica_mix.1D',mmix_orig)
         seldict,comptable,betas,mmix = fitmodels_direct(catd,mmix_orig,mask,t2s,tes,options.fout,reindex=True)
