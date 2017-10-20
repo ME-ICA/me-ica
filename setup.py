@@ -16,5 +16,8 @@ setup(
     maintainer_email='emd222@cornell.edu',
     install_requires=requirements,
     packages=['meica'],
+    entry_points={'console_scripts': [
+        'meica=meica.meica:main'
+    ]},
     license='LGPLv2+',
     **extra_setuptools_args)
