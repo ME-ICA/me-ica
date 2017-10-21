@@ -1202,7 +1202,7 @@ def tedica(nc, dd, conv, fixed_seed, cost, final_cost):
     return mmix
 
 
-def write_split_ts(data,comptable,mmix,suffix=''):
+def write_split_ts(data,comptable,mmix, acc, rej, midk,suffix=''):
     mdata = fmask(data,mask)
     betas = fmask(get_coeffs(unmask((mdata.T-mdata.T.mean(0)).T,mask),mask,mmix),mask)
     dmdata = mdata.T-mdata.T.mean(0)
@@ -1220,7 +1220,7 @@ def write_split_ts(data,comptable,mmix,suffix=''):
     return varexpl
 
 
-def split_ts(data,comptable,mmix):
+def split_ts(data,comptable,mmix, acc, rej, midk):
     cbetas = get_coeffs(data-data.mean(-1)[:,:,:,np.newaxis],mask,mmix)
     betas = fmask(cbetas,mask)
     if len(acc)!=0:
@@ -1239,7 +1239,7 @@ def writefeats(cbetas,comptable,mmix,suffix=''):
     edm = fmask(catd[:,:,:,e2d-1,:],mask)
     edms = edm/edm.std(-1)[:,np.newaxis]
     edms[edm<1]=0
-    hik,noise = split_ts(unmask(edms,mask),comptable,mmix)
+    hik,noise = split_ts(unmask(edms,mask),comptable,mmix,acc, rej, midk)
     noise = noise-noise.mean(-1)[:,:,:,np.newaxis]
 
     zfac = 1./(mmix.shape[0]-len(acc)-1)*(noise**2).sum(-1) #noise scaling
@@ -1274,9 +1274,7 @@ def writefeats2(data,mmix,mask,suffix=''):
     niwrite(unmask(feats,mask),aff,'_'.join(['feats',suffix])+'.nii')
 
 
-def writect(comptable,ctname='',varexpl='-1',classarr=[], nt):
-    if len(classarr)!=0:
-        acc,rej,midk,empty = classarr
+def writect(comptable, nt, acc, rej, midk, empty, ctname='', varexpl='-1'):
     nc = comptable.shape[0]
     sortab = comptable[comptable[:,1].argsort()[::-1],:]
     if ctname=='': ctname = 'comp_table.txt'
@@ -1351,7 +1349,7 @@ def gscontrol_raw(OCcatd,dtrank=4):
     #     catd[:,:,:,ii,:] = unmask(e_nogs,Gmask)
 
 
-def gscontrol_mmix():
+def gscontrol_mmix(mmix, acc, rej, midk, empty):
 
     Gmu = OCcatd.mean(-1)
     Gstd = OCcatd.std(-1)
@@ -1435,27 +1433,27 @@ def dwtcatd():
     newcatd = unmask(trans_mask_catd,stackmask)
 
 
-def writeresults(comptable, mmix, nt):
+def writeresults(comptable, mmix, nt, acc, rej, midk, empty):
     print("++ Writing optimally combined time series")
     ts = OCcatd
     niwrite(ts,aff,'ts_OC.nii')
     print("++ Writing Kappa-filtered optimally combined timeseries")
-    varexpl = write_split_ts(ts,comptable,mmix,'OC')
+    varexpl = write_split_ts(ts,comptable,mmix,acc, rej, midk, 'OC')
     print("++ Writing signal versions of components")
     ts_B = get_coeffs(ts,mask,mmix)
     niwrite(ts_B[:,:,:,:],aff,'_'.join(['betas','OC'])+'.nii')
     if len(acc)!=0:
         niwrite(ts_B[:,:,:,acc],aff,'_'.join(['betas_hik','OC'])+'.nii')
         print("++ Writing optimally combined high-Kappa features")
-        writefeats2(split_ts(ts,comptable,mmix)[0],mmix[:,acc],mask,'OC2')
+        writefeats2(split_ts(ts,comptable,mmix,acc, rej, midk)[0],mmix[:,acc],mask,'OC2')
     print("++ Writing component table")
-    writect(comptable,'comp_table.txt',varexpl, nt)
+    writect(comptable, nt, acc, rej, midk, empty, ctname='comp_table.txt',varexpl=varexpl)
 
 
-def writeresults_echoes():
+def writeresults_echoes(acc, rej, midk):
     for ii in range(ne):
         print("++ Writing Kappa-filtered TE#%i timeseries" % (ii+1))
-        write_split_ts(catd[:,:,:,ii,:],comptable,mmix,'e%i' % (ii+1))
+        write_split_ts(catd[:,:,:,ii,:],comptable, mmix,acc, rej, midk, 'e%i' % (ii+1))
 
 
 def ctabsel(ctabfile):
@@ -1661,7 +1659,6 @@ def main(*args):
         if 'GROUP0' in sys.argv:
             group0_flag = True
         else: group0_flag = False
-        global acc, rej, midk
         acc,rej,midk,empty = selcomps(seldict,mmix,knobargs=options,group0_only=group0_flag,strict_mode=options.strict)
         del dd
     else:
@@ -1677,9 +1674,9 @@ def main(*args):
     if len(acc)==0:
         print("\n** WARNING! No BOLD components detected!!! Please check data and results!\n")
 
-    writeresults(comptable, mmix, nt)
-    gscontrol_mmix()
-    if options.dne: writeresults_echoes()
+    writeresults(comptable, mmix, nt, acc, rej, midk, empty)
+    gscontrol_mmix(mmix, acc, rej, midk, empty)
+    if options.dne: writeresults_echoes(acc, rej, midk)
 
 if __name__=='__main__':
     main()
