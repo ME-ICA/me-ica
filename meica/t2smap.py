@@ -1,213 +1,22 @@
 #!/usr/bin/env python
-
-import os
+import argparse
 import numpy as np
 import nibabel as nib
-import scipy.stats as stats
-from sys import stdout,argv
-from optparse import OptionParser
+from meica.utils import (niwrite, cat2echos,
+                         uncat2echos, makeadmask,
+                         fmask, unmask)
 
-def scoreatpercentile(a, per, limit=(), interpolation_method='lower'):
+
+def t2sadmap(catd,mask,tes,masksum,start_echo):
     """
-    This function is grabbed from scipy
-
-    """
-    values = np.sort(a, axis=0)
-    if limit:
-        values = values[(limit[0] <= values) & (values <= limit[1])]
-
-    idx = per /100. * (values.shape[0] - 1)
-    if (idx % 1 == 0):
-        score = values[idx]
-    else:
-        if interpolation_method == 'fraction':
-            score = _interpolate(values[int(idx)], values[int(idx) + 1],
-                                 idx % 1)
-        elif interpolation_method == 'lower':
-            score = values[np.floor(idx)]
-        elif interpolation_method == 'higher':
-            score = values[np.ceil(idx)]
-        else:
-            raise ValueError("interpolation_method can only be 'fraction', " \
-                             "'lower' or 'higher'")
-    return score
-
-def niwrite(data,affine, name , header=None):
-    data[np.isnan(data)]=0
-    stdout.write(" + Writing file: %s ...." % name)
-
-    thishead = header
-    if thishead == None:
-        thishead = head.copy()
-        thishead.set_data_shape(list(data.shape))
-
-    outni = nib.Nifti1Image(data,affine,header=thishead)
-    outni.set_data_dtype('float64')
-    outni.to_filename(name)
-
-
-    print('done.')
-
-    return outni
-
-def cat2echos(data,Ne):
-    """
-    cat2echos(data,Ne)
-
-    Input:
-    data shape is (nx,ny,Ne*nz,nt)
-    """
-    nx,ny = data.shape[0:2]
-    nz = data.shape[2]/Ne
-    if len(data.shape) >3:
-        nt = data.shape[3]
-    else:
-        nt = 1
-
-    nx = round(nx)
-    ny = round(ny)
-    nz = round(nz)
-    Ne = round(Ne)
-    nt = round(nt)
-
-    return np.reshape(data,(nx,ny,nz,Ne,nt),order='F')
-
-def uncat2echos(data,Ne):
-    """
-    uncat2echos(data,Ne)
-
-    Input:
-    data shape is (nx,ny,Ne,nz,nt)
-    """
-    nx,ny = data.shape[0:2]
-    nz = data.shape[2]*Ne
-    if len(data.shape) >4:
-        nt = data.shape[4]
-    else:
-        nt = 1
-    return np.reshape(data,(nx,ny,nz,nt),order='F')
-
-def makemask(cdat,min=True,getsum=False):
-
-    nx,ny,nz,Ne,nt = cdat.shape
-
-    mask = np.ones((nx,ny,nz),dtype=np.bool)
-
-    if min:
-        mask = cdat[:,:,:,:,:].prod(axis=-1).prod(-1)!=0
-        return mask
-    else:
-        #Make a map of longest echo that a voxel can be sampled with,
-        #with minimum value of map as X value of voxel that has median
-        #value in the 1st echo. N.b. larger factor leads to bias to lower TEs
-        emeans = cdat[:,:,:,:,:].mean(-1)
-        medv = emeans[:,:,:,0] == stats.scoreatpercentile(emeans[:,:,:,0][emeans[:,:,:,0]!=0],33,interpolation_method='higher')
-        lthrs = np.squeeze(np.array([ emeans[:,:,:,ee][medv]/3 for ee in range(Ne) ]))
-
-        if len(lthrs.shape)==1: lthrs = np.atleast_2d(lthrs).T
-        lthrs = lthrs[:,lthrs.sum(0).argmax()]
-
-        mthr = np.ones([nx,ny,nz,ne])
-        for ee in range(Ne): mthr[:,:,:,ee]*=lthrs[ee]
-        mthr = np.abs(emeans[:,:,:,:])>mthr
-        masksum = np.array(mthr,dtype=np.int).sum(-1)
-        mask = masksum!=0
-        if getsum: return mask,masksum
-        else: return mask
-
-def fmask(data,mask):
-    """
-    fmask(data,mask)
-
-    Input:
-    data shape is (nx,ny,nz,...)
-    mask shape is (nx,ny,nz)
-
-    Output:
-    out shape is (Nm,...)
-    """
-
-    s = data.shape
-    sm = mask.shape
-
-    N = s[0]*s[1]*s[2]
-    news = []
-    news.append(N)
-
-    if len(s) >3:
-        news.extend(s[3:])
-
-    tmp1 = np.reshape(data,news)
-    fdata = tmp1.compress((mask > 0 ).ravel(),axis=0)
-
-    return fdata.squeeze()
-
-def unmask (data,mask):
-    """
-    unmask (data,mask)
-
-    Input:
-
-    data has shape (Nm,nt)
-    mask has shape (nx,ny,nz)
-
-    """
-    M = (mask != 0).ravel()
-    Nm = M.sum()
-
-    nx,ny,nz = mask.shape
-
-    if len(data.shape) > 1:
-        nt = data.shape[1]
-    else:
-        nt = 1
-
-    out = np.zeros((nx*ny*nz,nt),dtype=data.dtype)
-    out[M,:] = np.reshape(data,(Nm,nt))
-
-    return np.reshape(out,(nx,ny,nz,nt))
-
-def t2smap(catd,mask,tes):
-    """
-    t2smap(catd,mask,tes)
+    t2sadmap(catd,mask,tes,masksum)
 
     Input:
 
     catd  has shape (nx,ny,nz,Ne,nt)
     mask  has shape (nx,ny,nz)
     tes   is a 1d numpy array
-    """
-    nx,ny,nz,Ne,nt = catd.shape
-    N = nx*ny*nz
-
-    echodata = fmask(catd,mask)
-    Nm = echodata.shape[0]
-
-    #Do Log Linear fit
-    B = np.reshape(np.abs(echodata)+1, (Nm,Ne*nt)).transpose()
-    B = np.log(B)
-    x = np.array([np.ones(Ne),-tes])
-    X = np.tile(x,(1,nt))
-    X = np.sort(X)[:,::-1].transpose()
-
-    beta,res,rank,sing = np.linalg.lstsq(X,B)
-    t2s = 1/beta[1,:].transpose()
-    s0  = np.exp(beta[0,:]).transpose()
-
-    out = unmask(t2s,mask),unmask(s0,mask)
-    out[0][np.isnan(out[0])]=0.
-
-    return out
-
-def t2sadmap(catd,mask,tes):
-    """
-    t2smap(catd,mask,tes)
-
-    Input:
-
-    catd  has shape (nx,ny,nz,Ne,nt)
-    mask  has shape (nx,ny,nz)
-    tes   is a 1d numpy array
+    masksum
     """
     nx,ny,nz,Ne,nt = catd.shape
     N = nx*ny*nz
@@ -218,11 +27,13 @@ def t2sadmap(catd,mask,tes):
     t2ss = np.zeros([nx,ny,nz,Ne-1])
     s0vs = np.zeros([nx,ny,nz,Ne-1])
 
-    for ne in range(2,Ne+1):
+    for ne in range(start_echo,Ne+1):
+
         #Do Log Linear fit
         B = np.reshape(np.abs(echodata[:,:ne])+1, (Nm,(ne)*nt)).transpose()
         B = np.log(B)
-        x = np.array([np.ones(ne),-tes[:ne] ])
+        neg_tes = [-1 * te for te in tes[:ne]]
+        x = np.array([np.ones(ne),neg_tes])
         X = np.tile(x,(1,nt))
         X = np.sort(X)[:,::-1].transpose()
 
@@ -236,19 +47,25 @@ def t2sadmap(catd,mask,tes):
         t2ss[:,:,:,ne-2] = np.squeeze(unmask(t2s,mask))
         s0vs[:,:,:,ne-2] = np.squeeze(unmask(s0,mask))
 
+    #Limited T2* and S0 maps
     fl = np.zeros([nx,ny,nz,len(tes)-2+1])
     for ne in range(Ne-1):
         fl_ = np.squeeze(fl[:,:,:,ne])
         fl_[masksum==ne+2] = True
         fl[:,:,:,ne] = fl_
     fl = np.array(fl,dtype=bool)
+    t2sa = np.squeeze(unmask(t2ss[fl],masksum>1))
+    s0va = np.squeeze(unmask(s0vs[fl],masksum>1))
 
-    t2sa = unmask(t2ss[fl],masksum>1)
-    s0va = unmask(s0vs[fl],masksum>1)
+    #Full T2* maps with S0 estimation errors
+    t2saf = t2sa.copy()
+    s0vaf = s0va.copy()
+    t2saf[masksum==1] = t2ss[masksum==1,0]
+    s0vaf[masksum==1] = s0vs[masksum==1,0]
 
-    return t2sa,s0va,t2ss,s0vs
+    return t2sa,s0va,t2ss,s0vs,t2saf,s0vaf
 
-def optcom(data,t2s,tes,mask):
+def optcom(data,t2,tes,mask,combmode,useG=False):
     """
     out = optcom(data,t2s)
 
@@ -257,7 +74,7 @@ def optcom(data,t2s,tes,mask):
 
     data.shape = (nx,ny,nz,Ne,Nt)
     t2s.shape  = (nx,ny,nz)
-    tes.shape  = (Ne,)
+    tes.shape  = len(Ne)
 
     Output:
 
@@ -265,13 +82,19 @@ def optcom(data,t2s,tes,mask):
     """
     nx,ny,nz,Ne,Nt = data.shape
 
-    fdat = fmask(data,mask)
-    ft2s = fmask(t2s,mask)
+    if useG:
+        fdat = fmask(data,mask)
+        ft2s = fmask(t2,mask)
 
+    else:
+        fdat = fmask(data,mask)
+        ft2s = fmask(t2,mask)
+
+    tes = np.array(tes)
     tes = tes[np.newaxis,:]
     ft2s = ft2s[:,np.newaxis]
 
-    if options.combmode == 'ste':
+    if combmode == 'ste':
         alpha = fdat.mean(-1)*tes
     else:
         alpha = tes * np.exp(-tes /ft2s)
@@ -283,30 +106,48 @@ def optcom(data,t2s,tes,mask):
     print('Out shape is ', out.shape)
     return out
 
+def get_parser():
+    """
+    Parses command line inputs for t2smap
+    Returns
+    -------
+    parser.parse_args() : argparse dic
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_option('-d',
+                      nargs='+',
+                      dest='data',
+                      help="Spatially Concatenated Multi-Echo Dataset",
+                      required=True)
+    parser.add_option('-e',
+                      nargs='+',
+                      dest='tes',
+                      help="Echo times (in ms) ex: 15,39,63",
+                      required=True)
+    parser.add_option('-c',
+                      dest='combmode',
+                      help="Combination scheme for TEs: t2s (Posse 1999),ste(Poser,2006 default)",
+                      default='ste')
+    parser.add_option('-l',
+                      dest='label',
+                      help="Optional label to tag output files with",
+                      default=None)
+    return parser
 
-if __name__=='__main__':
 
-    parser=OptionParser()
-    parser.add_option('-d',"--orig_data",dest='data',help="Spatially Concatenated Multi-Echo Dataset",default=None)
-    parser.add_option('-c',"--combmode",dest='combmode',help="Combination scheme for TEs: t2s (Posse 1999),ste(Poser,2006 default)",default='ste')
-    parser.add_option('-l',"--label",dest='label',help="Optional label to tag output files with",default=None)
-    parser.add_option('-e',"--TEs",dest='tes',help="Echo times (in ms) ex: 15,39,63",default=None)
-
-    (options,args) = parser.parse_args()
-
-    if options.tes==None or options.data==None:
-        print("*+ Need at least data and TEs, use -h for help.")
-        sys.exit()
+def main():
+    """
+    """
+    options = get_parser().parse_args(*args)
 
     if options.label!=None:
         suf='_%s' % str(options.label)
     else:
         suf=''
 
-    print("++ Loading Data")
-    tes = np.fromstring(options.tes,sep=',',dtype=np.float32)
-    ne = tes.shape[0]
-    catim  = nib.load(options.data)
+    tes = [float(te) for te in options.tes]
+    ne = len(tes)
+    catim  = nib.load(options.data[0])
     head   = catim.get_header()
     head.extensions = []
     head.set_sform(head.get_sform(),code=1)
@@ -317,16 +158,21 @@ if __name__=='__main__':
     sig  = catd.std(axis=-1)
 
     print("++ Computing Mask")
-    mask,masksum  = makemask(catd,min=False,getsum=True)
+    mask,masksum  = makeadmask(catd,min=False,getsum=True)
 
     print("++ Computing Adaptive T2* map")
-    t2s,s0,t2ss,s0vs   = t2sadmap(catd,mask,tes)
+    t2s,s0,t2ss,s0vs,t2saf,s0vaf  = t2sadmap(catd,mask,tes,masksum,2)
     niwrite(masksum,aff,'masksum%s.nii' % suf )
     niwrite(t2ss,aff,'t2ss%s.nii' % suf )
     niwrite(s0vs,aff,'s0vs%s.nii' % suf )
 
     print("++ Computing optimal combination")
-    tsoc = np.array(optcom(catd,t2s,tes,mask),dtype=float)
+    tsoc = np.array(optcom(catd,
+                           t2s,
+                           tes,
+                           mask,
+                           options.combmode),
+                    dtype=float)
 
     #Clean up numerical errors
     t2sm = t2s.copy()
@@ -342,3 +188,6 @@ if __name__=='__main__':
     niwrite(s0,aff,'s0v%s.nii' % suf)
     niwrite(t2s,aff,'t2sv%s.nii' % suf )
     niwrite(t2sm,aff,'t2svm%s.nii' % suf )
+
+if __name__=='__main__':
+    main()
