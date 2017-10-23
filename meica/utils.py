@@ -1,19 +1,7 @@
 import numpy as np
 import nibabel as nib
+from scipy.optimize import leastsq
 from scipy.stats import scoreatpercentile
-
-
-def niwrite(data, affine, name, head, header=None):
-    data[np.isnan(data)]=0
-    if header == None:
-        this_header = head.copy()
-        this_header.set_data_shape(list(data.shape))
-    else:
-        this_header = header
-
-    outni = nib.Nifti1Image(data,affine,header=this_header)
-    outni.set_data_dtype('float64')
-    outni.to_filename(name)
 
 
 def cat2echos(data,Ne):
@@ -145,3 +133,62 @@ def unmask (data,mask):
     out[M,:] = np.reshape(data,(Nm,nt))
 
     return np.squeeze(np.reshape(out,(nx,ny,nz,nt)))
+
+def moments(data):
+    """
+    Returns the gaussian parameters of a 2D
+    distribution by calculating its moments.
+
+    REF_
+    .. _REF: http://scipy-cookbook.readthedocs.io/items/FittingData.html
+    """
+    total = data.sum()
+    X, Y = np.indices(data.shape)
+    center_x = (X*data).sum()/total
+    center_y = (Y*data).sum()/total
+    col = data[:, int(center_y)]
+    width_x = np.sqrt(abs((np.arange(col.size)-center_y)**2*col).sum()/col.sum())
+    row = data[int(center_x), :]
+    width_y = np.sqrt(abs((np.arange(row.size)-center_x)**2*row).sum()/row.sum())
+    height = data.max()
+    return height, center_x, center_y, width_x, width_y
+
+
+def gaussian(height, center_x, center_y,
+             width_x, width_y):
+    """
+    Returns a gaussian function with the given parameters
+
+    REF_
+    .. _REF: http://scipy-cookbook.readthedocs.io/items/FittingData.html
+    """
+    width_x = float(width_x)
+    width_y = float(width_y)
+    return lambda x,y: height*np.exp(-(((center_x-x)/width_x)**2+((center_y-y)/width_y)**2)/2)
+
+
+def fitgaussian(data):
+    """
+    Returns (height, x, y, width_x, width_y)
+    the gaussian parameters of a 2D distribution found by a fit
+
+    REF_
+    .. _REF: http://scipy-cookbook.readthedocs.io/items/FittingData.html
+    """
+    params = moments(data)
+    errorfunction = lambda p, data: np.ravel(gaussian(*p)(*np.indices(data.shape)) - data)
+    (p, success) = leastsq(errorfunction, params, data)
+    return p
+
+
+def niwrite(data, affine, name, head, header=None):
+    data[np.isnan(data)]=0
+    if header == None:
+        this_header = head.copy()
+        this_header.set_data_shape(list(data.shape))
+    else:
+        this_header = header
+
+    outni = nib.Nifti1Image(data,affine,header=this_header)
+    outni.set_data_dtype('float64')
+    outni.to_filename(name)
