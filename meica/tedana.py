@@ -68,10 +68,10 @@ def do_svm(X_train, y_train, X_test, svmtype=0):
     else:
         raise ValueError('Input svmtype not in range (3)')
 
-    clf.fit(train_set, train_labs)
-    pred_labels = clf.predict(test_set)
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
 
-    return pred_labels, clf
+    return y_pred, clf
 
 
 def spatclust(data, mask, csize, thr, header, aff, infile=None, dindex=0,
