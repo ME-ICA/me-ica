@@ -1,23 +1,27 @@
+"""Utilities for meica package.
+"""
 import numpy as np
 import nibabel as nib
 from scipy.optimize import leastsq
 from scipy.stats import scoreatpercentile
 
+from meica.due import due, BibTeX
 
-def cat2echos(data,Ne):
+
+def cat2echos(data, Ne):
     """
     cat2echos(data,Ne)
 
     Input:
     data shape is (nx,ny,Ne*nz,nt)
     """
-    nx,ny = data.shape[0:2]
-    nz = data.shape[2]//Ne
-    if len(data.shape) >3:
+    nx, ny = data.shape[0:2]
+    nz = data.shape[2] // Ne
+    if len(data.shape) > 3:
         nt = data.shape[3]
     else:
         nt = 1
-    return np.reshape(data,(nx,ny,nz,Ne,nt),order='F')
+    return np.reshape(data, (nx, ny, nz, Ne, nt), order='F')
 
 
 def uncat2echos(data,Ne):
@@ -27,61 +31,72 @@ def uncat2echos(data,Ne):
     Input:
     data shape is (nx,ny,Ne,nz,nt)
     """
-    nx,ny = data.shape[0:2]
+    nx, ny = data.shape[0:2]
     nz = data.shape[2]*Ne
-    if len(data.shape) >4:
+    if len(data.shape) > 4:
         nt = data.shape[4]
     else:
         nt = 1
-    return np.reshape(data,(nx,ny,nz,nt),order='F')
+    return np.reshape(data, (nx, ny, nz, nt), order='F')
 
 
 def makemask(cdat):
+    """
+    Create a mask.
+    """
+    nx, ny, nz, Ne, nt = cdat.shape
 
-    nx,ny,nz,Ne,nt = cdat.shape
-
-    mask = np.ones((nx,ny,nz),dtype=np.bool)
+    mask = np.ones((nx, ny, nz), dtype=np.bool)
 
     for i in range(Ne):
-        tmpmask = (cdat[:,:,:,i,:] != 0).prod(axis=-1,dtype=np.bool)
+        tmpmask = (cdat[:, :, :, i, :] != 0).prod(axis=-1, dtype=np.bool)
         mask = mask & tmpmask
 
     return mask
 
 
-def makeadmask(cdat,min=True,getsum=False):
+def makeadmask(cdat, min=True, getsum=False):
+    """
+    Create a mask.
 
-    nx,ny,nz,Ne,nt = cdat.shape
+    NOTES:
+      - Need to change arg `min` to non-built-in.
+      - Is `cdat[:, :, :, :, :]` necessary? Why not just `cdat`?
+    """
+    #nx, ny, nz, Ne, nt = cdat.shape  # nt was unused
+    nx, ny, nz, Ne, _ = cdat.shape
 
-    mask = np.ones((nx,ny,nz),dtype=np.bool)
+    mask = np.ones((nx, ny, nz), dtype=np.bool)
 
     if min:
-        mask = cdat[:,:,:,:,:].prod(axis=-1).prod(-1)!=0
+        mask = cdat[:, :, :, :, :].prod(axis=-1).prod(-1) != 0
         return mask
     else:
         #Make a map of longest echo that a voxel can be sampled with,
         #with minimum value of map as X value of voxel that has median
         #value in the 1st echo. N.b. larger factor leads to bias to lower TEs
-        emeans = cdat[:,:,:,:,:].mean(-1)
-        medv = emeans[:,:,:,0] == scoreatpercentile(emeans[:,:,:,0][emeans[:,:,:,0]!=0],33,interpolation_method='higher')
-        lthrs = np.squeeze(np.array([ emeans[:,:,:,ee][medv]/3 for ee in range(Ne) ]))
+        emeans = cdat[:, :, :, :, :].mean(-1)
+        medv = emeans[:, :, :, 0] == scoreatpercentile(emeans[:, :, :, 0][emeans[:, :, :, 0] != 0],
+                                                       33, interpolation_method='higher')
+        lthrs = np.squeeze(np.array([emeans[:, :, :, ee][medv] / 3 for ee in range(Ne)]))
 
-        if len(lthrs.shape)==1:
+        if len(lthrs.shape) == 1:
             lthrs = np.atleast_2d(lthrs).T
-        lthrs = lthrs[:,lthrs.sum(0).argmax()]
+        lthrs = lthrs[:, lthrs.sum(0).argmax()]
 
-        mthr = np.ones([nx,ny,nz,Ne])
-        for ee in range(Ne): mthr[:,:,:,ee]*=lthrs[ee]
-        mthr = np.abs(emeans[:,:,:,:])>mthr
-        masksum = np.array(mthr,dtype=np.int).sum(-1)
-        mask = masksum!=0
+        mthr = np.ones([nx, ny, nz, Ne])
+        for i_echo in range(Ne):
+            mthr[:, :, :, i_echo] *= lthrs[i_echo]
+        mthr = np.abs(emeans[:, :, :, :]) > mthr
+        masksum = np.array(mthr, dtype=np.int).sum(-1)
+        mask = masksum != 0
         if getsum:
-            return mask,masksum
+            return mask, masksum
         else:
             return mask
 
 
-def fmask(data,mask):
+def fmask(data, mask):
     """
     fmask(data,mask)
 
@@ -94,22 +109,22 @@ def fmask(data,mask):
     """
 
     s = data.shape
-    sm = mask.shape
+    #sm = mask.shape  # unused
 
-    N = s[0]*s[1]*s[2]
+    N = s[0] * s[1] * s[2]
     news = []
     news.append(N)
 
-    if len(s) >3:
+    if len(s) > 3:
         news.extend(s[3:])
 
-    tmp1 = np.reshape(data,news)
-    fdata = tmp1.compress((mask > 0 ).ravel(),axis=0)
+    tmp1 = np.reshape(data, news)
+    fdata = tmp1.compress((mask > 0).ravel(), axis=0)
 
     return fdata.squeeze()
 
 
-def unmask (data,mask):
+def unmask (data, mask):
     """
     unmask (data,mask)
 
@@ -122,17 +137,17 @@ def unmask (data,mask):
     M = (mask != 0).ravel()
     Nm = M.sum()
 
-    nx,ny,nz = mask.shape
+    nx, ny, nz = mask.shape
 
     if len(data.shape) > 1:
         nt = data.shape[1]
     else:
         nt = 1
 
-    out = np.zeros((nx*ny*nz,nt),dtype=data.dtype)
-    out[M,:] = np.reshape(data,(Nm,nt))
+    out = np.zeros((nx * ny * nz, nt), dtype=data.dtype)
+    out[M, :] = np.reshape(data, (Nm, nt))
 
-    return np.squeeze(np.reshape(out,(nx,ny,nz,nt)))
+    return np.squeeze(np.reshape(out, (nx, ny, nz, nt)))
 
 def moments(data):
     """
@@ -144,18 +159,17 @@ def moments(data):
     """
     total = data.sum()
     X, Y = np.indices(data.shape)
-    center_x = (X*data).sum()/total
-    center_y = (Y*data).sum()/total
+    center_x = (X * data).sum() / total
+    center_y = (Y * data).sum() / total
     col = data[:, int(center_y)]
-    width_x = np.sqrt(abs((np.arange(col.size)-center_y)**2*col).sum()/col.sum())
+    width_x = np.sqrt(abs((np.arange(col.size) - center_y)**2 * col).sum() / col.sum())
     row = data[int(center_x), :]
-    width_y = np.sqrt(abs((np.arange(row.size)-center_x)**2*row).sum()/row.sum())
+    width_y = np.sqrt(abs((np.arange(row.size) - center_x)**2 * row).sum() / row.sum())
     height = data.max()
     return height, center_x, center_y, width_x, width_y
 
 
-def gaussian(height, center_x, center_y,
-             width_x, width_y):
+def gaussian(height, center_x, center_y, width_x, width_y):
     """
     Returns a gaussian function with the given parameters
 
@@ -164,7 +178,7 @@ def gaussian(height, center_x, center_y,
     """
     width_x = float(width_x)
     width_y = float(width_y)
-    return lambda x,y: height*np.exp(-(((center_x-x)/width_x)**2+((center_y-y)/width_y)**2)/2)
+    return lambda x, y: height * np.exp(-(((center_x - x) / width_x)**2 + ((center_y - y) / width_y)**2) / 2)
 
 
 def fitgaussian(data):
@@ -177,18 +191,82 @@ def fitgaussian(data):
     """
     params = moments(data)
     errorfunction = lambda p, data: np.ravel(gaussian(*p)(*np.indices(data.shape)) - data)
-    (p, success) = leastsq(errorfunction, params, data)
+    (p, _) = leastsq(errorfunction, params, data)
     return p
 
 
 def niwrite(data, affine, name, head, header=None):
-    data[np.isnan(data)]=0
-    if header == None:
+    """
+    Write out nifti file.
+    """
+    data[np.isnan(data)] = 0
+    if header is None:
         this_header = head.copy()
         this_header.set_data_shape(list(data.shape))
     else:
         this_header = header
 
-    outni = nib.Nifti1Image(data,affine,header=this_header)
+    outni = nib.Nifti1Image(data, affine, header=this_header)
     outni.set_data_dtype('float64')
     outni.to_filename(name)
+
+
+@due.dcite(BibTeX('@article{dice1945measures,'\
+            	  'author={Dice, Lee R},'\
+            	  'title={Measures of the amount of ecologic association between species},'\
+            	  'year = {1945},'\
+            	  'publisher = {Wiley Online Library},'\
+            	  'journal = {Ecology},'\
+                  'volume={26},'\
+                  'number={3},'\
+                  'pages={297--302}}'),
+           description='Introduction of Sorenson-Dice index by Dice in 1945.')
+@due.dcite(BibTeX('@article{sorensen1948method,'\
+            	  'author={S{\\o}rensen, Thorvald},'\
+            	  'title={A method of establishing groups of equal amplitude '\
+                  'in plant sociology based on similarity of species and its '\
+                  'application to analyses of the vegetation on Danish commons},'\
+            	  'year = {1948},'\
+            	  'publisher = {Wiley Online Library},'\
+            	  'journal = {Biol. Skr.},'\
+                  'volume={5},'\
+                  'pages={1--34}}'),
+           description='Introduction of Sorenson-Dice index by Sorenson in 1948.')
+def dice(arr1, arr2):
+    """Compute Dice's similarity index between two numpy arrays. Arrays will be
+    binarized before comparison.
+    From https://gist.github.com/brunodoamaral/e130b4e97aa4ebc468225b7ce39b3137
+
+    Parameters
+    ----------
+    arr1, arr2 : array_like
+        Input arrays, arrays to binarize and compare.
+
+    Returns
+    -------
+    dsi : float
+        Dice-Sorenson index.
+    """
+    arr1 = np.array(arr1 != 0).astype(int)
+    arr2 = np.array(arr2 != 0).astype(int)
+
+    if arr1.shape != arr2.shape:
+        raise ValueError('Shape mismatch: arr1 and arr2 must have the same shape.')
+
+    arr_sum = arr1.sum() + arr2.sum()
+    if arr_sum == 0:
+        dsi = 0
+    else:
+        intersection = np.logical_and(arr1, arr2)
+        dsi = (2. * intersection.sum()) / arr_sum
+
+    return dsi
+
+
+def andb(arrs):
+    """Add multiple 1d arrays together.
+    """
+    result = np.zeros(arrs[0].shape)
+    for aa in arrs:
+        result += np.array(aa, dtype=np.int)
+    return result

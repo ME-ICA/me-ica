@@ -13,7 +13,7 @@ import sklearn.decomposition
 from meica.t2smap import (optcom, t2sadmap)
 from meica.utils import (cat2echos, uncat2echos, makemask,
                          makeadmask, fmask, unmask,
-                         fitgaussian, niwrite)
+                         fitgaussian, niwrite, dice, andb)
 
 
 """
@@ -71,16 +71,6 @@ def do_svm(train_set, train_labs,
     return pred_labels, clf
 
 
-def dice(A,B):
-    denom = np.array(A!=0,dtype=np.int).sum(0)+(np.array(B!=0,dtype=np.int).sum(0))
-    if denom!=0:
-        AB_un = andb([A!=0,B!=0])==2
-        numer = np.array(AB_un,dtype=np.int).sum(0)
-        return 2.*numer/denom
-    else:
-        return 0.
-
-
 def spatclust(data,mask,csize,thr,header,aff,infile=None,dindex=0,tindex=0):
     if infile==None:
         data = data.copy()
@@ -128,13 +118,6 @@ def get_coeffs(data,mask,X,add_const=False):
     out = unmask(tmpbetas,mask)
 
     return out
-
-
-def andb(arrs):
-    result = np.zeros(arrs[0].shape)
-    for aa in arrs:
-        result += np.array(aa, dtype=np.int)
-    return result
 
 
 def getelbow_cons(ks,val=False):
