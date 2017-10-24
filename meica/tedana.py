@@ -884,22 +884,22 @@ def tedpca(combmode, mask, stabilize, head, ste=0, mlepca=True):
     if int(kdaw)!=-1 and int(rdaw)==-1:
         rhos_lim = rhos[andb([rhos<fmid,rhos>fmin])==2]
         rho_thr = rhos_lim[getelbow_mod(rhos_lim)]
+
+    temp1 = np.array(ctb[:, 1] > kappa_thr, dtype=np.int)
+    temp2 = np.array(ctb[:, 2] > rho_thr, dtype=np.int)
+    temp3 = np.array(ctb[:, 3] > eigelb, dtype=np.int)
+    temp4 = np.array(ctb[:, 3] > spmin, dtype=np.int)
+    temp5 = np.array(ctb[:, 1] != F_MAX, dtype=np.int)
+    temp6 = np.array(ctb[:, 2] != F_MAX, dtype=np.int)
+    pcscore = (temp1 + temp2 + temp3) * temp4 * temp5 * temp6
     if stabilize:
-        pcscore = (np.array(ctb[:,1]>kappa_thr,dtype=np.int)+np.array(ctb[:,2]>rho_thr,dtype=np.int)+np.array(ctb[:,3]>eigelb,dtype=np.int))*np.array(ctb[:,3]>spmin,dtype=np.int)*np.array(spcum<0.95,dtype=np.int)*np.array(ctb[:,2]>fmin,dtype=np.int)*np.array(ctb[:,1]>fmin,dtype=np.int)*np.array(ctb[:,1]!=F_MAX,dtype=np.int)*np.array(ctb[:,2]!=F_MAX,dtype=np.int)
-    else:
-        pcscore = (np.array(ctb[:,1]>kappa_thr,dtype=np.int)+np.array(ctb[:,2]>rho_thr,dtype=np.int)+np.array(ctb[:,3]>eigelb,dtype=np.int))*np.array(ctb[:,3]>spmin,dtype=np.int)*np.array(ctb[:,1]!=F_MAX,dtype=np.int)*np.array(ctb[:,2]!=F_MAX,dtype=np.int)
+        temp7 = np.array(spcum < 0.95, dtype=np.int)
+        temp8 = np.array(ctb[:, 2] > fmin, dtype=np.int)
+        temp9 = np.array(ctb[:, 1] > fmin, dtype=np.int)
+        pcscore = pcscore * temp7 * temp8 * temp9
+
     pcsel = pcscore > 0
     pcrej = np.array(pcscore==0,dtype=np.int)*np.array(ctb[:,3]>spmin,dtype=np.int) > 0
-
-    """
-    kdaw=15
-    rdaw=5
-    kappa_thr = np.average(sorted([fmin,getelbow_mod(kappas,True)/2,fmid]),weights=[kdaw,1,1])
-    rho_thr = np.average(sorted([fmin,getelbow_cons(rhos,True)/2,fmid]),weights=[rdaw,1,1])
-    print kappa_thr, rho_thr
-    pcscore = (np.array(ctb[:,1]>kappa_thr,dtype=np.int)+np.array(ctb[:,2]>rho_thr,dtype=np.int)+np.array(ctb[:,3]>eigelb,dtype=np.int))*np.array(ctb[:,3]>spmin,dtype=np.int)*np.array(ctb[:,1]!=F_MAX,dtype=np.int)*np.array(ctb[:,2]!=F_MAX,dtype=np.int)
-    np.array(pcscore>0).sum()
-    """
 
     dd = u.dot(np.diag(s*np.array(pcsel,dtype=np.int))).dot(v)
 
@@ -1329,5 +1329,5 @@ def main(*args):
     gscontrol_mmix(mmix, acc, rej, midk, empty, head)
     if options.dne: writeresults_echoes(acc, rej, midk, head)
 
-if __name__=='__main__':
+if __name__ == '__main__':
     main()
