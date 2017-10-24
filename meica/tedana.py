@@ -32,38 +32,41 @@ F_MAX=500
 Z_MAX = 8
 
 
-def do_svm(train_set, train_labs,
-           test_set, svmtype=0):
+def do_svm(X_train, y_train, X_test, svmtype=0):
     """
     sklearn's Support Vector Classification (SVC).
     For svmtype=1, implemented in liblinear rather than libsvm.
 
     Parameters
     ----------
-    train_set : numpy array
-        training dataset
-    train_labs : numpy array
-        labels for the training dataset
-    test_set : numpy array
-        test dataset for evaluating accuracy
+    X_train : {array-like, sparse matrix}, shape (n_samples, n_features)
+        Training vectors, where n_samples is the number of samples in the
+        training dataset and n_features is the number of features.
+    y_train : array-like, shape (n_samples,)
+        Target values (class labels in classification, real numbers in
+        regression)
+    X_test : {array-like, sparse matrix}, shape (n_samples, n_features)
+        Test vectors, where n_samples is the number of samples in the test
+        dataset and n_features is the number of features.
     svmtype : int
-        desired support vector machine type
+        Desired support vector machine type.
 
     Returns
     -------
-    pred_labels : numpy array
-        predicted class labels
-    clf : sklearn model
-        created sklearn model instance
+    y_pred : array, shape (n_samples,)
+        Predicted class labels for samples in X_test.
+    clf : {:obj:`sklearn.svm.classes.SVC`, :obj:`sklearn.svm.classes.LinearSVC`}
+        Trained sklearn model instance.
     """
 
-    if svmtype ==1:
-        clf = svm.LinearSVC(loss='squared_hinge',
-                            penalty='l1', dual=False)
+    if svmtype == 0:
+        clf = svm.SVC(kernel='linear')
+    elif svmtype == 1:
+        clf = svm.LinearSVC(loss='squared_hinge', penalty='l1', dual=False)
     elif svmtype == 2:
         clf = svm.SVC(kernel='linear', probability=True)
     else:
-        clf = svm.SVC(kernel='linear')
+        raise ValueError('Input svmtype not in range (3)')
 
     clf.fit(train_set, train_labs)
     pred_labels = clf.predict(test_set)
@@ -71,28 +74,53 @@ def do_svm(train_set, train_labs,
     return pred_labels, clf
 
 
-def spatclust(data,mask,csize,thr,header,aff,infile=None,dindex=0,tindex=0):
-    if infile==None:
+def spatclust(data, mask, csize, thr, header, aff, infile=None, dindex=0,
+              tindex=0):
+    """
+    """
+    if infile is None:
         data = data.copy()
-        data[data<thr] = 0
-        niwrite(unmask(data,mask),aff,'__clin.nii.gz',header)
-        infile='__clin.nii.gz'
-    addopts=""
-    if data is not None and len(np.squeeze(data).shape)>1 and dindex+tindex==0: addopts="-doall"
-    else: addopts="-1dindex %s -1tindex %s" % (str(dindex),str(tindex))
-    os.system('3dmerge -overwrite %s -dxyz=1  -1clust 1 %i -1thresh %.02f -prefix __clout.nii.gz %s' % (addopts,int(csize),float(thr),infile))
-    clustered = fmask(nib.load('__clout.nii.gz').get_data(),mask)!=0
+        data[data < thr] = 0
+        niwrite(unmask(data, mask), aff, '__clin.nii.gz', header)
+        infile = '__clin.nii.gz'
+    addopts = ''
+    if data is not None and len(np.squeeze(data).shape) > 1 and dindex + tindex == 0:
+        addopts = '-doall'
+    else:
+        addopts = '-1dindex %s -1tindex %s' % (str(dindex), str(tindex))
+    os.system('3dmerge -overwrite %s -dxyz=1  -1clust 1 %i -1thresh %.02f -prefix __clout.nii.gz %s' % (addopts, int(csize), float(thr), infile))
+    clustered = fmask(nib.load('__clout.nii.gz').get_data(), mask) != 0
     return clustered
 
 
 def rankvec(vals):
+    """Returns ranks of array.
+
+    Parameters
+    ----------
+    vals : array-like
+        1d array from which to determine ranks.
+
+    Returns
+    -------
+    ranks : array-like
+        1d array of ranks for values in input vals.
+    """
+    try:
+        vals = np.array(vals)
+    except:
+        raise IOError('Input vals is not array_like')
+
+    if len(vals.shape) != 1:
+        raise ValueError('Input vals is not 1d array')
+
     asort = np.argsort(vals)
     ranks = np.zeros(vals.shape[0])
-    ranks[asort]=np.arange(vals.shape[0])+1
+    ranks[asort] = np.arange(vals.shape[0]) + 1
     return ranks
 
 
-def get_coeffs(data,mask,X,add_const=False):
+def get_coeffs(data, mask, X, add_const=False):
     """
     get_coeffs(data,X)
 
@@ -674,7 +702,10 @@ def selcomps(seldict, mmix, head, debug=False, olevel=2, oversion=99, knobargs='
 
     toacc_hi = np.setdiff1d(nc [andb([ fdist <= np.max(fdist[group0]), Rhos<F025, Vz>-2 ])==3  ],np.union1d(group0,rej))  #Tried getting rid of accepting based on SVM altogether, now using only rejecting
     toacc_lo = np.intersect1d(to_clf,nc[andb([spz<1,Rz<0,mmix_kurt_z_max<5,Dz>-1,Tz>-1,Vz<0,Kappas>=F025,fdist<3*np.percentile(fdist[group0],98)])==8])
-    midk_clf,clf_ = do_svm(fproj_arr_val[:,np.union1d(group0,rej)].T,[0]*len(group0) + [1]*len(rej),fproj_arr_val[:,to_clf].T,svmtype=2)
+    midk_clf,clf_ = do_svm(fproj_arr_val[:, np.union1d(group0, rej)].T,
+                           [0] * len(group0) + [1] * len(rej),
+                           fproj_arr_val[:, to_clf].T,
+                           svmtype=2)
     midk = np.setdiff1d(to_clf[andb([midk_clf==1,varex[to_clf]>np.median(varex[group0])  ])==2],np.union1d(toacc_hi,toacc_lo))
     if len(np.intersect1d(to_clf[andb([midk_clf==1,Vz[to_clf]>0 ])==2],toacc_hi))==0:
         svm_acc_fail = True
