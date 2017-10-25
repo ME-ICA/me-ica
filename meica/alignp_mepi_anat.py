@@ -5,8 +5,7 @@ import sys
 import os.path
 import subprocess
 from re import split as resplit
-from os import system,getcwd,mkdir,chdir,popen
-from optparse import OptionParser,OptionGroup
+from os import system, getcwd, mkdir, chdir, popen
 
 
 def dsprefix(idn):
@@ -124,43 +123,3 @@ def runproc(script_prefix, scrlines):
     ofh.write("\n".join(scrlines))
     ofh.close()
     os.system("bash %s" % script_name)
-
-
-if __name__=='__main__':
-
-    parser=OptionParser()
-    parser.add_option('-t',"",dest='t2s',help="T2* volume",default='')
-    parser.add_option('-s',"",dest='s0',help="Skull-stripped S0 weighted volume, optional, for masking T2*",default='')
-    parser.add_option('-a',"",dest='anat',help="Anatomical volume",default='')
-    parser.add_option('-p',"",dest='prefix',help="Alignment matrix prefix" ,default='')
-    parser.add_option('',"--cmass",action='store_true',dest='cmass',help="Align cmass before main co-registration" ,default=False)
-    parser.add_option('',"--autocmass",action='store_false',dest='autocmass',help="Automatic cmass detection (default yes)" ,default=True)
-    parser.add_option('',"--maxrot",dest='maxrot',help="Maximum rotation, default 30" ,default='30')
-    parser.add_option('',"--maxshift",dest='maxshf',help="Maximum shift, default 30" ,default='30')
-    parser.add_option('',"--maxscl",dest='maxscl',help="Maximum scale, default 1.01" ,default='1.01')
-    (options,args) = parser.parse_args()
-
-    """
-    Set up and cd into directory
-    """
-    sl = []
-    startdir = os.path.abspath(os.path.curdir)
-    walignp_dirname = "alignp.%s" % (options.prefix)
-    sl.append("rm -rf %s " % walignp_dirname)
-    sl.append("mkdir %s " % walignp_dirname)
-    sl.append("cd %s " % walignp_dirname)
-
-    """Import datasets"""
-    t2s_name,s0_name,anat_name = import_datasets([options.t2s,options.s0,options.anat])
-
-    """Filter and segment T2* volume to produce T2* base and weight volumes"""
-    basevol,weightvol = graywt(t2s_name,s0_name)
-
-    """Run 3dAllineate"""
-    allin_volume,allin_matrix = allineate(anat_name,weightvol,basevol,options.prefix,options.maxrot,options.maxshf,options.maxscl,options.cmass)
-
-    """For auto center-of-mass, check dice of COM and no-COM options"""
-    cmselect(basevol,allin_volume)
-
-    """Run procedure"""
-    runproc(options.prefix, sl)

@@ -5,7 +5,7 @@ import nibabel as nib
 from scipy.optimize import leastsq
 from scipy.stats import scoreatpercentile
 
-from meica.due import due, BibTeX
+from .due import due, BibTeX
 
 
 def cat2echos(data, Ne):
@@ -24,7 +24,7 @@ def cat2echos(data, Ne):
     return np.reshape(data, (nx, ny, nz, Ne, nt), order='F')
 
 
-def uncat2echos(data,Ne):
+def uncat2echos(data, Ne):
     """
     uncat2echos(data,Ne)
 
@@ -124,7 +124,7 @@ def fmask(data, mask):
     return fdata.squeeze()
 
 
-def unmask (data, mask):
+def unmask(data, mask):
     """
     unmask (data,mask)
 
@@ -239,7 +239,7 @@ def dice(arr1, arr2):
 
     Parameters
     ----------
-    arr1, arr2 : array_like
+    arr1, arr2 : array-like
         Input arrays, arrays to binarize and compare.
 
     Returns
@@ -264,9 +264,17 @@ def dice(arr1, arr2):
 
 
 def andb(arrs):
-    """Add multiple 1d arrays together.
+    """Add multiple arrays of ints or bools together.
     """
+    same_shape = []
+    for arr in arrs:
+        for arr2 in arrs:
+            same_shape.append(arr.shape == arr2.shape)
+
+    if not np.all(same_shape):
+        raise ValueError('All input arrays must have same shape')
+
     result = np.zeros(arrs[0].shape)
-    for aa in arrs:
-        result += np.array(aa, dtype=np.int)
+    for arr in arrs:
+        result += np.array(arr, dtype=np.int)
     return result

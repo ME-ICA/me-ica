@@ -1,6 +1,10 @@
+"""Set up MEICA module.
+"""
 from setuptools import setup
 
-__version__ = '3.2.1'
+# fetch version from within meica module
+with open('meica/version.py') as f:
+    exec(f.read())
 
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()

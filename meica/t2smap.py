@@ -1,10 +1,8 @@
 #!/usr/bin/env python
-import argparse
 import numpy as np
 import nibabel as nib
-from meica.utils import (niwrite, cat2echos,
-                         uncat2echos, makeadmask,
-                         fmask, unmask)
+
+from .utils import (niwrite, cat2echos, makeadmask, unmask)
 
 
 def t2sadmap(catd,mask,tes,masksum,start_echo):
@@ -106,40 +104,10 @@ def optcom(data,t2,tes,mask,combmode,useG=False):
     print('Out shape is ', out.shape)
     return out
 
-def get_parser():
-    """
-    Parses command line inputs for t2smap
-    Returns
-    -------
-    parser.parse_args() : argparse dic
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_option('-d',
-                      nargs='+',
-                      dest='data',
-                      help="Spatially Concatenated Multi-Echo Dataset",
-                      required=True)
-    parser.add_option('-e',
-                      nargs='+',
-                      dest='tes',
-                      help="Echo times (in ms) ex: 15,39,63",
-                      required=True)
-    parser.add_option('-c',
-                      dest='combmode',
-                      help="Combination scheme for TEs: t2s (Posse 1999),ste(Poser,2006 default)",
-                      default='ste')
-    parser.add_option('-l',
-                      dest='label',
-                      help="Optional label to tag output files with",
-                      default=None)
-    return parser
 
-
-def main():
+def main(options):
     """
     """
-    options = get_parser().parse_args(*args)
-
     if options.label!=None:
         suf='_%s' % str(options.label)
     else:
@@ -188,6 +156,3 @@ def main():
     niwrite(s0,aff,'s0v%s.nii' % suf)
     niwrite(t2s,aff,'t2sv%s.nii' % suf )
     niwrite(t2sm,aff,'t2svm%s.nii' % suf )
-
-if __name__=='__main__':
-    main()

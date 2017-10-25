@@ -1,19 +1,19 @@
-#!/usr/bin/env python
+# emacs: -*- mode: python-mode; py-indent-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+# ex: set sts=4 ts=4 sw=4 et:
 
 import os
 import sys
 import gzip
 import pickle
-import argparse
 import numpy as np
 import nibabel as nib
 from sklearn import svm
 import scipy.stats as stats
 import sklearn.decomposition
-from meica.t2smap import (optcom, t2sadmap)
-from meica.utils import (cat2echos, uncat2echos, makemask,
-                         makeadmask, fmask, unmask,
-                         fitgaussian, niwrite, dice, andb)
+from .t2smap import (optcom, t2sadmap)
+from .utils import (cat2echos, uncat2echos, makemask,
+                    makeadmask, fmask, unmask,
+                    fitgaussian, niwrite, dice, andb)
 
 
 """
@@ -28,7 +28,7 @@ PROCEDURE 2 : Computes ME-PCA and ME-ICA
 PROCEDURE 2a: Model fitting and component selection routines
 """
 
-F_MAX=500
+F_MAX = 500
 Z_MAX = 8
 
 
@@ -77,6 +77,33 @@ def do_svm(X_train, y_train, X_test, svmtype=0):
 def spatclust(data, mask, csize, thr, header, aff, infile=None, dindex=0,
               tindex=0):
     """
+
+    Parameters
+    ----------
+    data :
+
+    mask :
+
+    csize :
+
+    thr :
+
+    header :
+
+    aff :
+
+    infile :
+
+    dindex :
+
+    tindex :
+
+
+    Returns
+    -------
+    clustered :
+
+
     """
     if infile is None:
         data = data.copy()
@@ -87,8 +114,10 @@ def spatclust(data, mask, csize, thr, header, aff, infile=None, dindex=0,
     if data is not None and len(np.squeeze(data).shape) > 1 and dindex + tindex == 0:
         addopts = '-doall'
     else:
-        addopts = '-1dindex %s -1tindex %s' % (str(dindex), str(tindex))
-    os.system('3dmerge -overwrite %s -dxyz=1  -1clust 1 %i -1thresh %.02f -prefix __clout.nii.gz %s' % (addopts, int(csize), float(thr), infile))
+        addopts = '-1dindex {0} -1tindex {1}'.format(str(dindex), str(tindex))
+
+    cmd_str = '3dmerge -overwrite {0} -dxyz=1  -1clust 1 {1:d} -1thresh {2:.02f} -prefix __clout.nii.gz {3}'
+    os.system(cmd_str.format(addopts, int(csize), float(thr), infile))
     clustered = fmask(nib.load('__clout.nii.gz').get_data(), mask) != 0
     return clustered
 
@@ -124,84 +153,156 @@ def get_coeffs(data, mask, X, add_const=False):
     """
     get_coeffs(data,X)
 
-    Input:
+    Parameters
+    ----------
+    data : array-like
+        Array of shape (nx, ny, nz, nt)
+    mask : array-like
+        Array of shape (nx, ny, nz)
+    X : array-like
+        Array of shape (nt, nc)
+    add_const : bool, optional
+        Default is False.
 
-    data has shape (nx,ny,nz,nt)
-    mask has shape (nx,ny,nz)
-    X    has shape (nt,nc)
-
-    Output:
-
-    out  has shape (nx,ny,nz,nc)
+    Returns
+    -------
+    out : array_like
+        Array of shape (nx, ny, nz, nc)
     """
-    mdata = fmask(data,mask).transpose()
+    mdata = fmask(data, mask).transpose()
 
-    X=np.atleast_2d(X)
-    if X.shape[0]==1: X=X.T
+    # Coerce X to >=2d
+    X = np.atleast_2d(X)
+
+    if X.shape[0] == 1:
+        X = X.T
     Xones = np.atleast_2d(np.ones(np.min(mdata.shape))).T
-    if add_const: X = np.hstack([X,Xones])
+    if add_const:
+        X = np.hstack([X, Xones])
 
-    tmpbetas = np.linalg.lstsq(X,mdata)[0].transpose()
-    if add_const: tmpbetas = tmpbetas[:,:-1]
-    out = unmask(tmpbetas,mask)
+    tmpbetas = np.linalg.lstsq(X, mdata)[0].transpose()
+    if add_const:
+        tmpbetas = tmpbetas[:, :-1]
+    out = unmask(tmpbetas, mask)
 
     return out
 
 
-def getelbow_cons(ks,val=False):
-    #Elbow using mean/variance method - conservative
+def getelbow_cons(ks, val=False):
+    """Elbow using mean/variance method - conservative
+
+    Parameters
+    ----------
+    ks : array-like
+
+    val : bool, optional
+        Default is False
+
+    Returns
+    -------
+    array-like
+        Either the elbow index (if val is True) or the values at the elbow
+        index (if val is False)
+    """
     ks = np.sort(ks)[::-1]
     nk = len(ks)
-    ds = np.array([  (ks[nk-5-ii-1]>ks[nk-5-ii:nk].mean()+2*ks[nk-5-ii:nk].std()) for ii in range(nk-5) ][::-1],dtype=np.int)
+    temp1 = [(ks[nk-5-ii-1] > ks[nk-5-ii:nk].mean() + 2*ks[nk-5-ii:nk].std()) for ii in range(nk-5)]
+    ds = np.array(temp1[::-1], dtype=np.int)
     dsum = []
     c_ = 0
     for d_ in ds:
-        c_=(c_+d_)*d_
+        c_ = (c_ + d_) * d_
         dsum.append(c_)
-    e2=np.argmax(np.array(dsum))
-    elind = np.max([getelbow_mod(ks),e2])
+    e2 = np.argmax(np.array(dsum))
+    elind = np.max([getelbow_mod(ks), e2])
+
     if val: return ks[elind]
     else: return elind
 
 
-def getelbow_mod(ks,val=False):
-    #Elbow using linear projection method - moderate
+def getelbow_mod(ks, val=False):
+    """Elbow using linear projection method - moderate
+
+    Parameters
+    ----------
+    ks : array-like
+
+    val : bool, optional
+        Default is False
+
+    Returns
+    -------
+    array-like
+        Either the elbow index (if val is True) or the values at the elbow
+        index (if val is False)
+    """
     ks = np.sort(ks)[::-1]
     nc = ks.shape[0]
-    coords = np.array([np.arange(nc),ks])
-    p  = coords - np.tile(np.reshape(coords[:,0],(2,1)),(1,nc))
-    b  = p[:,-1]
-    b_hat = np.reshape(b/np.sqrt((b**2).sum()),(2,1))
-    proj_p_b = p - np.dot(b_hat.T,p)*np.tile(b_hat,(1,nc))
-    d = np.sqrt((proj_p_b**2).sum(axis=0))
+    coords = np.array([np.arange(nc), ks])
+    p  = coords - np.tile(np.reshape(coords[:, 0], (2, 1)), (1, nc))
+    b  = p[:, -1]
+    b_hat = np.reshape(b / np.sqrt((b ** 2).sum()), (2, 1))
+    proj_p_b = p - np.dot(b_hat.T, p) * np.tile(b_hat, (1, nc))
+    d = np.sqrt((proj_p_b ** 2).sum(axis=0))
     k_min_ind = d.argmax()
     k_min  = ks[k_min_ind]
+
     if val: return ks[k_min_ind]
     else: return k_min_ind
 
 
-def getelbow_aggr(ks,val=False):
-    #Elbow using curvature - aggressive
+def getelbow_aggr(ks, val=False):
+    """Elbow using curvature - aggressive
+
+    Parameters
+    ----------
+    ks : array-like
+
+    val : bool, optional
+        Default is False
+
+    Returns
+    -------
+    array-like
+        Either the elbow index (if val is True) or the values at the elbow
+        index (if val is False)
+    """
     ks = np.sort(ks)[::-1]
-    dKdt = ks[:-1]-ks[1:]
-    dKdt2 = dKdt[:-1]-dKdt[1:]
-    curv = np.abs((dKdt2/(1+dKdt[:-1]**2.)**(3./2.)))
-    curv[np.isnan(curv)]=-1*10**6
-    maxcurv = np.argmax(curv)+2
+    dKdt = ks[:-1] - ks[1:]
+    dKdt2 = dKdt[:-1] - dKdt[1:]
+    curv = np.abs((dKdt2 / (1 + dKdt[:-1]**2.) ** (3. / 2.)))
+    curv[np.isnan(curv)] = -1 * 10**6
+    maxcurv = np.argmax(curv) + 2
+
     if val: return(ks[maxcurv])
     else:return maxcurv
 
 
 def getfbounds(ne):
-    F05s=[None,None,18.5,10.1,7.7,6.6,6.0,5.6,5.3,5.1,5.0]
-    F025s=[None,None,38.5,17.4,12.2,10,8.8,8.1,7.6,7.2,6.9]
-    F01s=[None,None,98.5,34.1,21.2,16.2,13.8,12.2,11.3,10.7,10.]
-    return F05s[ne-1],F025s[ne-1],F01s[ne-1]
+    """
+
+    Parameters
+    ----------
+    ne : int
+        Number of echoes.
+
+    Returns
+    -------
+    """
+    if not isinstance(ne, int):
+        raise IOError('Input ne must be int')
+    elif ne > 0:
+        raise ValueError('Input ne must be greater than 0')
+
+    F05s = [None, 18.5, 10.1, 7.7, 6.6, 6.0, 5.6, 5.3, 5.1, 5.0]
+    F025s = [None, 38.5, 17.4, 12.2, 10, 8.8, 8.1, 7.6, 7.2, 6.9]
+    F01s = [None, 98.5, 34.1, 21.2, 16.2, 13.8, 12.2, 11.3, 10.7, 10.]
+    return F05s[ne], F025s[ne], F01s[ne]
 
 
-def eimask(dd,ees=None):
+def eimask(dd, ees=None):
     if ees==None: ees=range(dd.shape[1])
-    imask = np.zeros([dd.shape[0],len(ees)])
+    imask = np.zeros([dd.shape[0], len(ees)])
     for ee in ees:
         print(ee)
         lthr = 0.001 * stats.scoreatpercentile(dd[:,ee,:].flatten(),98, interpolation_method='lower')
@@ -1144,137 +1245,31 @@ def writeresults_echoes(acc, rej, midk, head):
         write_split_ts(catd[:,:,:,ii,:],comptable, mmix,acc, rej, midk, head, suffix = 'e%i' % (ii+1))
 
 
-def get_parser():
+def main(options):
     """
-    Parses command line inputs for tedana
-    Returns
-    -------
-    parser.parse_args() : argparse dic
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-d',
-                        dest='data',
-                        nargs='+',
-                        help="Spatially Concatenated Multi-Echo Dataset",
-                        required=True)
-    parser.add_argument('-e',
-                        dest='tes',
-                        nargs='+',
-                        help="Echo times (in ms) ex: 15,39,63",
-                        required=True)
-    parser.add_argument("--mix",
-                        dest='mixm',
-                        help="Mixing matrix. If not provided, " +
-                             "ME-PCA & ME-ICA is done.",
-                        default=None)
-    parser.add_argument("--ctab",
-                        dest='ctab',
-                        help="Component table extract pre-computed " +
-                             "classifications from.",
-                        default=None)
-    parser.add_argument("--manacc",
-                        dest='manacc',
-                        help="Comma separated list of manually " +
-                             "accepted components",
-                        default=None)
-    parser.add_argument("--strict",
-                        dest='strict',
-                        action='store_true',
-                        help="Ignore low-variance ambiguous components",
-                        default=False)
-    # parser.add_argument("--wav",
-    #                     dest='wav',
-    #                     help="Perform wavelet PCA, default False",
-    #                     default=False)
-    parser.add_argument("--no_gscontrol",
-                        dest='no_gscontrol',
-                        action='store_true',
-                        help="Control global signal using spatial approach",
-                        default=False)
-    parser.add_argument("--kdaw",
-                        dest='kdaw',
-                        help="Dimensionality augmentation weight " +
-                             "(Kappa). Default 10. -1 for low-dimensional ICA",
-                        default=10.)
-    parser.add_argument("--rdaw",
-                        dest='rdaw',
-                        help="Dimensionality augmentation weight (Rho). " +
-                             "Default 1. -1 for low-dimensional ICA",
-                        default=1.)
-    parser.add_argument("--conv",
-                        dest='conv',
-                        help="Convergence limit. Default 2.5e-5",
-                        default='2.5e-5')
-    parser.add_argument("--sourceTEs",
-                        dest='ste',
-                        help="Source TEs for models. ex: -ste 0 for all, " +
-                             "-1 for opt. com. Default -1.",
-                        default=-1)
-    parser.add_argument("--combmode",
-                        dest='combmode',
-                        help="Combination scheme for TEs: t2s " +
-                             "(Posse 1999, default),ste(Poser)",
-                        default='t2s')
-    parser.add_argument("--denoiseTEs",
-                        dest='dne',
-                        action='store_true',
-                        help="Denoise each TE dataset separately",
-                        default=False)
-    parser.add_argument("--initcost",
-                        dest='initcost',
-                        help="Initial cost func. for ICA: pow3, " +
-                             "tanh(default), gaus, skew",
-                        default='tanh')
-    parser.add_argument("--finalcost",
-                        dest='finalcost',
-                        help="Final cost func, same opts. as initial",
-                        default='tanh')
-    parser.add_argument("--stabilize",
-                        dest='stabilize',
-                        action='store_true',
-                        help="Stabilize convergence by reducing " +
-                             "dimensionality, for low quality data",
-                        default=False)
-    parser.add_argument("--fout",
-                        dest='fout',
-                        help="Output TE-dependence Kappa/Rho SPMs",
-                        action="store_true",
-                        default=False)
-    parser.add_argument("--filecsdata",
-                        dest='filecsdata',
-                        help="Save component selection data",
-                        action="store_true",
-                        default=False)
-    parser.add_argument("--label",
-                        dest='label',
-                        help="Label for output directory.",
-                        default=None)
-    parser.add_argument("--seed",
-                        dest='fixed_seed',
-                        help="Seeded value for ICA, for reproducibility.",
-                        default=42)
-    return parser
 
-
-def main(*args):
+    Args (and defaults):
+    data, tes, mixm=None, ctab=None, manacc=None, strict=False,
+             no_gscontrol=False, kdaw=10., rdaw=1., conv=2.5e-5, ste=-1,
+             combmode='t2s', dne=False, initcost='tanh', finalcost='tanh',
+             stabilize=False, fout=False, filecsdata=False, label=None,
+             fixed_seed=42
     """
-    """
-    options = get_parser().parse_args(*args)
     global tes, ne, catd, head, aff
     tes = [float(te) for te in options.tes]
     ne = len(tes)
     catim  = nib.load(options.data[0])
 
-    head   = catim.get_header()
+    head = catim.get_header()
     head.extensions = []
     head.set_sform(head.get_sform(),code=1)
     aff = catim.get_affine()
     catd = cat2echos(catim.get_data(),ne)
     nx,ny,nz,Ne,nt = catd.shape
-    mu  = catd.mean(axis=-1)
-    sig  = catd.std(axis=-1)
+    mu = catd.mean(axis=-1)
+    sig = catd.std(axis=-1)
 
-    """Parse options, prepare output directory"""
+    #Parse options, prepare output directory
     if options.fout: options.fout = aff
     else: options.fout=None
 
@@ -1359,6 +1354,3 @@ def main(*args):
     writeresults(OCcatd, comptable, mmix, nt, acc, rej, midk, empty, head)
     gscontrol_mmix(mmix, acc, rej, midk, empty, head)
     if options.dne: writeresults_echoes(acc, rej, midk, head)
-
-if __name__ == '__main__':
-    main()
