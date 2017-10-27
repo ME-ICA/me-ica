@@ -2,7 +2,7 @@
 import numpy as np
 import nibabel as nib
 
-from .utils import (niwrite, cat2echos, makeadmask, unmask)
+from .utils import (niwrite, cat2echos, makeadmask, unmask, fmask)
 
 
 def t2sadmap(catd,mask,tes,masksum,start_echo):

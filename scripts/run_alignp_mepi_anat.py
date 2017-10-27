@@ -12,7 +12,7 @@ def get_parser():
     parser.add_argument('-e',
                         dest='tes',
                         nargs='+',
-                        help="Echo times in ms. ex: -e 14.5 38.5 62.5",
+                        help='Echo times in ms. ex: -e 14.5 38.5 62.5',
                         required=True)
     parser.add_argument('-t',
                         dest='t2s',
@@ -20,37 +20,37 @@ def get_parser():
                         default='')
     parser.add_argument('-s',
                         dest='s0',
-                        help="Skull-stripped S0 weighted volume, optional, for masking T2*",
+                        help='Skull-stripped S0 weighted volume, optional, for masking T2*',
                         default='')
     parser.add_argument('-a',
                         dest='anat',
-                        help="Anatomical volume",
+                        help='Anatomical volume',
                         default='')
     parser.add_argument('-p',
                         dest='prefix',
-                        help="Alignment matrix prefix",
+                        help='Alignment matrix prefix',
                         default='')
-    parser.add_argument("--cmass",
+    parser.add_argument('--cmass',
                         action='store_true',
                         dest='cmass',
-                        help="Align cmass before main co-registration",
+                        help='Align cmass before main co-registration',
                         default=False)
-    parser.add_argument("--autocmass",
+    parser.add_argument('--autocmass',
                         action='store_false',
                         dest='autocmass',
-                        help="Automatic cmass detection (default yes)",
+                        help='Automatic cmass detection (default yes)',
                         default=True)
-    parser.add_argument("--maxrot",
+    parser.add_argument('--maxrot',
                         dest='maxrot',
-                        help="Maximum rotation, default 30",
+                        help='Maximum rotation, default 30',
                         default='30')
-    parser.add_argument("--maxshift",
+    parser.add_argument('--maxshift',
                         dest='maxshf',
-                        help="Maximum shift, default 30",
+                        help='Maximum shift, default 30',
                         default='30')
-    parser.add_argument("--maxscl",
+    parser.add_argument('--maxscl',
                         dest='maxscl',
-                        help="Maximum scale, default 1.01",
+                        help='Maximum scale, default 1.01',
                         default='1.01')
 
     return parser
@@ -62,10 +62,10 @@ def main(argv=None):
 
     #Set up and cd into directory
     sl = []
-    walignp_dirname = "alignp.%s" % (options.prefix)
-    sl.append("rm -rf %s " % walignp_dirname)
-    sl.append("mkdir %s " % walignp_dirname)
-    sl.append("cd %s " % walignp_dirname)
+    walignp_dirname = 'alignp.%s' % (options.prefix)
+    sl.append('rm -rf %s ' % walignp_dirname)
+    sl.append('mkdir %s ' % walignp_dirname)
+    sl.append('cd %s ' % walignp_dirname)
 
     #Import datasets
     t2s_name, s0_name, anat_name = ama.import_datasets([options.t2s, options.s0, options.anat])

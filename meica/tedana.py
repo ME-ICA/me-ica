@@ -291,7 +291,7 @@ def getfbounds(ne):
     """
     if not isinstance(ne, int):
         raise IOError('Input ne must be int')
-    elif ne > 0:
+    elif ne <= 0:
         raise ValueError('Input ne must be greater than 0')
 
     F05s = [None, 18.5, 10.1, 7.7, 6.6, 6.0, 5.6, 5.3, 5.1, 5.0]
@@ -424,7 +424,7 @@ def fitmodels_direct(catd, mmix, mask,
     NmD = (t2s!=0).sum()
     mu = catd.mean(axis=-1)
     tes = np.reshape(tes,(Ne,1))
-    fmin,fmid,fmax = getfbounds(ne)
+    fmin,fmid,fmax = getfbounds(Ne)
 
     #Mask arrays
     mumask   = fmask(mu,t2s!=0)

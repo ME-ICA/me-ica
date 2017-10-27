@@ -16,20 +16,20 @@ def get_parser():
     parser.add_option('-d',
                       nargs='+',
                       dest='data',
-                      help="Spatially Concatenated Multi-Echo Dataset",
+                      help='Spatially Concatenated Multi-Echo Dataset',
                       required=True)
     parser.add_option('-e',
                       nargs='+',
                       dest='tes',
-                      help="Echo times (in ms) ex: 15,39,63",
+                      help='Echo times (in ms) ex: 15,39,63',
                       required=True)
     parser.add_option('-c',
                       dest='combmode',
-                      help="Combination scheme for TEs: t2s (Posse 1999),ste(Poser,2006 default)",
+                      help='Combination scheme for TEs: t2s (Posse 1999),ste(Poser,2006 default)',
                       default='ste')
     parser.add_option('-l',
                       dest='label',
-                      help="Optional label to tag output files with",
+                      help='Optional label to tag output files with',
                       default=None)
     return parser
 
