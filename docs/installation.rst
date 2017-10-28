@@ -20,7 +20,7 @@ Containerized versions
 To access a containerized version of ``meica`` simply pull the latest Docker image.
 This can be accomplished with the following command:
 
-``docker pull emdupre/meica``
+``docker pull emdupre/meica:0.0.1``
 
 Local installation
 ------------------
