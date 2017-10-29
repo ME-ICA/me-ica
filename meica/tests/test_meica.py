@@ -3,7 +3,7 @@
 import os
 import os.path as op
 import numpy as np
-import meica
+import meica.meica as meica
 from nipype.interfaces.traits_extension import TraitError
 import pytest
 
@@ -150,20 +150,20 @@ def test_find_CM():
                         meica.find_CM('sub-001_T1w.nii.gz'))
 
 
-def test_parser_opts():
-    """
-    """
-    parser = meica.get_parser().parse_args(['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz',
-                                '-e', '14.5,38.5,62.5'])
-
-    # confirm required inputs are interpreted correctly from argparse
-    assert parser.input_ds == ['sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz']
-    assert parser.tes == ['14.5,38.5,62.5']
-
-    # confirm that argparse complains about missing arguments
-    with pytest.raises (SystemExit) as err:
-        parser = meica.get_parser().parse_args(['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz'])
-        assert err.type == SystemExit
+# def test_parser_opts():
+#     """
+#     """
+#     parser = meica.get_parser().parse_args(['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz',
+#                                 '-e', '14.5,38.5,62.5'])
+#
+#     # confirm required inputs are interpreted correctly from argparse
+#     assert parser.input_ds == ['sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz']
+#     assert parser.tes == ['14.5,38.5,62.5']
+#
+#     # confirm that argparse complains about missing arguments
+#     with pytest.raises (SystemExit) as err:
+#         parser = meica.get_parser().parse_args(['-d', 'sub-001_task-rest_run-01_echo-[1,2,3]_bold.nii.gz'])
+#         assert err.type == SystemExit
 
 
 # def test_gen_script():
