@@ -1,5 +1,4 @@
-"""Utilities for meica package.
-"""
+"""Utilities for meica package."""
 import numpy as np
 import nibabel as nib
 from scipy.optimize import leastsq
@@ -55,27 +54,23 @@ def makemask(cdat):
     return mask
 
 
-def makeadmask(cdat, min=True, getsum=False):
+def makeadmask(cdat, minimum=True, getsum=False):
     """
     Create a mask.
-
-    NOTES:
-      - Need to change arg `min` to non-built-in.
-      - Is `cdat[:, :, :, :, :]` necessary? Why not just `cdat`?
     """
     #nx, ny, nz, Ne, nt = cdat.shape  # nt was unused
     nx, ny, nz, Ne, _ = cdat.shape
 
     mask = np.ones((nx, ny, nz), dtype=np.bool)
 
-    if min:
-        mask = cdat[:, :, :, :, :].prod(axis=-1).prod(-1) != 0
+    if minimum:
+        mask = cdat.prod(axis=-1).prod(-1) != 0
         return mask
     else:
         #Make a map of longest echo that a voxel can be sampled with,
         #with minimum value of map as X value of voxel that has median
         #value in the 1st echo. N.b. larger factor leads to bias to lower TEs
-        emeans = cdat[:, :, :, :, :].mean(-1)
+        emeans = cdat.mean(-1)
         medv = emeans[:, :, :, 0] == scoreatpercentile(emeans[:, :, :, 0][emeans[:, :, :, 0] != 0],
                                                        33, interpolation_method='higher')
         lthrs = np.squeeze(np.array([emeans[:, :, :, ee][medv] / 3 for ee in range(Ne)]))
@@ -87,7 +82,7 @@ def makeadmask(cdat, min=True, getsum=False):
         mthr = np.ones([nx, ny, nz, Ne])
         for i_echo in range(Ne):
             mthr[:, :, :, i_echo] *= lthrs[i_echo]
-        mthr = np.abs(emeans[:, :, :, :]) > mthr
+        mthr = np.abs(emeans) > mthr
         masksum = np.array(mthr, dtype=np.int).sum(-1)
         mask = masksum != 0
         if getsum:
@@ -155,7 +150,8 @@ def moments(data):
     distribution by calculating its moments.
 
     REF_
-    .. _REF: http://scipy-cookbook.readthedocs.io/items/FittingData.html
+
+    .. _REF: http://scipy-cookbook.readthedocs.io/items/FittingData.html#Fitting-a-2D-gaussian
     """
     total = data.sum()
     X, Y = np.indices(data.shape)
@@ -174,7 +170,8 @@ def gaussian(height, center_x, center_y, width_x, width_y):
     Returns a gaussian function with the given parameters
 
     REF_
-    .. _REF: http://scipy-cookbook.readthedocs.io/items/FittingData.html
+
+    .. _REF: http://scipy-cookbook.readthedocs.io/items/FittingData.html#Fitting-a-2D-gaussian
     """
     width_x = float(width_x)
     width_y = float(width_y)
@@ -187,7 +184,8 @@ def fitgaussian(data):
     the gaussian parameters of a 2D distribution found by a fit
 
     REF_
-    .. _REF: http://scipy-cookbook.readthedocs.io/items/FittingData.html
+
+    .. _REF: http://scipy-cookbook.readthedocs.io/items/FittingData.html#Fitting-a-2D-gaussian
     """
     params = moments(data)
     errorfunction = lambda p, data: np.ravel(gaussian(*p)(*np.indices(data.shape)) - data)
@@ -233,9 +231,13 @@ def niwrite(data, affine, name, head, header=None):
                   'pages={1--34}}'),
            description='Introduction of Sorenson-Dice index by Sorenson in 1948.')
 def dice(arr1, arr2):
-    """Compute Dice's similarity index between two numpy arrays. Arrays will be
+    """
+    Compute Dice's similarity index between two numpy arrays. Arrays will be
     binarized before comparison.
-    From https://gist.github.com/brunodoamaral/e130b4e97aa4ebc468225b7ce39b3137
+
+    REF_
+
+    .. _REF: https://gist.github.com/brunodoamaral/e130b4e97aa4ebc468225b7ce39b3137
 
     Parameters
     ----------
@@ -264,7 +266,8 @@ def dice(arr1, arr2):
 
 
 def andb(arrs):
-    """Add multiple arrays of ints or bools together.
+    """
+    Add multiple arrays of ints or bools together.
     """
     same_shape = []
     for arr in arrs:
