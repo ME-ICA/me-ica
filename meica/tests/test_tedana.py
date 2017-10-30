@@ -14,4 +14,4 @@ def test_basic_tedana():
     options = parser.parse_args(['-d', '/home/neuro/data/zcat_ffd.nii.gz',
                                  '-e', '14.5', '38.5', '62.5'])
     tedana.main(options)
-    assert os.path.isfile('TED/comp_table.txt')
+    assert os.path.isfile('comp_table.txt')
