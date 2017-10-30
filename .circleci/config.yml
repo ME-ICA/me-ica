@@ -7,19 +7,15 @@ jobs:
   build:
     docker:
       - image: emdupre/meica-docker:0.0.1
-      # Specify service dependencies here if necessary
 
     working_directory: /home/neuro/code/
 
     steps:
       - checkout
 
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-          - v1-dependencies-{{ checksum "requirements.txt" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
+      - run:
+          name: download data
+          command: curl -L -o /home/neuro/data/zcat_ffd.nii.gz https://www.dropbox.com/s/ljeqskdmnc6si9d/zcat_ffd.nii.gz?dl=0
 
       - run:
           name: install dependencies
@@ -29,18 +25,10 @@ jobs:
             pip install -r requirements.txt
             pip install pytest
 
-      - save_cache:
-          paths:
-            - ./venv
-          key: v1-dependencies-{{ checksum "requirements.txt" }}
-
       # run tests!
       - run:
           name: run tests
           command: |
             source activate venv
-            py.test -k tedana
-
-      - store_artifacts:
-          path: test-reports
-          destination: test-reports
+            py.test ./meica/tests/test_tedana.py
+          post: bash <(curl -s https://codecov.io/bash)

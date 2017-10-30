@@ -1,6 +1,17 @@
-#!/usr/bin/env python
-"""
-Tests for tedana.
-"""
+"""Tests for tedana."""
 
-TEST_FILE = 'https://www.dropbox.com/s/ljeqskdmnc6si9d/zcat_ffd.nii.gz?dl=0'
+import os.path
+import meica.tedana as tedana
+import scripts.run_tedana as run_tedana
+
+def test_basic_tedana():
+    """
+    A very simple test, to confirm that tedana creates output
+    files.
+    """
+
+    parser = run_tedana.get_parser()
+    options = parser.parse_args(['-d', '/home/neuro/data/zcat_ffd.nii.gz',
+                                 '-e', '14.5', '38.5', '62.5'])
+    tedana.main(options)
+    assert os.path.isfile('TED/comp_table.txt')
