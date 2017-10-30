@@ -41,7 +41,7 @@ before_script:
 - python setup.py install
 
 script:
-- py.test -k ./meica/tests/test_meica.py --cov-report term-missing --cov=meica
+- py.test meica/tests/test_meica.py --cov-report term-missing --cov=meica
 
 after_success:
 - codecov
