@@ -1,4 +1,4 @@
-"""Utilities for meica package."""
+"""Utilities for meica package"""
 import numpy as np
 import nibabel as nib
 from scipy.optimize import leastsq
@@ -9,11 +9,21 @@ from .due import due, BibTeX
 
 def cat2echos(data, Ne):
     """
-    cat2echos(data,Ne)
+    Separates z- and echo-axis in `data`
 
-    Input:
-    data shape is (nx,ny,Ne*nz,nt)
+    Parameters
+    ----------
+    data : array_like
+        Array of shape (nx, ny, nz*Ne, nt)
+    Ne : int
+        Number of echoes that were in original (uncombined) data array
+
+    Returns
+    -------
+    ndarray
+        Array of shape (nx, ny, nz, Ne, nt)
     """
+
     nx, ny = data.shape[0:2]
     nz = data.shape[2] // Ne
     if len(data.shape) > 3:
@@ -25,13 +35,23 @@ def cat2echos(data, Ne):
 
 def uncat2echos(data, Ne):
     """
-    uncat2echos(data,Ne)
+    Combines z- and echo-axis in `data`
 
-    Input:
-    data shape is (nx,ny,Ne,nz,nt)
+    Parameters
+    ----------
+    data : array_like
+        Array of shape (nx, ny, nz, Ne, nt)
+    Ne : int
+        Number of echoes; should be equal to `data.shape[3]`
+
+    Returns
+    -------
+    ndarray
+        Array of shape (nx, ny, nz*Ne, nt)
     """
+
     nx, ny = data.shape[0:2]
-    nz = data.shape[2]*Ne
+    nz = data.shape[2] * Ne
     if len(data.shape) > 4:
         nt = data.shape[4]
     else:
@@ -41,8 +61,22 @@ def uncat2echos(data, Ne):
 
 def makemask(cdat):
     """
-    Create a mask.
+    Generates a 3D mask from `cdat`
+
+    Finds consistently (i.e., across time) non-zero entries for each echo of
+    `cdat`, combining to form final mask.
+
+    Parameters
+    ----------
+    cdat : array_like
+        Array of shape (nx, ny, nz, Ne, nt)
+
+    Returns
+    -------
+    mask : ndarray
+        Boolean array of shape (nx, ny, nz)
     """
+
     nx, ny, nz, Ne, nt = cdat.shape
 
     mask = np.ones((nx, ny, nz), dtype=np.bool)
@@ -58,7 +92,6 @@ def makeadmask(cdat, minimum=True, getsum=False):
     """
     Create a mask.
     """
-    #nx, ny, nz, Ne, nt = cdat.shape  # nt was unused
     nx, ny, nz, Ne, _ = cdat.shape
 
     mask = np.ones((nx, ny, nz), dtype=np.bool)
@@ -93,18 +126,22 @@ def makeadmask(cdat, minimum=True, getsum=False):
 
 def fmask(data, mask):
     """
-    fmask(data,mask)
+    Masks `data` with non-zero entries of `mask`
 
-    Input:
-    data shape is (nx,ny,nz,...)
-    mask shape is (nx,ny,nz)
+    Parameters
+    ----------
+    data : array_like
+        Array of shape (nx, ny, nz[, Ne[, nt]])
+    mask : array_like
+        Boolean array of shape (nx, ny, nz)
 
-    Output:
-    out shape is (Nm,...)
+    Returns
+    -------
+    ndarray
+        Masked array of shape (nx*ny*nz[, Ne[, nt]])
     """
 
     s = data.shape
-    #sm = mask.shape  # unused
 
     N = s[0] * s[1] * s[2]
     news = []
@@ -121,14 +158,21 @@ def fmask(data, mask):
 
 def unmask(data, mask):
     """
-    unmask (data,mask)
+    Unmasks `data` using non-zero entries of `mask`
 
-    Input:
+    Parameters
+    ----------
+    data : array_like
+        Masked array of shape (nx*ny*nz[, Ne[, nt]])
+    mask : array_like
+        Boolean array of shape (nx, ny, nz)
 
-    data has shape (Nm,nt)
-    mask has shape (nx,ny,nz)
-
+    Returns
+    -------
+    ndarray
+        Array of shape (nx, ny, nz[, Ne[, nt]])
     """
+
     M = (mask != 0).ravel()
     Nm = M.sum()
 
@@ -144,15 +188,31 @@ def unmask(data, mask):
 
     return np.squeeze(np.reshape(out, (nx, ny, nz, nt)))
 
+
 def moments(data):
     """
-    Returns the gaussian parameters of a 2D
-    distribution by calculating its moments.
+    Returns gaussian parameters of a 2D distribution by calculating its moments
 
-    REF_
+    Parameters
+    ----------
+    data : array_like
+        2D data array
 
-    .. _REF: http://scipy-cookbook.readthedocs.io/items/FittingData.html#Fitting-a-2D-gaussian
+    Returns
+    -------
+    height : float
+    center_x : float
+    center_y : float
+    width_x : float
+    width_y : float
+
+    References
+    ----------
+    `Scipy Cookbook`_
+
+    .. _Scipy Cookbook: http://scipy-cookbook.readthedocs.io/items/FittingData.html#Fitting-a-2D-gaussian
     """
+
     total = data.sum()
     X, Y = np.indices(data.shape)
     center_x = (X * data).sum() / total
@@ -167,12 +227,28 @@ def moments(data):
 
 def gaussian(height, center_x, center_y, width_x, width_y):
     """
-    Returns a gaussian function with the given parameters
+    Returns gaussian function
 
-    REF_
+    Parameters
+    ----------
+    height : float
+    center_x : float
+    center_y : float
+    width_x : float
+    width_y : float
 
-    .. _REF: http://scipy-cookbook.readthedocs.io/items/FittingData.html#Fitting-a-2D-gaussian
+    Returns
+    -------
+    lambda
+        Gaussian function with provided parameters
+
+    References
+    ----------
+    `Scipy Cookbook`_
+
+    .. _Scipy Cookbook: http://scipy-cookbook.readthedocs.io/items/FittingData.html#Fitting-a-2D-gaussian
     """
+
     width_x = float(width_x)
     width_y = float(width_y)
     return lambda x, y: height * np.exp(-(((center_x - x) / width_x)**2 + ((center_y - y) / width_y)**2) / 2)
@@ -180,13 +256,25 @@ def gaussian(height, center_x, center_y, width_x, width_y):
 
 def fitgaussian(data):
     """
-    Returns (height, x, y, width_x, width_y)
-    the gaussian parameters of a 2D distribution found by a fit
+    Returns estimated gaussian parameters of a 2D distribution found by a fit
 
-    REF_
+    Parameters
+    ----------
+    data : array_like
+        2D data array
 
-    .. _REF: http://scipy-cookbook.readthedocs.io/items/FittingData.html#Fitting-a-2D-gaussian
+    Returns
+    -------
+    p : array_like
+        Array with height, center_x, center_y, width_x, width_y of `data`
+
+    References
+    ----------
+    `Scipy Cookbook`_
+
+    .. _Scipy Cookbook: http://scipy-cookbook.readthedocs.io/items/FittingData.html#Fitting-a-2D-gaussian
     """
+
     params = moments(data)
     errorfunction = lambda p, data: np.ravel(gaussian(*p)(*np.indices(data.shape)) - data)
     (p, _) = leastsq(errorfunction, params, data)
@@ -210,23 +298,23 @@ def niwrite(data, affine, name, head, header=None):
 
 
 @due.dcite(BibTeX('@article{dice1945measures,'\
-            	  'author={Dice, Lee R},'\
-            	  'title={Measures of the amount of ecologic association between species},'\
-            	  'year = {1945},'\
-            	  'publisher = {Wiley Online Library},'\
-            	  'journal = {Ecology},'\
+                  'author={Dice, Lee R},'\
+                  'title={Measures of the amount of ecologic association between species},'\
+                  'year = {1945},'\
+                  'publisher = {Wiley Online Library},'\
+                  'journal = {Ecology},'\
                   'volume={26},'\
                   'number={3},'\
                   'pages={297--302}}'),
            description='Introduction of Sorenson-Dice index by Dice in 1945.')
 @due.dcite(BibTeX('@article{sorensen1948method,'\
-            	  'author={S{\\o}rensen, Thorvald},'\
-            	  'title={A method of establishing groups of equal amplitude '\
+                  'author={S{\\o}rensen, Thorvald},'\
+                  'title={A method of establishing groups of equal amplitude '\
                   'in plant sociology based on similarity of species and its '\
                   'application to analyses of the vegetation on Danish commons},'\
-            	  'year = {1948},'\
-            	  'publisher = {Wiley Online Library},'\
-            	  'journal = {Biol. Skr.},'\
+                  'year = {1948},'\
+                  'publisher = {Wiley Online Library},'\
+                  'journal = {Biol. Skr.},'\
                   'volume={5},'\
                   'pages={1--34}}'),
            description='Introduction of Sorenson-Dice index by Sorenson in 1948.')
@@ -234,10 +322,6 @@ def dice(arr1, arr2):
     """
     Compute Dice's similarity index between two numpy arrays. Arrays will be
     binarized before comparison.
-
-    REF_
-
-    .. _REF: https://gist.github.com/brunodoamaral/e130b4e97aa4ebc468225b7ce39b3137
 
     Parameters
     ----------
@@ -248,6 +332,12 @@ def dice(arr1, arr2):
     -------
     dsi : float
         Dice-Sorenson index.
+
+    References
+    ----------
+    REF_
+
+    .. _REF: https://gist.github.com/brunodoamaral/e130b4e97aa4ebc468225b7ce39b3137
     """
     arr1 = np.array(arr1 != 0).astype(int)
     arr2 = np.array(arr2 != 0).astype(int)
@@ -267,8 +357,19 @@ def dice(arr1, arr2):
 
 def andb(arrs):
     """
-    Add multiple arrays of ints or bools together.
+    Sums arrays in `arrs`
+
+    Parameters
+    ----------
+    arrs : list
+        List of boolean or integer arrays to be summed
+
+    Returns
+    -------
+    result : ndarray
+        Integer array of summed `arrs`
     """
+
     same_shape = []
     for arr in arrs:
         for arr2 in arrs:
