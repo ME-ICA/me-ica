@@ -1295,7 +1295,7 @@ def main(options):
 
     print("++ Computing Mask")
     global mask
-    mask,masksum = makeadmask(catd,min=False,getsum=True)
+    mask,masksum = makeadmask(catd,minimum=False,getsum=True)
 
     print("++ Computing T2* map")
     global t2s, s0, t2ss, s0s, t2sG, s0G
