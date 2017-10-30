@@ -31,5 +31,5 @@ jobs:
           command: |
             source activate venv
             py.test ./meica/tests/test_tedana.py
-            timeout: 2400
+          no_output_timeout: "40m"
           post: bash <(curl -s https://codecov.io/bash)
