@@ -10,10 +10,10 @@ import nibabel as nib
 from sklearn import svm
 import scipy.stats as stats
 import sklearn.decomposition
-from .t2smap import (optcom, t2sadmap)
-from .utils import (cat2echos, uncat2echos, makemask,
-                    makeadmask, fmask, unmask,
-                    fitgaussian, niwrite, dice, andb)
+from meica.interfaces.t2smap import (optcom, t2sadmap)
+from meica.utils.utils import (cat2echos, uncat2echos, makemask,
+                               makeadmask, fmask, unmask,
+                               fitgaussian, niwrite, dice, andb)
 
 
 """

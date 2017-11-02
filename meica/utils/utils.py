@@ -4,7 +4,7 @@ import nibabel as nib
 from scipy.optimize import leastsq
 from scipy.stats import scoreatpercentile
 
-from .due import due, BibTeX
+from duecredit import due, BibTeX
 
 
 def cat2echos(data, Ne):

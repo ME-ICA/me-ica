@@ -2,7 +2,7 @@
 # ex: set sts=4 ts=4 sw=4 et:
 
 import argparse
-from meica import tedana
+from meica.interfaces import tedana
 
 
 def get_parser():

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
-import meica.utils as utils
+import meica.utils.utils as utils
 import pytest
 
 

@@ -2,7 +2,7 @@
 # ex: set sts=4 ts=4 sw=4 et:
 
 import argparse
-from meica import alignp_mepi_anat as ama
+from meica.interfaces import alignp_mepi_anat as ama
 
 
 def get_parser():
