@@ -4,7 +4,7 @@
 MEICA: A Python package for multi-echo independent/principal component analysis.
 """
 
-from duecredit import (due, Doi)
+from .due import (due, Doi)
 
 from .info import (
     __version__,
