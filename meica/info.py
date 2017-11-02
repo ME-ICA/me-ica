@@ -28,7 +28,6 @@ REQUIRES = [
     'numpy',
     'scikit-learn',
     'nilearn',
-    'sklearn',
     'nibabel>=2.1.0',
     'pybids>=0.4.0',
     'nipype',

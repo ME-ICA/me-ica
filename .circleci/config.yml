@@ -23,6 +23,10 @@ jobs:
             conda create --name venv python=3.6
             source activate venv
             pip install pytest
+            pip install numpy
+            pip install scipy
+            pip install scikit-learn
+            python setup.py install
 
       # run tests!
       - run:

@@ -10,15 +10,13 @@ def main():
     from os import path as op
     from inspect import getfile, currentframe
     from setuptools import setup, find_packages
-    from setuptools.extension import Extension
-    from numpy import get_include
 
     this_path = op.dirname(op.abspath(getfile(currentframe())))
 
     # For Python 3: use a locals dictionary
     # http://stackoverflow.com/a/1463370/6820620
     ldict = locals()
-    # Get version and release info, which is all stored in fmriprep/info.py
+    # Get version and release info, which is all stored in meica/info.py
     module_file = op.join(this_path, 'meica', 'info.py')
     with open(module_file) as infofile:
         pythoncode = [line for line in infofile.readlines() if not line.strip().startswith('#')]
