@@ -4,17 +4,27 @@
 MEICA: A Python package for multi-echo independent/principal component analysis.
 """
 
-from .version import __version__
-from .due import due, Doi, BibTeX
+from duecredit import (due, Doi)
 
-from .meica import afni_fname_parse
-from .alignp_mepi_anat import dsprefix
-from .t2smap import t2sadmap
-from .tedana import do_svm
-from .utils import cat2echos
+from .info import (
+    __version__,
+    __author__,
+    __copyright__,
+    __credits__,
+    __license__,
+    __maintainer__,
+    __email__,
+    __status__,
+    __url__,
+    __packagename__,
+    __description__,
+    __longdesc__
+)
 
+import warnings
 
-__all__ = ['meica', 'tedana', 't2smap', 'alignp_mepi_anat', 'utils']
+# cmp is not used, so ignore nipype-generated warnings
+warnings.filterwarnings('ignore', r'cmp not installed')
 
 # Citation for the algorithm.
 due.cite(Doi('10.1016/j.neuroimage.2011.12.028'),
@@ -23,7 +33,3 @@ due.cite(Doi('10.1016/j.neuroimage.2011.12.028'),
 due.cite(Doi('10.1073/pnas.1301725110'),
          description='Improves MEICA.',
          version=__version__, path='meica', cite_module=True)
-
-# Cleanup
-del due, Doi, BibTeX
-del afni_fname_parse, dsprefix, t2sadmap, do_svm, cat2echos
