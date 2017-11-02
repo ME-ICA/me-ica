@@ -1,11 +1,18 @@
 # emacs: -*- mode: python-mode; py-indent-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
 # ex: set sts=4 ts=4 sw=4 et:
-import argparse
 
+import argparse
 from meica import alignp_mepi_anat as ama
 
 
 def get_parser():
+    """
+    Parses command line inputs
+
+    Returns
+    -------
+    parser.parse_args() : argparse dic
+    """
     parser = argparse.ArgumentParser()
 
     # Base processing options
@@ -57,8 +64,8 @@ def get_parser():
 
 
 def main(argv=None):
-    parser = get_parser()
-    options = parser.parse_args(argv)
+    """Entry point"""
+    options = get_parser().parse_args(argv)
 
     #Set up and cd into directory
     sl = []
