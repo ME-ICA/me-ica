@@ -3,7 +3,7 @@
 import os
 import os.path as op
 import numpy as np
-import meica.meica as meica
+import meica.workflows.meica as meica
 from nipype.interfaces.traits_extension import TraitError
 import pytest
 

@@ -1,8 +1,8 @@
 # emacs: -*- mode: python-mode; py-indent-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
 # ex: set sts=4 ts=4 sw=4 et:
-import argparse
 
-from meica import t2smap
+import argparse
+from meica.interfaces import t2smap
 
 
 def get_parser():
@@ -35,8 +35,8 @@ def get_parser():
 
 
 def main(argv=None):
-    parser = get_parser()
-    options = parser.parse_args(argv)
+    """Entry point"""
+    options = get_parser().parse_args(argv)
     t2smap.main(options)
 
 

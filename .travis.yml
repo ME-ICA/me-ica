@@ -35,7 +35,6 @@ before_install:
 
 install:
 - pip install pytest coverage pytest-cov codecov
-- pip install -r requirements.txt
 
 before_script:
 - python setup.py install

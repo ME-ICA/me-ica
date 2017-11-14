@@ -1,8 +1,8 @@
 # emacs: -*- mode: python-mode; py-indent-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
 # ex: set sts=4 ts=4 sw=4 et:
-import argparse
 
-from meica import meica
+import argparse
+import meica.workflows.meica as meica
 
 
 def get_parser():
@@ -79,7 +79,7 @@ def get_parser():
                          action='store_true',
                          dest='no_skullstrip',
                          help='Anat is intensity-normalized and ' +
-                              'skull-stripped (for use with '-a' flag).',
+                              'skull-stripped (for use with -a flag).',
                          default=False)
     extopts.add_argument('--no_despike',
                          action='store_true',
@@ -229,10 +229,11 @@ def get_parser():
 
 
 def main(argv=None):
-    """
-    """
-    parser = get_parser()
-    options = parser.parse_args(argv)
+    """Entry point"""
+    options = get_parser().parse_args(argv)
+
+    if options.debug:
+        logger.setLevel(logging.DEBUG)
 
     script_list = meica.gen_script(options)
 

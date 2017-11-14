@@ -1,9 +1,8 @@
-"""Command-line interaction with tedana.
-"""
+# emacs: -*- mode: python-mode; py-indent-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+# ex: set sts=4 ts=4 sw=4 et:
 
 import argparse
-
-from meica import tedana
+from meica.interfaces import tedana
 
 
 def get_parser():
@@ -115,19 +114,8 @@ def get_parser():
 
 
 def main(argv=None):
-    """
-    Args to tedana.main (eventually)
-    data=options.data, tes=options.tes, mixm=options.mixm,
-                ctab=options.ctab, manacc=options.manacc, strict=options.strict,
-                no_gscontrol=options.no_gscontrol, kdaw=options.kdaw,
-                rdaw=options.rdaw, conv=options.conv, ste=options.ste,
-                combmode=options.combmode, dne=options.dne, initcost=options.initcost,
-                finalcost=options.finalcost, stabilize=options.stabilize,
-                fout=options.fout, filecsdata=options.filecsdata, label=options.label,
-                fixed_seed=options.fixed_seed
-    """
-    parser = get_parser()
-    options = parser.parse_args(argv)
+    """Entry point"""
+    options = get_parser().parse_args(argv)
     tedana.main(options)
 
 if __name__ == '__main__':

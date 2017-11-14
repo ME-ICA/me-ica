@@ -1,8 +1,8 @@
 """Tests for tedana."""
 
 import os.path
-import meica.tedana as tedana
-import scripts.run_tedana as run_tedana
+from meica.interfaces import tedana
+from meica.cli import run_tedana
 
 def test_basic_tedana():
     """

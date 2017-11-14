@@ -31,7 +31,7 @@ RUN apt-get update -qq && apt-get install -yq --no-install-recommends  \
     && chmod -R 777 /neurodocker && chmod a+s /neurodocker
 ENTRYPOINT ["/neurodocker/startup.sh"]
 
-RUN apt-get update -qq && apt-get install -yq --no-install-recommends git vim \
+RUN apt-get update -qq && apt-get install -yq --no-install-recommends git vim libxml2-dev libnlopt-dev libxslt-dev\
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -98,7 +98,7 @@ RUN conda create -y -q --name default --channel vida-nyu python=3.6.1 \
     && sync && conda clean -tipsy && sync \
     && /bin/bash -c "source activate default \
     	&& pip install -q --no-cache-dir \
-    	nipype ipython sklearn scipy ipdb mdp" \
+    	nipype ipython scikit-learn scipy ipdb mdp" \
     && sync
 ENV PATH=/opt/conda/envs/default/bin:$PATH
 
@@ -110,7 +110,7 @@ RUN conda create -y -q --name py27 python=2.7 \
     && sync && conda clean -tipsy && sync \
     && /bin/bash -c "source activate default \
         && pip install -q --no-cache-dir \
-        nipype ipython sklearn scipy ipdb mdp" \
+        nipype ipython scikit-learn scipy ipdb mdp" \
     && sync
 
 USER root
