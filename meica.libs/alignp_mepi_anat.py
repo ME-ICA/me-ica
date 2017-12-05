@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-__version__="v3.0 beta1"
+__version__="v3.2 beta1"
 """
 # Multi-Echo ICA, Version %s
 # See http://dx.doi.org/10.1016/j.neuroimage.2011.12.028
@@ -40,6 +40,7 @@ parser.add_option('',"--autocmass",action='store_false',dest='autocmass',help="A
 parser.add_option('',"--maxrot",dest='maxrot',help="Maximum rotation, default 30" ,default='30')
 parser.add_option('',"--maxshift",dest='maxshf',help="Maximum shift, default 30" ,default='30')
 parser.add_option('',"--maxscl",dest='maxscl',help="Maximum scale, default 1.01" ,default='1.01')
+parser.add_option('',"--cost",dest='cost',help="Cost function, default -lpc" ,default='-lpc')
 (options,args) = parser.parse_args()
 
 """
@@ -131,12 +132,12 @@ def allineate(sourcevol, weight, targetvol, prefix, maxrot, maxshf,maxscl,do_cma
 	autocmass=False
 	if do_cmass or options.autocmass: cmass_opt = '-cmass'
 	elif not do_cmass and not options.autocmass: cmass_opt=''
-	align_opts = "-lpc -weight %s -maxshf %s -maxrot %s -maxscl %s %s" % (weightvol, maxrot, maxshf,maxscl,cmass_opt)
+	align_opts = "%s -weight %s -maxshf %s -maxrot %s -maxscl %s %s" % (options.cost, weightvol, maxrot, maxshf,maxscl,cmass_opt)
 	sl.append("3dAllineate -overwrite -weight_frac 1.0 -VERB -warp aff -source_automask+2 -master SOURCE -source %s -base %s -prefix ./%s -1Dmatrix_save ./%s %s " \
 		% (sourcevol,targetvol,outvol_prefix,outmat_prefix,align_opts))
 	if options.autocmass: 
 		cmass_opt=''
-		align_opts = "-lpc -weight %s -maxshf %s -maxrot %s -maxscl %s %s" % (weightvol, maxrot, maxshf,maxscl,cmass_opt)
+		align_opts = "%s -weight %s -maxshf %s -maxrot %s -maxscl %s %s" % (options.cost, weightvol, maxrot, maxshf,maxscl,cmass_opt)
 	sl.append("3dAllineate -overwrite -weight_frac 1.0 -VERB -warp aff -source_automask+2 -master SOURCE -source %s -base %s -prefix ./ncm_%s -1Dmatrix_save ./ncm_%s %s " \
 		% (sourcevol,targetvol,outvol_prefix,outmat_prefix,align_opts))
 	outvol_name = niibrik(outvol_prefix)
