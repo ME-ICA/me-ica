@@ -154,6 +154,13 @@ def getdsname(e_ii,prefixonly=False):
 	if prefixonly: return dsprefix(dsname)
 	else: return dsname
 
+def isnumber(val,ret=False):
+	retval=None
+	try: retval=float(val)
+	except: return False
+	if ret: return retval
+	else: return True
+
 def logcomment(comment,level=3): 
 	majmark='\n'
 	leading='--------'
@@ -275,18 +282,26 @@ headsl.append('#'+runcmd)
 headsl.append(welcome_block)
 osf='.nii.gz' #Using NIFTI outputs
 
-#Check if input files exist
+#Check if input files exist, and get their means for the TE-check
 notfound=0
-for ds_ii in range(len(datasets)): 
-	if commands.getstatusoutput('3dinfo %s' % (getdsname(ds_ii)))[0]!=0:
+dataset_means = []
+for ds_ii in range(len(datasets)):
+	dataset_mean = isnumber(commands.getoutput('3dBrickStat -mean %s' % getdsname(ds_ii)).split('\n')[-1].strip(),True)
+	if dataset_mean==False:
 		print "*+ Can't find/load dataset %s !" % (getdsname(ds_ii))
 		notfound+=1
+	dataset_means.append(dataset_mean)
 if options.anat!='' and commands.getstatusoutput('3dinfo %s' % (options.anat))[0]!=0:
 	print "*+ Can't find/load anatomical dataset %s !" % (options.anat)
 	notfound+=1
-if notfound!=0:
+if notfound!=0 or (None in dataset_means):
 	print "++ EXITING. Check dataset names."
 	sys.exit()
+
+#Do TE / dataset alignment
+if not shorthand_dsin:
+	dataset_means = dict(zip(dataset_means,datasets_in))
+	datasets_in = [ dataset_means[dmean] for dmean in sorted(dataset_means.keys(),reverse=True) ]
 
 #Check dependencies
 grayweight_ok = 0
