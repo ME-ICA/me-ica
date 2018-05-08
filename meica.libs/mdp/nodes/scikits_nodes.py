@@ -277,8 +277,8 @@ def wrap_scikits_classifier(scikits_class):
             mdp_method.__func__.__doc__ = _gen_docstring(
                 scikits_class, scikits_method.__func__)
 
-    if scikits_class.__init__.__doc__ is None:
-        ScikitsNode.__init__.__func__.__doc__ = _gen_docstring(scikits_class)
+    #if scikits_class.__init__.__doc__ is None:
+    #    ScikitsNode.__init__.__func__.__doc__ = _gen_docstring(scikits_class)
 
     return ScikitsNode
 
@@ -356,8 +356,8 @@ def wrap_scikits_transformer(scikits_class):
             mdp_method.__func__.__doc__ = _gen_docstring(
                 scikits_class, scikits_method.__func__)
 
-    if scikits_class.__init__.__doc__ is None:
-        ScikitsNode.__init__.__func__.__doc__ = _gen_docstring(scikits_class)
+    #if scikits_class.__init__.__doc__ is None:
+    #    ScikitsNode.__init__.__func__.__doc__ = _gen_docstring(scikits_class)
     return ScikitsNode
 
 
@@ -434,8 +434,8 @@ def wrap_scikits_predictor(scikits_class):
             mdp_method.__func__.__doc__ = _gen_docstring(
                 scikits_class, scikits_method.__func__)
 
-    if scikits_class.__init__.__doc__ is None:
-        ScikitsNode.__init__.__func__.__doc__ = _gen_docstring(scikits_class)
+    #if scikits_class.__init__.__doc__ is None:
+    #    ScikitsNode.__init__.__func__.__doc__ = _gen_docstring(scikits_class)
     return ScikitsNode
 
 

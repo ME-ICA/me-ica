@@ -598,10 +598,10 @@ def tedpca(ste=0, mlepca=True):
         eigelb = sp[getelbow(sp)]
 
         spdif = np.abs(sp[1:] - sp[:-1])
-        spdifh = spdif[spdif.shape[0] / 2:]
+        spdifh = spdif[spdif.shape[0] // 2:]
         spdmin = spdif.min()
         spdthr = np.mean([spdifh.max(), spdmin])
-        spmin = sp[(spdif.shape[0] / 2)
+        spmin = sp[(spdif.shape[0] // 2)
                    + (np.arange(spdifh.shape[0])[spdifh >= spdthr][0]) + 1]
         spcum = []
         spcumv = 0

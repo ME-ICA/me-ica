@@ -836,12 +836,12 @@ if options.anat != '':
     abmprage = nsmprage
     refanat = nsmprage
     if options.space:
-        sl.append("afniatlasloc=`find /usr -name infant-neo.nii.gz | xargs dirname`")
+        sl.append("afniatlasloc=`find /usr -name MNI_caez_N27+tlrc.HEAD -exec dirname '{}' ';'`")
         if '/' in options.space:
             sl.append("ll=\"%s\"; templateloc=${ll%%/*}/" % options.space)
             options.space = options.space.split('/')[-1]
         else:
-            sl.append("templateloc=${afniatlasloc%/*}")
+            sl.append("templateloc=${afniatlasloc}")
         atnsmprage = "%s_at.nii.gz" % (dsprefix(nsmprage))
         if not dssuffix(nsmprage).__contains__('nii'):
             sl.append("3dcalc -float -a %s -expr 'a' -prefix %s.nii.gz" %
