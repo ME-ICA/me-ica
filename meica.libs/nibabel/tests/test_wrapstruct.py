@@ -39,13 +39,13 @@ from unittest import TestCase
 
 from numpy.testing import assert_array_equal
 
-from ..testing import (assert_equal, assert_true, assert_false,
-                       assert_raises, assert_not_equal)
+from ..testing import (assert_equal, assert_true, assert_false, assert_raises,
+                       assert_not_equal)
 
 
 class MyWrapStruct(WrapStruct):
     """ An example wrapped struct class """
-    _field_recoders = {} # for recoding values for str
+    _field_recoders = {}  # for recoding values for str
     template_dtype = np.dtype([('an_integer', 'i2'), ('a_str', 'S10')])
 
     @classmethod
@@ -64,8 +64,7 @@ class MyWrapStruct(WrapStruct):
     @classmethod
     def _get_checks(klass):
         ''' Return sequence of check functions for this class '''
-        return (klass._chk_integer,
-                klass._chk_string)
+        return (klass._chk_integer, klass._chk_string)
 
     def get_value_label(self, fieldname):
         if not fieldname in self._field_recoders:
@@ -74,6 +73,7 @@ class MyWrapStruct(WrapStruct):
         return self._field_recoders[fieldname].label[code]
 
     ''' Check functions in format expected by BatteryRunner class '''
+
     @staticmethod
     def _chk_integer(hdr, fix=False):
         rep = Report(HeaderDataError)
@@ -153,17 +153,14 @@ class _TestWrapStructBase(TestCase):
 
     def test_mappingness(self):
         hdr = self.header_class()
-        assert_raises(ValueError,
-                    hdr.__setitem__,
-                    'nonexistent key',
-                    0.1)
+        assert_raises(ValueError, hdr.__setitem__, 'nonexistent key', 0.1)
         hdr_dt = hdr.structarr.dtype
-        keys = hdr.keys()
+        keys = list(hdr.keys())
         assert_equal(keys, list(hdr))
-        vals = hdr.values()
+        vals = list(hdr.values())
         assert_equal(len(vals), len(keys))
         assert_equal(keys, list(hdr_dt.names))
-        for key, val in hdr.items():
+        for key, val in list(hdr.items()):
             assert_array_equal(hdr[key], val)
         # verify that .get operates as destined
         assert_equal(hdr.get('nonexistent key'), None)
@@ -220,7 +217,7 @@ class _TestWrapStructBase(TestCase):
         logger.addHandler(handler)
         str_io.truncate(0)
         hdrc = hdr.copy()
-        if level == 0: # Should never log or raise error
+        if level == 0:  # Should never log or raise error
             logger.setLevel(0)
             hdrc.check_fix(logger=logger, error_level=0)
             assert_equal(str_io.getvalue(), '')
@@ -228,23 +225,20 @@ class _TestWrapStructBase(TestCase):
             return hdrc, '', ()
         # Non zero level, test above and below threshold
         # Logging level above threshold, no log
-        logger.setLevel(level+1)
-        e_lev = level+1
+        logger.setLevel(level + 1)
+        e_lev = level + 1
         hdrc.check_fix(logger=logger, error_level=e_lev)
         assert_equal(str_io.getvalue(), '')
         # Logging level below threshold, log appears
-        logger.setLevel(level+1)
-        logger.setLevel(level-1)
+        logger.setLevel(level + 1)
+        logger.setLevel(level - 1)
         hdrc = hdr.copy()
         hdrc.check_fix(logger=logger, error_level=e_lev)
         assert_true(str_io.getvalue() != '')
         message = str_io.getvalue().strip()
         logger.removeHandler(handler)
         hdrc2 = hdr.copy()
-        raiser = (HeaderDataError,
-                  hdrc2.check_fix,
-                  logger,
-                  level)
+        raiser = (HeaderDataError, hdrc2.check_fix, logger, level)
         return hdrc, message, raiser
 
     def test_bytes(self):
@@ -262,12 +256,8 @@ class _TestWrapStructBase(TestCase):
         assert_equal(hdr1.binaryblock, hdr2.binaryblock)
         # Short and long binaryblocks give errors
         # (here set through init)
-        assert_raises(WrapStructError,
-                      self.header_class,
-                      bb[:-1])
-        assert_raises(WrapStructError,
-                      self.header_class,
-                      bb + ZEROB)
+        assert_raises(WrapStructError, self.header_class, bb[:-1])
+        assert_raises(WrapStructError, self.header_class, bb + ZEROB)
         # Checking set to true by default, and prevents nonsense being
         # set into the header. Completely zeros binary block always
         # (fairly) bad
@@ -287,10 +277,12 @@ class _TestWrapStructBase(TestCase):
         hdr_bs = hdr.as_byteswapped(swapped_code)
         assert_equal(hdr_bs.endianness, swapped_code)
         assert_not_equal(hdr.binaryblock, hdr_bs.binaryblock)
+
         # Note that contents is not rechecked on swap / copy
         class DC(self.header_class):
             def check_fix(self, *args, **kwargs):
                 raise Exception
+
         assert_raises(Exception, DC, hdr.binaryblock)
         hdr = DC(hdr.binaryblock, check=False)
         hdr2 = hdr.as_byteswapped(native_code)
@@ -315,19 +307,19 @@ class _TestWrapStructBase(TestCase):
         new_recoders = {}
         hdr._field_recoders = new_recoders
         # Even if there is a recoder
-        assert_true('improbable' not in hdr.keys())
+        assert_true('improbable' not in list(hdr.keys()))
         rec = Recoder([[0, 'fullness of heart']], ('code', 'label'))
         hdr._field_recoders['improbable'] = rec
         assert_raises(ValueError, hdr.get_value_label, 'improbable')
         # If the key exists in the structure, and is intable, then we can recode
-        for key, value in hdr.items():
+        for key, value in list(hdr.items()):
             # No recoder at first
             assert_raises(ValueError, hdr.get_value_label, 0)
             try:
                 code = int(value)
             except (ValueError, TypeError):
                 pass
-            else: # codeable
+            else:  # codeable
                 rec = Recoder([[code, 'fullness of heart']], ('code', 'label'))
                 hdr._field_recoders[key] = rec
                 assert_equal(hdr.get_value_label(key), 'fullness of heart')
@@ -384,18 +376,17 @@ class TestWrapStruct(_TestWrapStructBase):
         # pretent header defined at the top of this file
         HC = self.header_class
         hdr = HC()
-        hdr['an_integer'] = 2 # severity 40
+        hdr['an_integer'] = 2  # severity 40
         fhdr, message, raiser = self.log_chk(hdr, 40)
         assert_equal(fhdr['an_integer'], 1)
-        assert_equal(message, 'an_integer should be 1; '
-                           'set an_integer to 1')
+        assert_equal(message, 'an_integer should be 1; ' 'set an_integer to 1')
         assert_raises(*raiser)
         # lower case string
         hdr = HC()
-        hdr['a_str'] = 'Hello' # severity = 20
+        hdr['a_str'] = 'Hello'  # severity = 20
         fhdr, message, raiser = self.log_chk(hdr, 20)
         assert_equal(message, 'a_str should be lower case; '
-                           'set a_str to lower case')
+                     'set a_str to lower case')
         assert_raises(*raiser)
 
     def test_logger_error(self):
@@ -409,14 +400,13 @@ class TestWrapStruct(_TestWrapStructBase):
         logger.setLevel(20)
         logger.addHandler(logging.StreamHandler(str_io))
         # Prepare something that needs fixing
-        hdr['a_str'] = 'Fullness' # severity 20
+        hdr['a_str'] = 'Fullness'  # severity 20
         log_cache = imageglobals.logger, imageglobals.error_level
         try:
             # Check log message appears in new logger
             imageglobals.logger = logger
             hdr.copy().check_fix()
-            assert_equal(str_io.getvalue(),
-                         'a_str should be lower case; '
+            assert_equal(str_io.getvalue(), 'a_str should be lower case; '
                          'set a_str to lower case\n')
             # Check that error_level in fact causes error to be raised
             imageglobals.error_level = 20

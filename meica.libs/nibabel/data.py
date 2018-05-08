@@ -8,11 +8,10 @@ import os
 from os.path import join as pjoin
 import glob
 import sys
-import ConfigParser
+import configparser
 from distutils.version import LooseVersion
 
 from .environment import get_nipy_user_dir, get_nipy_system_dir
-
 
 DEFAULT_INSTALL_HINT = ('If you have the package, have you set the '
                         'path to the package correctly?')
@@ -33,6 +32,7 @@ class BomberError(DataError, AttributeError):
 
 class Datasource(object):
     ''' Simple class to add base path to relative path '''
+
     def __init__(self, base_path):
         ''' Initialize datasource
 
@@ -87,7 +87,7 @@ class Datasource(object):
         out_list = list()
         for base, dirs, files in os.walk(self.base_path):
             if relative:
-                base = base[len(self.base_path)+1:]
+                base = base[len(self.base_path) + 1:]
             for filename in files:
                 out_list.append(pjoin(base, filename))
         return out_list
@@ -97,6 +97,7 @@ class VersionedDatasource(Datasource):
     ''' Datasource with version information in config file
 
     '''
+
     def __init__(self, base_path, config_filename=None):
         ''' Initialize versioned datasource
 
@@ -122,14 +123,14 @@ class VersionedDatasource(Datasource):
         Datasource.__init__(self, base_path)
         if config_filename is None:
             config_filename = 'config.ini'
-        self.config = ConfigParser.SafeConfigParser()
+        self.config = configparser.SafeConfigParser()
         cfg_file = self.get_filename(config_filename)
         readfiles = self.config.read(cfg_file)
         if not readfiles:
             raise DataError('Could not read config file %s' % cfg_file)
         try:
             self.version = self.config.get('DEFAULT', 'version')
-        except ConfigParser.Error:
+        except configparser.Error:
             raise DataError('Could not get version from %s' % cfg_file)
         version_parts = self.version.split('.')
         self.major_version = int(version_parts[0])
@@ -140,13 +141,13 @@ class VersionedDatasource(Datasource):
 
 def _cfg_value(fname, section='DATA', value='path'):
     """ Utility function to fetch value from config file """
-    configp =  ConfigParser.ConfigParser()
+    configp = configparser.ConfigParser()
     readfiles = configp.read(fname)
     if not readfiles:
         return ''
     try:
         return configp.get(section, value)
-    except ConfigParser.Error:
+    except configparser.Error:
         return ''
 
 
@@ -239,8 +240,7 @@ def find_data_dir(root_dirs, *names):
         if os.path.isdir(pth):
             return pth
     raise DataError('Could not find datasource "%s" in data path "%s"' %
-                   (ds_relative,
-                    os.path.pathsep.join(root_dirs)))
+                    (ds_relative, os.path.pathsep.join(root_dirs)))
 
 
 def make_datasource(pkg_def, **kwargs):
@@ -289,9 +289,8 @@ def make_datasource(pkg_def, **kwargs):
     try:
         pth = find_data_dir(data_path, *names)
     except DataError:
-        exception = sys.exc_info()[1] # Python 2 and 3 compatibility
-        pth = [pjoin(this_data_path, *names)
-                for this_data_path in data_path]
+        exception = sys.exc_info()[1]  # Python 2 and 3 compatibility
+        pth = [pjoin(this_data_path, *names) for this_data_path in data_path]
         pkg_hint = pkg_def.get('install hint', DEFAULT_INSTALL_HINT)
         msg = ('%s; Is it possible you have not installed a data package?' %
                exception)
@@ -305,16 +304,16 @@ def make_datasource(pkg_def, **kwargs):
 
 class Bomber(object):
     ''' Class to raise an informative error when used '''
+
     def __init__(self, name, msg):
         self.name = name
         self.msg = msg
 
     def __getattr__(self, attr_name):
         ''' Raise informative error accessing not-found attributes '''
-        raise BomberError(
-            'Trying to access attribute "%s" '
-            'of non-existent data "%s"\n\n%s\n' %
-            (attr_name, self.name, self.msg))
+        raise BomberError('Trying to access attribute "%s" '
+                          'of non-existent data "%s"\n\n%s\n' %
+                          (attr_name, self.name, self.msg))
 
 
 def datasource_or_bomber(pkg_def, **options):
@@ -348,21 +347,19 @@ def datasource_or_bomber(pkg_def, **options):
     try:
         ds = make_datasource(pkg_def, **options)
     except DataError:
-        exception = sys.exc_info()[1] # python 2 and 3 compatibility
+        exception = sys.exc_info()[1]  # python 2 and 3 compatibility
         return Bomber(sys_relpath, exception)
     # check version
-    if (version is None or
-        LooseVersion(ds.version) >= LooseVersion(version)):
+    if (version is None or LooseVersion(ds.version) >= LooseVersion(version)):
         return ds
     if 'name' in pkg_def:
         pkg_name = pkg_def['name']
     else:
         pkg_name = 'data at ' + unix_relpath
     msg = ('%(name)s is version %(pkg_version)s but we need '
-           'version >= %(req_version)s\n\n%(pkg_hint)s' %
-           dict(name=pkg_name,
-                pkg_version=ds.version,
-                req_version=version,
-                pkg_hint=pkg_hint))
+           'version >= %(req_version)s\n\n%(pkg_hint)s' % dict(
+               name=pkg_name,
+               pkg_version=ds.version,
+               req_version=version,
+               pkg_hint=pkg_hint))
     return Bomber(sys_relpath, DataError(msg))
-

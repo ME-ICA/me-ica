@@ -1,9 +1,8 @@
 import mdp.parallel as parallel
-from _tools import *
+from ._tools import *
 
 requires_parallel_python = skip_on_condition(
-    "not mdp.config.has_parallel_python",
-    "This test requires Parallel Python")
+    "not mdp.config.has_parallel_python", "This test requires Parallel Python")
 
 
 @requires_parallel_python
@@ -21,9 +20,8 @@ def test_reverse_patching():
 @requires_parallel_python
 def test_simple():
     """Test local pp scheduling."""
-    scheduler = parallel.pp_support.LocalPPScheduler(ncpus=2,
-                                                     max_queue_length=0,
-                                                     verbose=False)
+    scheduler = parallel.pp_support.LocalPPScheduler(
+        ncpus=2, max_queue_length=0, verbose=False)
     # process jobs
     for i in range(50):
         scheduler.add_task(i, parallel.SqrTestCallable())
@@ -32,7 +30,8 @@ def test_simple():
     # check result
     results.sort()
     results = numx.array(results[:6])
-    assert numx.all(results == numx.array([0,1,4,9,16,25]))
+    assert numx.all(results == numx.array([0, 1, 4, 9, 16, 25]))
+
 
 @requires_parallel_python
 def test_scheduler_flow():
@@ -43,15 +42,15 @@ def test_scheduler_flow():
     node3 = mdp.nodes.SFANode(output_dim=10)
     flow = mdp.parallel.ParallelFlow([node1, node2, node3])
     parallel_flow = mdp.parallel.ParallelFlow(flow.copy()[:])
-    scheduler = parallel.pp_support.LocalPPScheduler(ncpus=3,
-                                                     max_queue_length=0,
-                                                     verbose=False)
+    scheduler = parallel.pp_support.LocalPPScheduler(
+        ncpus=3, max_queue_length=0, verbose=False)
     input_dim = 30
     scales = numx.linspace(1, 100, num=input_dim)
     scale_matrix = mdp.numx.diag(scales)
-    train_iterables = [numx.dot(mdp.numx_rand.random((5, 100, input_dim)),
-                             scale_matrix)
-                       for _ in range(3)]
+    train_iterables = [
+        numx.dot(mdp.numx_rand.random((5, 100, input_dim)), scale_matrix)
+        for _ in range(3)
+    ]
     parallel_flow.train(train_iterables, scheduler=scheduler)
     x = mdp.numx.random.random((10, input_dim))
     # test that parallel execution works as well

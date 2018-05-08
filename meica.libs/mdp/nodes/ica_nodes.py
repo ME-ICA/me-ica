@@ -1,16 +1,17 @@
-
 __docformat__ = "restructuredtext en"
 
 import math
 import mdp
-from isfa_nodes import ISFANode
+from .isfa_nodes import ISFANode
 numx, numx_rand, numx_linalg = mdp.numx, mdp.numx_rand, mdp.numx_linalg
 
 utils = mdp.utils
 mult = utils.mult
 
+
 class ProjectMatrixMixin(object):
     """Mixin class to be inherited by all ICA-like algorithms"""
+
     def get_projmatrix(self, transposed=1):
         """Return the projection matrix."""
         self._if_training_stop_training()
@@ -40,6 +41,7 @@ class ProjectMatrixMixin(object):
             return T
         return T.T
 
+
 class ICANode(mdp.Cumulator, mdp.Node, ProjectMatrixMixin):
     """
     ICANode is a general class to handle different batch-mode algorithm for
@@ -49,9 +51,15 @@ class ICANode(mdp.Cumulator, mdp.Node, ProjectMatrixMixin):
     Wiley.
     """
 
-    def __init__(self, limit = 0.001, telescope = False, verbose = False,
-                 whitened = False, white_comp = None, white_parm = None,
-                 input_dim = None, dtype = None):
+    def __init__(self,
+                 limit=0.001,
+                 telescope=False,
+                 verbose=False,
+                 whitened=False,
+                 white_comp=None,
+                 white_parm=None,
+                 input_dim=None,
+                 dtype=None):
         """
         Input arguments:
 
@@ -86,7 +94,6 @@ class ICANode(mdp.Cumulator, mdp.Node, ProjectMatrixMixin):
             self.white_parm = white_parm
         super(ICANode, self).__init__(input_dim, None, dtype)
 
-
     def _set_input_dim(self, n):
         self._input_dim = n
         if self.whitened:
@@ -108,9 +115,10 @@ class ICANode(mdp.Cumulator, mdp.Node, ProjectMatrixMixin):
         # whiten if needed
         if not self.whitened:
             self.output_dim = self.white_comp
-            white = mdp.nodes.WhiteningNode(output_dim = self.white_comp,
-                                            dtype=self.dtype,
-                                            **self.white_parm)
+            white = mdp.nodes.WhiteningNode(
+                output_dim=self.white_comp,
+                dtype=self.dtype,
+                **self.white_parm)
             white.train(self.data)
             self.data = white.execute(self.data)
             self.white = white
@@ -123,19 +131,19 @@ class ICANode(mdp.Cumulator, mdp.Node, ProjectMatrixMixin):
 
         # call 'core' in telescope mode if needed
         if self.telescope:
-            minpow = math.frexp(self.input_dim*10)[1]
-            maxpow = int(numx.log(data.shape[0])/numx.log(2))
-            for tel in range(minpow, maxpow+1):
+            minpow = math.frexp(self.input_dim * 10)[1]
+            maxpow = int(numx.log(data.shape[0]) / numx.log(2))
+            for tel in range(minpow, maxpow + 1):
                 index = 2**tel
                 if verbose:
-                    print "--\nUsing %d inputs" % index
+                    print("--\nUsing %d inputs" % index)
                 convergence = core(data[:index, :])
                 if convergence <= limit:
                     break
         else:
             convergence = core(data)
         if verbose:
-            print "Convergence criterium: ", convergence
+            print("Convergence criterium: ", convergence)
         self.convergence = convergence
 
     def core(self, data):
@@ -161,6 +169,7 @@ class ICANode(mdp.Cumulator, mdp.Node, ProjectMatrixMixin):
         if not self.whitened:
             y = self.white.inverse(y)
         return y
+
 
 class CuBICANode(ICANode):
     """
@@ -197,7 +206,7 @@ class CuBICANode(ICANode):
         # keep track of maximum angle of rotation
         # angles vary in the range [-pi, +pi]
         # put here -2pi < -pi < +pi
-        self.maxangle = [-2*numx.pi]
+        self.maxangle = [-2 * numx.pi]
         verbose = self.verbose
 
         # we need to copy to avoid overwriting during rotation.
@@ -211,52 +220,53 @@ class CuBICANode(ICANode):
         # some constants
         ct_c34 = 0.0625
         ct_s34 = 0.25
-        ct_c44 = 1./384
-        ct_s44 = 1./96
+        ct_c44 = 1. / 384
+        ct_s44 = 1. / 96
 
         # initial transposed rotation matrix == identity matrix
         Qt = numx.identity(comp, dtype=self.dtype)
 
         # maximum number of sweeps through all possible pairs of signals
-        num = int(1+round(numx.sqrt(comp)))
+        num = int(1 + round(numx.sqrt(comp)))
 
         # start sweeping
         for k in range(num):
             maxangle = 0
             for i in range(comp - 1):
-                for j in range(i+1, comp):
+                for j in range(i + 1, comp):
                     u1 = x[:, i]
                     u2 = x[:, j]
-                    sq1 = x[:, i]*x[:, i]
-                    sq2 = x[:, j]*x[:, j]
+                    sq1 = x[:, i] * x[:, i]
+                    sq2 = x[:, j] * x[:, j]
 
                     # calculate the cumulants of 3rd and 4th order.
-                    C111  = mult(sq1, u1)/tlen
-                    C112  = mult(sq1, u2)/tlen
-                    C122  = mult(sq2, u1)/tlen
-                    C222  = mult(sq2, u2)/tlen
-                    C1111 = mult(sq1, sq1)/tlen - 3.
-                    C1112 = mult(sq1*u1, u2)/tlen
-                    C1122 = mult(sq1, sq2)/tlen - 1.
-                    C1222 = mult(sq2*u2, u1)/tlen
-                    C2222 = mult(sq2, sq2)/tlen - 3.
+                    C111 = mult(sq1, u1) / tlen
+                    C112 = mult(sq1, u2) / tlen
+                    C122 = mult(sq2, u1) / tlen
+                    C222 = mult(sq2, u2) / tlen
+                    C1111 = mult(sq1, sq1) / tlen - 3.
+                    C1112 = mult(sq1 * u1, u2) / tlen
+                    C1122 = mult(sq1, sq2) / tlen - 1.
+                    C1222 = mult(sq2 * u2, u1) / tlen
+                    C2222 = mult(sq2, sq2) / tlen - 3.
 
-                    c_34 = ct_c34 * (    (C111*C111+C222*C222)-
-                                      3.*(C112*C112+C122*C122)-
-                                      2.*(C111*C122+C112*C222)  )
-                    s_34 = ct_s34 * (     C111*C112-C122*C222   )
-                    c_44 = ct_c44 *(  7.*(C1111*C1111+C2222*C2222)-
-                                     16.*(C1112*C1112+C1222*C1222)-
-                                     12.*(C1111*C1122+C1122*C2222)-
-                                     36.*(C1122*C1122)-
-                                     32.*(C1112*C1222)-
-                                      2.*(C1111*C2222)              )
-                    s_44 = ct_s44 *(  7.*(C1111*C1112-C1222*C2222)+
-                                      6.*(C1112*C1122-C1122*C1222)+
-                                                (C1111*C1222-C1112*C2222)  )
+                    c_34 = ct_c34 * ((C111 * C111 + C222 * C222) - 3. *
+                                     (C112 * C112 + C122 * C122) - 2. *
+                                     (C111 * C122 + C112 * C222))
+                    s_34 = ct_s34 * (C111 * C112 - C122 * C222)
+                    c_44 = ct_c44 * (7. *
+                                     (C1111 * C1111 + C2222 * C2222) - 16. *
+                                     (C1112 * C1112 + C1222 * C1222) - 12. *
+                                     (C1111 * C1122 + C1122 * C2222) - 36. *
+                                     (C1122 * C1122) - 32. *
+                                     (C1112 * C1222) - 2. * (C1111 * C2222))
+                    s_44 = ct_s44 * (7. *
+                                     (C1111 * C1112 - C1222 * C2222) + 6. *
+                                     (C1112 * C1122 - C1122 * C1222) +
+                                     (C1111 * C1222 - C1112 * C2222))
 
                     # rotation angle that maximize the contrast function
-                    phi_max = -0.25 * numx.arctan2(s_34+s_44, c_34+c_44)
+                    phi_max = -0.25 * numx.arctan2(s_34 + s_44, c_34 + c_44)
 
                     # get the new rotation matrix.
                     # Using the function rotate with angle 'phi' on
@@ -277,11 +287,12 @@ class CuBICANode(ICANode):
 
         self.iter = k
         if verbose:
-            print "\nSweeps: ", k
+            print("\nSweeps: ", k)
         self.filters = Qt
 
         # return the convergence criterium
         return maxangle
+
 
 class FastICANode(ICANode):
     """
@@ -323,13 +334,26 @@ class FastICANode(ICANode):
     - 14.9.2007 updated to Matlab version 2.5
     """
 
-    def __init__(self, approach = 'defl', g = 'pow3', guess = None,
-                 fine_g = 'pow3', mu = 1,
-                 sample_size = 1, fine_tanh = 1, fine_gaus = 1,
-                 max_it = 5000, max_it_fine = 100,
-                 failures = 5, primary_limit=0.01, limit = 0.001,  verbose = False,
-                 whitened = False, white_comp = None, white_parm = None,
-                 input_dim = None, dtype=None):
+    def __init__(self,
+                 approach='defl',
+                 g='pow3',
+                 guess=None,
+                 fine_g='pow3',
+                 mu=1,
+                 sample_size=1,
+                 fine_tanh=1,
+                 fine_gaus=1,
+                 max_it=5000,
+                 max_it_fine=100,
+                 failures=5,
+                 primary_limit=0.01,
+                 limit=0.001,
+                 verbose=False,
+                 whitened=False,
+                 white_comp=None,
+                 white_parm=None,
+                 input_dim=None,
+                 dtype=None):
         """
         Input arguments:
 
@@ -389,9 +413,9 @@ class FastICANode(ICANode):
          failures -- maximum number of failures to allow in deflation mode
 
         """
-        super(FastICANode, self).__init__(limit, False, verbose, whitened,
-                                          white_comp, white_parm, input_dim,
-                                          dtype)
+        super(FastICANode,
+              self).__init__(limit, False, verbose, whitened, white_comp,
+                             white_parm, input_dim, dtype)
 
         if approach in ['defl', 'symm']:
             self.approach = approach
@@ -524,27 +548,26 @@ class FastICANode(ICANode):
                     errstr = 'No convergence after %d steps\n' % max_it
                     raise mdp.NodeException(errstr)
 
-
                 # Symmetric orthogonalization. Q = Q * real(inv(Q' * Q)^(1/2));
                 Q = mult(Q, utils.sqrtm(utils.inv(mult(Q.T, Q))))
 
                 # Test for termination condition. Note that we consider
                 # opposite directions here as well.
-                v1 = 1.-abs((mult(Q.T, QOld)).diagonal()).min(axis=0)
+                v1 = 1. - abs((mult(Q.T, QOld)).diagonal()).min(axis=0)
                 convergence.append(v1)
-                v2 = 1.-abs((mult(Q.T, QOldF)).diagonal()).min(axis=0)
+                v2 = 1. - abs((mult(Q.T, QOldF)).diagonal()).min(axis=0)
                 convergence_fine.append(v2)
 
-                if self.g!=self.fine_g and convergence[round] < primary_limit and not in_secondary:
+                if self.g != self.fine_g and convergence[round] < primary_limit and not in_secondary:
                     if verbose:
-                        print 'Primary convergence, switching to fine cost...'
+                        print('Primary convergence, switching to fine cost...')
                     used_g = gFine
                     in_secondary = True
 
                 if convergence[round] < limit:
                     if fine_tuning and (not fine_tuned):
                         if verbose:
-                            print 'Secondary convergence, fine-tuning...'
+                            print('Secondary convergence, fine-tuning...')
                         fine_tuned = True
                         used_g = gFine
                         mu = muK * self.mu
@@ -552,14 +575,14 @@ class FastICANode(ICANode):
                         QoldF = numx.zeros(Q.shape, dtype)
                     else:
                         if verbose:
-                            print 'Convergence after %d steps\n' % round
+                            print('Convergence after %d steps\n' % round)
                         break
                 if stabilization:
                     if (stroke == 0) and (convergence_fine[round] < limit):
                         if verbose:
-                            print 'Stroke!\n'
+                            print('Stroke!\n')
                         stroke = mu
-                        mu = 0.5*mu
+                        mu = 0.5 * mu
                         if used_g % 2 == 0:
                             used_g += 1
                     elif (stroke != 0):
@@ -567,11 +590,11 @@ class FastICANode(ICANode):
                         stroke = 0
                         if (mu == 1) and (used_g % 2 != 0):
                             used_g -= 1
-                    elif (not lng) and (round > max_it//2):
+                    elif (not lng) and (round > max_it // 2):
                         if verbose:
-                            print 'Taking long (reducing step size)...'
+                            print('Taking long (reducing step size)...')
                         lng = True
-                        mu = 0.5*mu
+                        mu = 0.5 * mu
                         if used_g % 2 == 0:
                             used_g += 1
 
@@ -581,124 +604,122 @@ class FastICANode(ICANode):
                 # Show the progress...
                 if verbose:
                     msg = ('Step no. %d,'
-                           ' convergence: %.7f' % (round+1,convergence[round]))
-                    print msg
-
+                           ' convergence: %.7f' % (round + 1,
+                                                   convergence[round]))
+                    print(msg)
 
                 # First calculate the independent components (u_i's).
                 # u_i = b_i' x = x' b_i. For all x:s simultaneously this is
                 # non linearity
                 if used_g == 10:
                     u = mult(X.T, Q)
-                    Q = mult(X, u*u*u)/tlen - 3.*Q
+                    Q = mult(X, u * u * u) / tlen - 3. * Q
                 elif used_g == 11:
                     u = mult(X.T, Q)
-                    Gpow3 = u*u*u
-                    Beta = (u*Gpow3).sum(axis=0)
-                    D = numx.diag((1/(Beta - 3*tlen)))
-                    Q = Q + mu * mult(Q, mult((mult(u.T, Gpow3) -
-                                               numx.diag(Beta)), D))
+                    Gpow3 = u * u * u
+                    Beta = (u * Gpow3).sum(axis=0)
+                    D = numx.diag((1 / (Beta - 3 * tlen)))
+                    Q = Q + mu * mult(
+                        Q, mult((mult(u.T, Gpow3) - numx.diag(Beta)), D))
                 elif used_g == 12:
                     Xsub = self._get_rsamples(X)
                     u = mult(Xsub.T, Q)
-                    Q = mult(Xsub, u*u*u)/Xsub.shape[1] - 3.*Q
+                    Q = mult(Xsub, u * u * u) / Xsub.shape[1] - 3. * Q
                 elif used_g == 13:
                     Xsub = self._get_rsamples(X)
                     u = mult(Xsub.T, Q)
-                    Gpow3 = u*u*u
-                    Beta = (u*Gpow3).sum(axis=0)
-                    D = numx.diag((1/(Beta - 3*Xsub.shape[1])))
-                    Q = Q + mu * mult(Q, mult((mult(u.T, Gpow3) -
-                                               numx.diag(Beta)), D))
+                    Gpow3 = u * u * u
+                    Beta = (u * Gpow3).sum(axis=0)
+                    D = numx.diag((1 / (Beta - 3 * Xsub.shape[1])))
+                    Q = Q + mu * mult(
+                        Q, mult((mult(u.T, Gpow3) - numx.diag(Beta)), D))
                 elif used_g == 20:
                     u = mult(X.T, Q)
                     tang = numx.tanh(fine_tanh * u)
-                    temp = (1.-tang*tang).sum(axis=0)/tlen
-                    Q = mult(X, tang)/tlen - temp * Q * fine_tanh
+                    temp = (1. - tang * tang).sum(axis=0) / tlen
+                    Q = mult(X, tang) / tlen - temp * Q * fine_tanh
                 elif used_g == 21:
                     u = mult(X.T, Q)
                     tang = numx.tanh(fine_tanh * u)
-                    Beta = (u*tang).sum(axis=0)
-                    D = numx.diag(1/(Beta -
-                                     fine_tanh*(1.-tang*tang).sum(axis=0)))
-                    Q = Q + mu * mult(Q,
-                                 mult((mult(u.T, tang)-
-                                       numx.diag(Beta)), D))
+                    Beta = (u * tang).sum(axis=0)
+                    D = numx.diag(1 / (Beta - fine_tanh *
+                                       (1. - tang * tang).sum(axis=0)))
+                    Q = Q + mu * mult(
+                        Q, mult((mult(u.T, tang) - numx.diag(Beta)), D))
                 elif used_g == 22:
                     Xsub = self._get_rsamples(X)
                     u = mult(Xsub.T, Q)
                     tang = numx.tanh(fine_tanh * u)
-                    temp = (1.-tang*tang).sum(axis=0)/Xsub.shape[1]
-                    Q = mult(Xsub, tang)/Xsub.shape[1] - temp * Q * fine_tanh
+                    temp = (1. - tang * tang).sum(axis=0) / Xsub.shape[1]
+                    Q = mult(Xsub, tang) / Xsub.shape[1] - temp * Q * fine_tanh
                 elif used_g == 23:
                     Xsub = self._get_rsamples(X)
                     u = mult(Xsub.T, Q)
                     tang = numx.tanh(fine_tanh * u)
-                    Beta = (u*tang).sum(axis=0)
-                    D = numx.diag(1/(Beta -
-                                     fine_tanh*(1.-tang*tang).sum(axis=0)))
-                    Q = Q + mu * mult(Q,
-                                 mult((mult(u.T, tang)-
-                                       numx.diag(Beta)), D))
+                    Beta = (u * tang).sum(axis=0)
+                    D = numx.diag(1 / (Beta - fine_tanh *
+                                       (1. - tang * tang).sum(axis=0)))
+                    Q = Q + mu * mult(
+                        Q, mult((mult(u.T, tang) - numx.diag(Beta)), D))
                 elif used_g == 30:
                     u = mult(X.T, Q)
-                    u2 = u*u
-                    ex = numx.exp(-fine_gaus*u2*0.5)
-                    gauss =  u*ex
-                    dgauss = (1. - fine_gaus*u2)*ex
-                    Q = (mult(X, gauss)-dgauss.sum(axis=0)*Q)/tlen
+                    u2 = u * u
+                    ex = numx.exp(-fine_gaus * u2 * 0.5)
+                    gauss = u * ex
+                    dgauss = (1. - fine_gaus * u2) * ex
+                    Q = (mult(X, gauss) - dgauss.sum(axis=0) * Q) / tlen
                 elif used_g == 31:
                     u = mult(X.T, Q)
-                    u2 = u*u
-                    ex = numx.exp(-fine_gaus*u2*0.5)
-                    gaus =  u*ex
-                    Beta = (u*gaus).sum(axis=0)
-                    D = numx.diag(1/(Beta -
-                                     ((1-fine_gaus*u2)*ex).sum(axis=0)))
-                    Q = Q + mu * mult(Q,
-                                 mult((mult(u.T, gaus)-
-                                       numx.diag(Beta)), D))
+                    u2 = u * u
+                    ex = numx.exp(-fine_gaus * u2 * 0.5)
+                    gaus = u * ex
+                    Beta = (u * gaus).sum(axis=0)
+                    D = numx.diag(
+                        1 / (Beta - ((1 - fine_gaus * u2) * ex).sum(axis=0)))
+                    Q = Q + mu * mult(
+                        Q, mult((mult(u.T, gaus) - numx.diag(Beta)), D))
                 elif used_g == 32:
                     Xsub = self._get_rsamples(X)
                     u = mult(Xsub.T, Q)
-                    u2 = u*u
-                    ex = numx.exp(-fine_gaus*u2*0.5)
-                    gauss =  u*ex
-                    dgauss = (1. - fine_gaus*u2)*ex
-                    Q = (mult(Xsub, gauss)-dgauss.sum(axis=0)*Q)/Xsub.shape[1]
+                    u2 = u * u
+                    ex = numx.exp(-fine_gaus * u2 * 0.5)
+                    gauss = u * ex
+                    dgauss = (1. - fine_gaus * u2) * ex
+                    Q = (mult(Xsub, gauss) - dgauss.sum(axis=0) * Q
+                         ) / Xsub.shape[1]
                 elif used_g == 33:
                     Xsub = self._get_rsamples(X)
                     u = mult(Xsub.T, Q)
-                    u2 = u*u
-                    ex = numx.exp(-fine_gaus*u2*0.5)
-                    gaus = u*ex
-                    Beta = (u*gaus).sum(axis=0)
-                    D = numx.diag(1/(Beta -
-                                     ((1-fine_gaus*u2)*ex).sum(axis=0)))
-                    Q = Q + mu * mult(Q, mult((mult(u.T, gaus)-
-                                               numx.diag(Beta)), D))
+                    u2 = u * u
+                    ex = numx.exp(-fine_gaus * u2 * 0.5)
+                    gaus = u * ex
+                    Beta = (u * gaus).sum(axis=0)
+                    D = numx.diag(
+                        1 / (Beta - ((1 - fine_gaus * u2) * ex).sum(axis=0)))
+                    Q = Q + mu * mult(
+                        Q, mult((mult(u.T, gaus) - numx.diag(Beta)), D))
                 elif used_g == 40:
                     u = mult(X.T, Q)
-                    Q = mult(X, u*u)/tlen
+                    Q = mult(X, u * u) / tlen
                 elif used_g == 41:
                     u = mult(X.T, Q)
-                    Gskew = u*u
-                    Beta = (u*Gskew).sum(axis=0)
-                    D = numx.diag(1/Beta)
-                    Q =  Q + mu * mult(Q, mult((mult(u.T, Gskew)-
-                                                numx.diag(Beta)), D))
+                    Gskew = u * u
+                    Beta = (u * Gskew).sum(axis=0)
+                    D = numx.diag(1 / Beta)
+                    Q = Q + mu * mult(
+                        Q, mult((mult(u.T, Gskew) - numx.diag(Beta)), D))
                 elif used_g == 42:
                     Xsub = self._get_rsamples(X)
                     u = mult(Xsub.T, Q)
-                    Q = mult(Xsub, u*u)/Xsub.shape[1]
+                    Q = mult(Xsub, u * u) / Xsub.shape[1]
                 elif used_g == 43:
                     Xsub = self._get_rsamples(X)
                     u = mult(Xsub.T, Q)
-                    Gskew = u*u
-                    Beta = (u*Gskew).sum(axis=0)
-                    D = numx.diag(1/Beta)
-                    Q =  Q + mu * mult(Q, mult((mult(u.T, Gskew)-
-                                                numx.diag(Beta)), D))
+                    Gskew = u * u
+                    Beta = (u * Gskew).sum(axis=0)
+                    D = numx.diag(1 / Beta)
+                    Q = Q + mu * mult(
+                        Q, mult((mult(u.T, Gskew) - numx.diag(Beta)), D))
                 else:
                     errstr = 'Nonlinearity not found: %i' % used_g
                     raise mdp.NodeException(errstr)
@@ -726,7 +747,7 @@ class FastICANode(ICANode):
 
                 # Take a random initial vector of lenght 1 and orthogonalize it
                 # with respect to the other vectors.
-                w  = guess[:, round]
+                w = guess[:, round]
                 w -= mult(mult(Q, Q.T), w)
                 w /= utils.norm2(w)
 
@@ -750,7 +771,7 @@ class FastICANode(ICANode):
                                        'converge in %d iterations.' % (round,
                                                                        max_it))
                             if verbose:
-                                print err_msg
+                                print(err_msg)
                             if round == 0:
                                 raise mdp.NodeException(err_msg)
                             nfail += 1
@@ -766,12 +787,12 @@ class FastICANode(ICANode):
                     # Test for termination condition. Note that the algorithm
                     # has converged if the direction of w and wOld is the same.
                     #conv = float(abs((w*wOld).sum()))
-                    conv = min(utils.norm2(w-wOld), utils.norm2(w+wOld))
+                    conv = min(utils.norm2(w - wOld), utils.norm2(w + wOld))
                     convergence.append(conv)
                     if conv < limit:
                         if fine_tuning and (not fine_tuned):
                             if verbose:
-                                print 'Initial convergence, fine-tuning...'
+                                print('Initial convergence, fine-tuning...')
                             fine_tuned = True
                             gabba = max_it_fine
                             wOld = numx.zeros(w.shape, dtype)
@@ -786,18 +807,18 @@ class FastICANode(ICANode):
                             Q[:, round] = w.copy()
                             # Show the progress...
                             if verbose:
-                                print 'IC %d computed ( %d steps )' % (round+1,
-                                                                       i+1)
+                                print('IC %d computed ( %d steps )' %
+                                      (round + 1, i + 1))
                             break
                     elif stabilization:
-                        conv_fine = min(utils.norm2(w-wOldF),
-                                        utils.norm2(w+wOldF))
+                        conv_fine = min(
+                            utils.norm2(w - wOldF), utils.norm2(w + wOldF))
                         convergence_fine.append(conv_fine)
-                        if  (stroke == 0) and conv_fine < limit:
+                        if (stroke == 0) and conv_fine < limit:
                             if verbose:
-                                print 'Stroke!'
+                                print('Stroke!')
                             stroke = mu
-                            mu = 0.5*mu
+                            mu = 0.5 * mu
                             if used_g % 2 == 0:
                                 used_g += 1
                         elif (stroke != 0):
@@ -805,11 +826,11 @@ class FastICANode(ICANode):
                             stroke = 0
                             if (mu == 1) and (used_g % 2 != 0):
                                 used_g -= 1
-                        elif (not lng) and (i > max_it//2):
+                        elif (not lng) and (i > max_it // 2):
                             if verbose:
-                                print 'Taking long (reducing step size)...'
+                                print('Taking long (reducing step size)...')
                             lng = True
-                            mu = 0.5*mu
+                            mu = 0.5 * mu
                             if used_g % 2 == 0:
                                 used_g += 1
 
@@ -817,100 +838,103 @@ class FastICANode(ICANode):
                     wOld = w
                     if used_g == 10:
                         u = mult(X.T, w)
-                        w = mult(X, u*u*u)/tlen - 3.*w
+                        w = mult(X, u * u * u) / tlen - 3. * w
                     elif used_g == 11:
                         u = mult(X.T, w)
-                        EXGpow3 = mult(X, u*u*u)/tlen
+                        EXGpow3 = mult(X, u * u * u) / tlen
                         Beta = mult(w.T, EXGpow3)
-                        w = w - mu * (EXGpow3 - Beta*w)/(3-Beta)
+                        w = w - mu * (EXGpow3 - Beta * w) / (3 - Beta)
                     elif used_g == 12:
                         Xsub = self._get_rsamples(X)
                         u = mult(Xsub.T, w)
-                        w = mult(Xsub, u*u*u)/Xsub.shape[1] - 3.*w
+                        w = mult(Xsub, u * u * u) / Xsub.shape[1] - 3. * w
                     elif used_g == 13:
                         Xsub = self._get_rsamples(X)
                         u = mult(Xsub.T, w)
-                        EXGpow3 = mult(Xsub, u*u*u)/Xsub.shape[1]
+                        EXGpow3 = mult(Xsub, u * u * u) / Xsub.shape[1]
                         Beta = mult(w.T, EXGpow3)
-                        w = w - mu * (EXGpow3 - Beta*w)/(3-Beta)
+                        w = w - mu * (EXGpow3 - Beta * w) / (3 - Beta)
                     elif used_g == 20:
                         u = mult(X.T, w)
                         tang = numx.tanh(fine_tanh * u)
-                        temp = mult((1. - tang*tang).sum(axis=0), w)
-                        w = (mult(X, tang) - fine_tanh*temp)/tlen
+                        temp = mult((1. - tang * tang).sum(axis=0), w)
+                        w = (mult(X, tang) - fine_tanh * temp) / tlen
                     elif used_g == 21:
                         u = mult(X.T, w)
                         tang = numx.tanh(fine_tanh * u)
                         Beta = mult(u.T, tang)
-                        temp = (1. - tang*tang).sum(axis=0)
-                        w = w-mu*((mult(X, tang)-Beta*w)/(fine_tanh*temp-Beta))
+                        temp = (1. - tang * tang).sum(axis=0)
+                        w = w - mu * ((mult(X, tang) - Beta * w) /
+                                      (fine_tanh * temp - Beta))
                     elif used_g == 22:
                         Xsub = self._get_rsamples(X)
                         u = mult(Xsub.T, w)
                         tang = numx.tanh(fine_tanh * u)
-                        temp = mult((1. - tang*tang).sum(axis=0), w)
-                        w = (mult(Xsub, tang) - fine_tanh*temp)/Xsub.shape[1]
+                        temp = mult((1. - tang * tang).sum(axis=0), w)
+                        w = (mult(Xsub, tang) - fine_tanh * temp
+                             ) / Xsub.shape[1]
                     elif used_g == 23:
                         Xsub = self._get_rsamples(X)
                         u = mult(Xsub.T, w)
                         tang = numx.tanh(fine_tanh * u)
                         Beta = mult(u.T, tang)
-                        w = w - mu * ((mult(Xsub, tang)-Beta*w) /
-                                      (fine_tanh*(1. - tang*tang).sum(axis=0) -
-                                       Beta))
+                        w = w - mu * ((mult(Xsub, tang) - Beta * w) /
+                                      (fine_tanh *
+                                       (1. - tang * tang).sum(axis=0) - Beta))
                     elif used_g == 30:
                         u = mult(X.T, w)
-                        u2 = u*u
-                        ex = numx.exp(-fine_gaus*u2*0.5)
-                        gauss =  u*ex
-                        dgauss = (1. - fine_gaus *u2)*ex
-                        w = (mult(X, gauss)-mult(dgauss.sum(axis=0), w))/tlen
+                        u2 = u * u
+                        ex = numx.exp(-fine_gaus * u2 * 0.5)
+                        gauss = u * ex
+                        dgauss = (1. - fine_gaus * u2) * ex
+                        w = (mult(X, gauss) - mult(dgauss.sum(axis=0), w)
+                             ) / tlen
                     elif used_g == 31:
                         u = mult(X.T, w)
-                        u2 = u*u
-                        ex = numx.exp(-fine_gaus*u2*0.5)
-                        gauss =  u*ex
-                        dgauss = (1. - fine_gaus *u2)*ex
+                        u2 = u * u
+                        ex = numx.exp(-fine_gaus * u2 * 0.5)
+                        gauss = u * ex
+                        dgauss = (1. - fine_gaus * u2) * ex
                         Beta = mult(u.T, gauss)
-                        w = w - mu*((mult(X, gauss)-Beta*w)/
-                                    (dgauss.sum(axis=0)-Beta))
+                        w = w - mu * ((mult(X, gauss) - Beta * w) /
+                                      (dgauss.sum(axis=0) - Beta))
                     elif used_g == 32:
                         Xsub = self._get_rsamples(X)
                         u = mult(Xsub.T, w)
-                        u2 = u*u
-                        ex = numx.exp(-fine_gaus*u2*0.5)
-                        gauss =  u*ex
-                        dgauss = (1. - fine_gaus *u2)*ex
-                        w = (mult(Xsub, gauss)-
-                             mult(dgauss.sum(axis=0), w))/Xsub.shape[1]
+                        u2 = u * u
+                        ex = numx.exp(-fine_gaus * u2 * 0.5)
+                        gauss = u * ex
+                        dgauss = (1. - fine_gaus * u2) * ex
+                        w = (mult(Xsub, gauss) - mult(dgauss.sum(axis=0), w)
+                             ) / Xsub.shape[1]
                     elif used_g == 33:
                         Xsub = self._get_rsamples(X)
                         u = mult(Xsub.T, w)
-                        u2 = u*u
-                        ex = numx.exp(-fine_gaus*u2*0.5)
-                        gauss =  u*ex
-                        dgauss = (1. - fine_gaus *u2)*ex
+                        u2 = u * u
+                        ex = numx.exp(-fine_gaus * u2 * 0.5)
+                        gauss = u * ex
+                        dgauss = (1. - fine_gaus * u2) * ex
                         Beta = mult(u.T, gauss)
-                        w = w - mu*((mult(Xsub, gauss)-Beta*w)/
-                                    (dgauss.sum(axis=0)-Beta))
+                        w = w - mu * ((mult(Xsub, gauss) - Beta * w) /
+                                      (dgauss.sum(axis=0) - Beta))
                     elif used_g == 40:
                         u = mult(X.T, w)
-                        w = mult(X, u*u)/tlen
+                        w = mult(X, u * u) / tlen
                     elif used_g == 41:
                         u = mult(X.T, w)
-                        EXGskew = mult(X, u*u) / tlen
+                        EXGskew = mult(X, u * u) / tlen
                         Beta = mult(w.T, EXGskew)
-                        w = w - mu * (EXGskew - mult(Beta, w))/(-Beta)
+                        w = w - mu * (EXGskew - mult(Beta, w)) / (-Beta)
                     elif used_g == 42:
                         Xsub = self._get_rsamples(X)
                         u = mult(Xsub.T, w)
-                        w = mult(Xsub, u*u)/Xsub.shape[1]
+                        w = mult(Xsub, u * u) / Xsub.shape[1]
                     elif used_g == 43:
                         Xsub = self._get_rsamples(X)
                         u = mult(Xsub.T, w)
-                        EXGskew = mult(Xsub, u*u) / Xsub.shape[1]
+                        EXGskew = mult(Xsub, u * u) / Xsub.shape[1]
                         Beta = mult(w.T, EXGskew)
-                        w = w - mu * (EXGskew - Beta*w)/(-Beta)
+                        w = w - mu * (EXGskew - Beta * w) / (-Beta)
                     else:
                         errstr = 'Nonlinearity not found: %i' % used_g
                         raise mdp.NodeException(errstr)
@@ -951,9 +975,17 @@ class TDSEPNode(ISFANode, ProjectMatrixMixin):
       ``self.convergence``
           The value of the convergence threshold.
     """
-    def __init__(self, lags=1, limit = 0.00001, max_iter=10000,
-                 verbose = False, whitened = False, white_comp = None,
-                 white_parm = None, input_dim = None, dtype = None):
+
+    def __init__(self,
+                 lags=1,
+                 limit=0.00001,
+                 max_iter=10000,
+                 verbose=False,
+                 whitened=False,
+                 white_comp=None,
+                 white_parm=None,
+                 input_dim=None,
+                 dtype=None):
         """
         Input arguments:
 
@@ -981,17 +1013,21 @@ class TDSEPNode(ISFANode, ProjectMatrixMixin):
                         max_iter iterations raise an Exception. Should be
                         larger than 100.
         """
-        super(TDSEPNode, self).__init__(lags=lags, sfa_ica_coeff=(0., 1.),
-                                        icaweights=None, sfaweights=None,
-                                        whitened=whitened,
-                                        white_comp=white_comp,
-                                        white_parm = None,
-                                        eps_contrast=limit,
-                                        max_iter=max_iter, RP=None,
-                                        verbose=verbose,
-                                        input_dim=input_dim,
-                                        output_dim=None,
-                                        dtype=dtype)
+        super(TDSEPNode, self).__init__(
+            lags=lags,
+            sfa_ica_coeff=(0., 1.),
+            icaweights=None,
+            sfaweights=None,
+            whitened=whitened,
+            white_comp=white_comp,
+            white_parm=None,
+            eps_contrast=limit,
+            max_iter=max_iter,
+            RP=None,
+            verbose=verbose,
+            input_dim=input_dim,
+            output_dim=None,
+            dtype=dtype)
 
     def _stop_training(self, covs=None):
         super(TDSEPNode, self)._stop_training(covs)

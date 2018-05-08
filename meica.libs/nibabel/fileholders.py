@@ -20,10 +20,8 @@ class FileHolderError(Exception):
 class FileHolder(object):
     ''' class to contain filename, fileobj and file position
     '''
-    def __init__(self,
-                 filename=None,
-                 fileobj=None,
-                 pos=0):
+
+    def __init__(self, filename=None, fileobj=None, pos=0):
         ''' Initialize FileHolder instance
 
         Parameters
@@ -87,8 +85,8 @@ class FileHolder(object):
             True if `other` has the same filename (or both have None) and the
             same fileobj (or both have None
         """
-        return ((self.filename == other.filename) and
-                (self.fileobj == other.fileobj))
+        return ((self.filename == other.filename)
+                and (self.fileobj == other.fileobj))
 
 
 def copy_file_map(file_map):
@@ -106,7 +104,6 @@ def copy_file_map(file_map):
 
     '''
     fm_copy = {}
-    for key, fh in file_map.items():
+    for key, fh in list(file_map.items()):
         fm_copy[key] = copy(fh)
     return fm_copy
-    

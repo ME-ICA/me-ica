@@ -131,8 +131,8 @@ class Wrapper(object):
         if iop is None:
             return None
         # Values are python Decimals in pydicom 0.9.7
-        iop = np.array((map(float, iop)))
-        return np.array(iop).reshape(2,3).T
+        iop = np.array((list(map(float, iop))))
+        return np.array(iop).reshape(2, 3).T
 
     @one_time
     def slice_normal(self):
@@ -159,12 +159,10 @@ class Wrapper(object):
         # doc/theory/dicom_orientation.rst The fliplr accounts for the
         # fact that the first column in ``iop`` refers to changes in
         # column index, and the second to changes in row index.
-        R[:,:2] = np.fliplr(iop)
-        R[:,2] = s_norm
+        R[:, :2] = np.fliplr(iop)
+        R[:, 2] = s_norm
         # check this is in fact a rotation matrix
-        assert np.allclose(np.eye(3),
-                           np.dot(R, R.T),
-                           atol=1e-6)
+        assert np.allclose(np.eye(3), np.dot(R, R.T), atol=1e-6)
         return R
 
     @one_time
@@ -184,7 +182,7 @@ class Wrapper(object):
                 zs = 1
         # Protect from python decimals in pydicom 0.9.7
         zs = float(zs)
-        pix_space = map(float, pix_space)
+        pix_space = list(map(float, pix_space))
         return tuple(pix_space + [zs])
 
     @one_time
@@ -204,7 +202,7 @@ class Wrapper(object):
         if ipp is None:
             return None
         # Values are python Decimals in pydicom 0.9.7
-        return np.array(map(float, ipp))
+        return np.array(list(map(float, ipp)))
 
     @one_time
     def slice_indicator(self):
@@ -243,11 +241,8 @@ class Wrapper(object):
         # dictionary with value, comparison func tuple
         signature = {}
         eq = operator.eq
-        for key in ('SeriesInstanceUID',
-                    'SeriesNumber',
-                    'ImageType',
-                    'SequenceName',
-                    'EchoNumbers'):
+        for key in ('SeriesInstanceUID', 'SeriesNumber', 'ImageType',
+                    'SequenceName', 'EchoNumbers'):
             signature[key] = (self.get(key), eq)
         signature['image_shape'] = (self.image_shape, eq)
         signature['iop'] = (self.image_orient_patient, none_or_close)
@@ -289,8 +284,8 @@ class Wrapper(object):
         if None in (orient, vox, ipp):
             raise WrapperError('Not enough information for affine')
         aff = np.eye(4)
-        aff[:3,:3] = orient * np.array(vox)
-        aff[:3,3] = ipp
+        aff[:3, :3] = orient * np.array(vox)
+        aff[:3, 3] = ipp
         return aff
 
     def get_pixel_array(self):
@@ -344,8 +339,8 @@ class Wrapper(object):
             if not func(v1, v2):
                 return False
         # values present in one or the other but not both
-        for keys, sig in ((my_keys - your_keys, my_sig),
-                          (your_keys - my_keys, your_sig)):
+        for keys, sig in ((my_keys - your_keys, my_sig), (your_keys - my_keys,
+                                                          your_sig)):
             for key in keys:
                 v1, func = sig[key]
                 if not func(v1, None):
@@ -407,7 +402,7 @@ class SiemensWrapper(Wrapper):
 
     @one_time
     def slice_normal(self):
-        #The std_slice_normal comes from the cross product of the directions 
+        #The std_slice_normal comes from the cross product of the directions
         #in the ImageOrientationPatient
         std_slice_normal = super(SiemensWrapper, self).slice_normal
         csa_slice_normal = csar.get_slice_normal(self.csa_header)
@@ -421,14 +416,14 @@ class SiemensWrapper(Wrapper):
             #Make sure the two normals are very close to parallel unit vectors
             dot_prod = np.dot(csa_slice_normal, std_slice_normal)
             assert np.allclose(np.fabs(dot_prod), 1.0, atol=1e-5)
-            #Use the slice normal computed with the cross product as it will 
+            #Use the slice normal computed with the cross product as it will
             #always be the most orthogonal, but take the sign from the CSA
             #slice normal
             if dot_prod < 0:
                 return -std_slice_normal
             else:
                 return std_slice_normal
-    
+
     @one_time
     def series_signature(self):
         ''' Add ICE dims from CSA header to signature '''
@@ -458,13 +453,13 @@ class SiemensWrapper(Wrapper):
         # read B matrix as recorded in CSA header.  This matrix refers to
         # the space of the DICOM patient coordinate space.
         B = csar.get_b_matrix(hdr)
-        if B is None: # may be not diffusion or B0 image
+        if B is None:  # may be not diffusion or B0 image
             bval_requested = csar.get_b_value(hdr)
             if bval_requested is None:
                 return None
             if bval_requested != 0:
                 raise csar.CSAError('No B matrix and b value != 0')
-            return np.zeros((3,3))
+            return np.zeros((3, 3))
         # rotation from voxels to DICOM PCS, inverted to give the rotation
         # from DPCS to voxels.  Because this is an orthonormal matrix, its
         # transpose is its inverse
@@ -558,8 +553,7 @@ class MosaicWrapper(SiemensWrapper):
         if None in (rows, cols):
             return None
         mosaic_size = self.mosaic_size
-        return (int(rows / mosaic_size),
-                int(cols / mosaic_size),
+        return (int(rows / mosaic_size), int(cols / mosaic_size),
                 self.n_mosaic)
 
     @one_time
@@ -586,7 +580,7 @@ class MosaicWrapper(SiemensWrapper):
         if None in (ipp, md_rows, md_cols, iop, pix_spacing):
             return None
         # PixelSpacing values are python Decimal in pydicom 0.9.7
-        pix_spacing = np.array(map(float, pix_spacing))
+        pix_spacing = np.array(list(map(float, pix_spacing)))
         # size of mosaic array before rearranging to 3D.
         md_rc = np.array([md_rows, md_cols])
         # size of slice array after reshaping to 3D
@@ -597,7 +591,7 @@ class MosaicWrapper(SiemensWrapper):
         # flip IOP field to refer to rows then columns index change -
         # see dicom_orientation doc
         Q = np.fliplr(iop) * pix_spacing
-        return ipp + np.dot(Q, vox_trans_fixes[:,None]).ravel()
+        return ipp + np.dot(Q, vox_trans_fixes[:, None]).ravel()
 
     def get_data(self):
         ''' Get scaled image data from DICOMs
@@ -633,16 +627,15 @@ class MosaicWrapper(SiemensWrapper):
             raise WrapperError('No valid information for image shape')
         n_slice_rows, n_slice_cols, n_mosaic = shape
         n_slab_rows = self.mosaic_size
-        n_blocks = n_slab_rows ** 2
+        n_blocks = n_slab_rows**2
         data = self.get_pixel_array()
-        v4=data.reshape(n_slab_rows, n_slice_rows,
-                        n_slab_rows, n_slice_cols)
+        v4 = data.reshape(n_slab_rows, n_slice_rows, n_slab_rows, n_slice_cols)
         # move the mosaic dims to the end
-        v4=v4.transpose((1,3,0,2))
+        v4 = v4.transpose((1, 3, 0, 2))
         # pool mosaic-generated dims
-        v3=v4.reshape((n_slice_rows, n_slice_cols, n_blocks))
+        v3 = v4.reshape((n_slice_rows, n_slice_cols, n_blocks))
         # delete any padding slices
-        v3 = v3[...,:n_mosaic]
+        v3 = v3[..., :n_mosaic]
         return self._scale_data(v3)
 
 

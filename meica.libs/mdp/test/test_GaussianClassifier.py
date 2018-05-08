@@ -1,4 +1,5 @@
-from _tools import *
+from ._tools import *
+
 
 def testGaussianClassifier_train():
     nclasses = 10
@@ -8,13 +9,13 @@ def testGaussianClassifier_train():
     means = []
 
     node = mdp.nodes.GaussianClassifier()
-    for i in xrange(nclasses):
-        cov = utils.symrand(uniform((dim,))*dim+1)
-        mn = uniform((dim,))*10.
+    for i in range(nclasses):
+        cov = utils.symrand(uniform((dim, )) * dim + 1)
+        mn = uniform((dim, )) * 10.
         x = normal(0., 1., size=(npoints, dim))
         x = mult(x, utils.sqrtm(cov)) + mn
         x = utils.refcast(x, 'd')
-        cl = numx.ones((npoints,))*i
+        cl = numx.ones((npoints, )) * i
 
         mn_estimate = mean(x, axis=0)
         means.append(mn_estimate)
@@ -22,21 +23,20 @@ def testGaussianClassifier_train():
 
         node.train(x, cl)
     try:
-        node.train(x, numx.ones((2,)))
+        node.train(x, numx.ones((2, )))
         assert False, 'No exception despite wrong number of labels'
     except mdp.TrainingException:
         pass
 
     node.stop_training()
 
-    for i in xrange(nclasses):
+    for i in range(nclasses):
         lbl_idx = node.labels.index(i)
-        assert_array_almost_equal_diff(means[i],
-                                  node.means[lbl_idx],
-                                  decimal-1)
-        assert_array_almost_equal_diff(utils.inv(covs[i]),
-                                  node.inv_covs[lbl_idx],
-                                  decimal-2)
+        assert_array_almost_equal_diff(means[i], node.means[lbl_idx],
+                                       decimal - 1)
+        assert_array_almost_equal_diff(
+            utils.inv(covs[i]), node.inv_covs[lbl_idx], decimal - 2)
+
 
 def testGaussianClassifier_labellistbug():
     gc = mdp.nodes.GaussianClassifier()
@@ -52,16 +52,18 @@ def testGaussianClassifier_label():
     rot = 45
 
     # input data: two distinct gaussians rotated by 45 deg
-    def distr(size): return normal(0, 1., size=(size)) * std_
-    x1 = distr((npoints,2)) + mean1
+    def distr(size):
+        return normal(0, 1., size=(size)) * std_
+
+    x1 = distr((npoints, 2)) + mean1
     utils.rotate(x1, rot, units='degrees')
-    x2 = distr((npoints,2)) + mean2
+    x2 = distr((npoints, 2)) + mean2
     utils.rotate(x2, rot, units='degrees')
     x = numx.concatenate((x1, x2), axis=0)
 
     # labels
-    cl1 = numx.ones((x1.shape[0],), dtype='i')
-    cl2 = 2*numx.ones((x2.shape[0],), dtype='i')
+    cl1 = numx.ones((x1.shape[0], ), dtype='i')
+    cl2 = 2 * numx.ones((x2.shape[0], ), dtype='i')
     classes = numx.concatenate((cl1, cl2))
 
     # shuffle the data

@@ -102,6 +102,7 @@ def float_to_int(arr, int_type, nan2zero=True, infmax=False):
 # Cache range values
 _SHARED_RANGES = {}
 
+
 def shared_range(flt_type, int_type):
     """ Min and max in float type that are >=min, <=max in integer type
 
@@ -153,6 +154,7 @@ def shared_range(flt_type, int_type):
     _SHARED_RANGES[key] = (mn, mx)
     return mn, mx
 
+
 # ----------------------------------------------------------------------------
 # Routines to work out the next lowest representable integer in floating point
 # types.
@@ -160,7 +162,7 @@ def shared_range(flt_type, int_type):
 
 try:
     _float16 = np.float16
-except AttributeError: # float16 not present in np < 1.6
+except AttributeError:  # float16 not present in np < 1.6
     _float16 = None
 
 
@@ -211,25 +213,32 @@ def type_info(np_type):
     dt = np.dtype(np_type)
     np_type = dt.type
     width = dt.itemsize
-    try: # integer type
+    try:  # integer type
         info = np.iinfo(dt)
     except ValueError:
         pass
     else:
-        return dict(min=np_type(info.min), max=np_type(info.max), minexp=None,
-                    maxexp=None, nmant=None, nexp=None, width=width)
+        return dict(
+            min=np_type(info.min),
+            max=np_type(info.max),
+            minexp=None,
+            maxexp=None,
+            nmant=None,
+            nexp=None,
+            width=width)
     info = np.finfo(dt)
     # Trust the standard IEEE types
     nmant, nexp = info.nmant, info.nexp
-    ret = dict(min=np_type(info.min),
-               max=np_type(info.max),
-               nmant=nmant,
-               nexp=nexp,
-               minexp=info.minexp,
-               maxexp=info.maxexp,
-               width=width)
-    if np_type in (_float16, np.float32, np.float64,
-                   np.complex64, np.complex128):
+    ret = dict(
+        min=np_type(info.min),
+        max=np_type(info.max),
+        nmant=nmant,
+        nexp=nexp,
+        minexp=info.minexp,
+        maxexp=info.maxexp,
+        width=width)
+    if np_type in (_float16, np.float32, np.float64, np.complex64,
+                   np.complex128):
         return ret
     info_64 = np.finfo(np.float64)
     if dt.kind == 'c':
@@ -238,16 +247,19 @@ def type_info(np_type):
     else:
         assert np_type is np.longdouble
         vals = (nmant, nexp, width)
-    if vals in ((112, 15, 16), # binary128
-                (info_64.nmant, info_64.nexp, 8), # float64
-                (63, 15, 12), (63, 15, 16)): # Intel extended 80
-        return ret # these are OK without modification
+    if vals in (
+        (112, 15, 16),  # binary128
+        (info_64.nmant, info_64.nexp, 8),  # float64
+        (63, 15, 12),
+        (63, 15, 16)):  # Intel extended 80
+        return ret  # these are OK without modification
     # The remaining types are longdoubles with bad finfo values.  Some we
     # correct, others we wait to hear of errors.
     # We start with float64 as basis
     ret = type_info(np.float64)
-    if vals in ((52, 15, 12), # windows float96
-                (52, 15, 16)): # windows float128?
+    if vals in (
+        (52, 15, 12),  # windows float96
+        (52, 15, 16)):  # windows float128?
         # On windows 32 bit at least, float96 is Intel 80 storage but operating
         # at float64 precision. The finfo values give nexp == 15 (as for intel
         # 80) but in calculations nexp in fact appears to be 11 as for float64
@@ -258,33 +270,34 @@ def type_info(np_type):
     # complex equivalent.
     if not np_type in (np.longdouble, np.longcomplex) or width not in (16, 32):
         raise FloatingError('We had not expected type %s' % np_type)
-    if (vals == (1, 1, 16) and on_powerpc() and
-        _check_maxexp(np.longdouble, 1024)):
+    if (vals == (1, 1, 16) and on_powerpc()
+            and _check_maxexp(np.longdouble, 1024)):
         # double pair on PPC.  The _check_nmant routine does not work for this
         # type, hence the powerpc platform check instead
-        ret.update(dict(nmant = 106, width=width))
-    elif (_check_nmant(np.longdouble, 52) and
-          _check_maxexp(np.longdouble, 11)):
+        ret.update(dict(nmant=106, width=width))
+    elif (_check_nmant(np.longdouble, 52)
+          and _check_maxexp(np.longdouble, 11)):
         # Got float64 despite everything
         pass
-    elif (_check_nmant(np.longdouble, 112) and
-          _check_maxexp(np.longdouble, 16384)):
+    elif (_check_nmant(np.longdouble, 112)
+          and _check_maxexp(np.longdouble, 16384)):
         # binary 128, but with some busted type information. np.longcomplex
         # seems to break here too, so we need to use np.longdouble and
         # complexify
         two = np.longdouble(2)
         # See: http://matthew-brett.github.com/pydagogue/floating_point.html
-        max_val = (two ** 113 - 1) / (two ** 112) * two ** 16383
+        max_val = (two**113 - 1) / (two**112) * two**16383
         if np_type is np.longcomplex:
             max_val += 0j
-        ret = dict(min = -max_val,
-                   max= max_val,
-                   nmant = 112,
-                   nexp = 15,
-                   minexp = -16382,
-                   maxexp = 16384,
-                   width = width)
-    else: # don't recognize the type
+        ret = dict(
+            min=-max_val,
+            max=max_val,
+            nmant=112,
+            nexp=15,
+            minexp=-16382,
+            maxexp=16384,
+            width=width)
+    else:  # don't recognize the type
         raise FloatingError('We had not expected long double type %s '
                             'with info %s' % (np_type, info))
     return ret
@@ -311,7 +324,7 @@ def _check_nmant(np_type, nmant):
         otherwise
     """
     np_type = np.dtype(np_type).type
-    max_contig = np_type(2 ** (nmant + 1)) # maximum of contiguous integers
+    max_contig = np_type(2**(nmant + 1))  # maximum of contiguous integers
     tests = max_contig + np.array([-2, -1, 0, 1, 2], dtype=np_type)
     return np.all(tests - max_contig == [-2, -1, 0, 0, 2])
 
@@ -338,9 +351,8 @@ def _check_maxexp(np_type, maxexp):
     """
     dt = np.dtype(np_type)
     np_type = dt.type
-    two = np_type(2).reshape((1,)) # to avoid upcasting
-    return (np.isfinite(two ** (maxexp - 1)) and
-            not np.isfinite(two ** maxexp))
+    two = np_type(2).reshape((1, ))  # to avoid upcasting
+    return (np.isfinite(two**(maxexp - 1)) and not np.isfinite(two**maxexp))
 
 
 def as_int(x, check=True):
@@ -480,7 +492,7 @@ def floor_exact(val, flt_type):
     val = int(val)
     flt_type = np.dtype(flt_type).type
     sign = 1 if val > 0 else -1
-    try: # int_to_float deals with longdouble safely
+    try:  # int_to_float deals with longdouble safely
         fval = int_to_float(val, flt_type)
     except OverflowError:
         return sign * np.inf
@@ -488,7 +500,7 @@ def floor_exact(val, flt_type):
         return fval
     info = type_info(flt_type)
     diff = val - as_int(fval)
-    if diff >= 0: # floating point value <= val
+    if diff >= 0:  # floating point value <= val
         return fval
     # Float casting made the value go up
     biggest_gap = 2**(floor_log2(val) - info['nmant'])
@@ -609,7 +621,7 @@ def floor_log2(x):
     ip = 0
     rem = abs(x)
     if rem > 1:
-        while rem>=2:
+        while rem >= 2:
             ip += 1
             rem //= 2
         return ip
@@ -634,8 +646,8 @@ def best_float():
     best_type : numpy type
         floating point type with highest precision
     """
-    if (type_info(np.longdouble)['nmant'] > type_info(np.float64)['nmant'] and
-        machine() != 'sparc64'): # sparc has crazy-slow float128
+    if (type_info(np.longdouble)['nmant'] > type_info(np.float64)['nmant']
+            and machine() != 'sparc64'):  # sparc has crazy-slow float128
         return np.longdouble
     return np.float64
 
@@ -652,7 +664,7 @@ def ok_floats():
 
     Remove longdouble if it has no higher precision than float64
     """
-    floats = sorted(np.sctypes['float'], key=lambda f : type_info(f)['nmant'])
+    floats = sorted(np.sctypes['float'], key=lambda f: type_info(f)['nmant'])
     if best_float() != np.longdouble and np.longdouble in floats:
         floats.remove(np.longdouble)
     return floats
@@ -730,7 +742,7 @@ def ulp(val=np.float64(1.0)):
     aval = np.abs(val)
     info = type_info(val.dtype)
     fl2 = floor_log2(aval)
-    if fl2 is None or fl2 < info['minexp']: # subnormal
+    if fl2 is None or fl2 < info['minexp']:  # subnormal
         fl2 = info['minexp']
     # 'nmant' value does not include implicit first bit
     return 2**(fl2 - info['nmant'])

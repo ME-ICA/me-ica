@@ -6,7 +6,6 @@
 #   copyright and license terms.
 #
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ##
-from __future__ import with_statement
 
 import os
 
@@ -29,6 +28,7 @@ from ..tmpdirs import InTemporaryDirectory
 
 ecat_file = os.path.join(data_path, 'tinypet.v')
 
+
 class TestEcatHeader(TestCase):
     header_class = EcatHeader
     example_file = ecat_file
@@ -48,8 +48,7 @@ class TestEcatHeader(TestCase):
     def test_dtype(self):
         #dtype not specified in header, only in subheaders
         hdr = self.header_class()
-        assert_raises(NotImplementedError,
-                            hdr.get_data_dtype)
+        assert_raises(NotImplementedError, hdr.get_data_dtype)
 
     def test_header_codes(self):
         fid = open(ecat_file, 'rb')
@@ -57,15 +56,15 @@ class TestEcatHeader(TestCase):
         newhdr = hdr.from_fileobj(fid)
         fid.close()
         assert_true(newhdr.get_filetype() == 'ECAT7_VOLUME16')
-        assert_equal(newhdr.get_patient_orient(),
-                           'ECAT7_Unknown_Orientation')
+        assert_equal(newhdr.get_patient_orient(), 'ECAT7_Unknown_Orientation')
 
     def test_copy(self):
         hdr = self.header_class()
         hdr2 = hdr.copy()
         assert_true(hdr == hdr2)
-        assert_true(not hdr.binaryblock == hdr2._header_data.byteswap().tostring())
-        assert_true(hdr.keys() == hdr2.keys())
+        assert_true(
+            not hdr.binaryblock == hdr2._header_data.byteswap().tostring())
+        assert_true(list(hdr.keys()) == list(hdr2.keys()))
 
     def test_update(self):
         hdr = self.header_class()
@@ -95,65 +94,53 @@ class TestEcatMlist(TestCase):
     def test_mlist(self):
         fid = open(self.example_file, 'rb')
         hdr = self.header_class.from_fileobj(fid)
-        mlist =  self.mlist_class(fid, hdr)
+        mlist = self.mlist_class(fid, hdr)
         fid.seek(0)
         fid.seek(512)
-        dat=fid.read(128*32)
-        dt = np.dtype([('matlist',np.int32)])
+        dat = fid.read(128 * 32)
+        dt = np.dtype([('matlist', np.int32)])
         dt = dt.newbyteorder('>')
-        mats = np.recarray(shape=(32,4), dtype=dt,  buf=dat)
+        mats = np.recarray(shape=(32, 4), dtype=dt, buf=dat)
         fid.close()
         #tests
-        assert_true(mats['matlist'][0,0] +  mats['matlist'][0,3] == 31)
+        assert_true(mats['matlist'][0, 0] + mats['matlist'][0, 3] == 31)
         assert_true(mlist.get_frame_order()[0][0] == 0)
         assert_true(mlist.get_frame_order()[0][1] == 16842758.0)
         # test badly ordered mlist
         badordermlist = mlist
-        badordermlist._mlist = np.array([[  1.68427540e+07,   3.00000000e+00,
-                                            1.20350000e+04,   1.00000000e+00],
-                                         [  1.68427530e+07,   1.20360000e+04,
-                                            2.40680000e+04,   1.00000000e+00],
-                                         [  1.68427550e+07,   2.40690000e+04,
-                                            3.61010000e+04,   1.00000000e+00],
-                                         [  1.68427560e+07,   3.61020000e+04,
-                                            4.81340000e+04,   1.00000000e+00],
-                                         [  1.68427570e+07,   4.81350000e+04,
-                                            6.01670000e+04,   1.00000000e+00],
-                                         [  1.68427580e+07,   6.01680000e+04,
-                                            7.22000000e+04,   1.00000000e+00]])
+        badordermlist._mlist = np.array([[
+            1.68427540e+07, 3.00000000e+00, 1.20350000e+04, 1.00000000e+00
+        ], [1.68427530e+07, 1.20360000e+04, 2.40680000e+04, 1.00000000e+00], [
+            1.68427550e+07, 2.40690000e+04, 3.61010000e+04, 1.00000000e+00
+        ], [1.68427560e+07, 3.61020000e+04, 4.81340000e+04, 1.00000000e+00], [
+            1.68427570e+07, 4.81350000e+04, 6.01670000e+04, 1.00000000e+00
+        ], [1.68427580e+07, 6.01680000e+04, 7.22000000e+04, 1.00000000e+00]])
         assert_true(badordermlist.get_frame_order()[0][0] == 1)
 
     def test_mlist_errors(self):
         fid = open(self.example_file, 'rb')
         hdr = self.header_class.from_fileobj(fid)
         hdr['num_frames'] = 6
-        mlist =  self.mlist_class(fid, hdr)    
-        mlist._mlist = np.array([[  1.68427540e+07,   3.00000000e+00,
-                                    1.20350000e+04,   1.00000000e+00],
-                                 [  1.68427530e+07,   1.20360000e+04,
-                                    2.40680000e+04,   1.00000000e+00],
-                                 [  1.68427550e+07,   2.40690000e+04,
-                                    3.61010000e+04,   1.00000000e+00],
-                                 [  1.68427560e+07,   3.61020000e+04,
-                                    4.81340000e+04,   1.00000000e+00],
-                                 [  1.68427570e+07,   4.81350000e+04,
-                                    6.01670000e+04,   1.00000000e+00],
-                                 [  1.68427580e+07,   6.01680000e+04,
-                                    7.22000000e+04,   1.00000000e+00]])        
+        mlist = self.mlist_class(fid, hdr)
+        mlist._mlist = np.array([[
+            1.68427540e+07, 3.00000000e+00, 1.20350000e+04, 1.00000000e+00
+        ], [1.68427530e+07, 1.20360000e+04, 2.40680000e+04, 1.00000000e+00], [
+            1.68427550e+07, 2.40690000e+04, 3.61010000e+04, 1.00000000e+00
+        ], [1.68427560e+07, 3.61020000e+04, 4.81340000e+04, 1.00000000e+00], [
+            1.68427570e+07, 4.81350000e+04, 6.01670000e+04, 1.00000000e+00
+        ], [1.68427580e+07, 6.01680000e+04, 7.22000000e+04, 1.00000000e+00]])
         series_framenumbers = mlist.get_series_framenumbers()
         # first frame stored was actually 2nd frame acquired
         assert_true(series_framenumbers[0] == 2)
         order = [series_framenumbers[x] for x in sorted(series_framenumbers)]
         # true series order is [2,1,3,4,5,6], note counting starts at 1
         assert_true(order == [2, 1, 3, 4, 5, 6])
-        mlist._mlist[0,0] = 0
+        mlist._mlist[0, 0] = 0
         frames_order = mlist.get_frame_order()
-        neworder =[frames_order[x][0] for x in sorted(frames_order)] 
+        neworder = [frames_order[x][0] for x in sorted(frames_order)]
         assert_true(neworder == [1, 2, 3, 4, 5])
-        assert_raises(IOError,
-                      mlist.get_series_framenumbers)
-        
-        
+        assert_raises(IOError, mlist.get_series_framenumbers)
+
 
 class TestEcatSubHeader(TestCase):
     header_class = EcatHeader
@@ -162,31 +149,32 @@ class TestEcatSubHeader(TestCase):
     example_file = ecat_file
     fid = open(example_file, 'rb')
     hdr = header_class.from_fileobj(fid)
-    mlist =  mlist_class(fid, hdr)
+    mlist = mlist_class(fid, hdr)
     subhdr = subhdr_class(hdr, mlist, fid)
 
     def test_subheader_size(self):
         assert_equal(self.subhdr_class._subhdrdtype.itemsize, 510)
 
     def test_subheader(self):
-        assert_equal(self.subhdr.get_shape() , (10,10,3))
-        assert_equal(self.subhdr.get_nframes() , 1)
-        assert_equal(self.subhdr.get_nframes(),
-                     len(self.subhdr.subheaders))
+        assert_equal(self.subhdr.get_shape(), (10, 10, 3))
+        assert_equal(self.subhdr.get_nframes(), 1)
+        assert_equal(self.subhdr.get_nframes(), len(self.subhdr.subheaders))
         assert_equal(self.subhdr._check_affines(), True)
-        assert_array_almost_equal(np.diag(self.subhdr.get_frame_affine()),
-                                  np.array([ 2.20241979, 2.20241979, 3.125,  1.]))
+        assert_array_almost_equal(
+            np.diag(self.subhdr.get_frame_affine()),
+            np.array([2.20241979, 2.20241979, 3.125, 1.]))
         assert_equal(self.subhdr.get_zooms()[0], 2.20241978764534)
         assert_equal(self.subhdr.get_zooms()[2], 3.125)
-        assert_equal(self.subhdr._get_data_dtype(0),np.uint16)
+        assert_equal(self.subhdr._get_data_dtype(0), np.uint16)
         #assert_equal(self.subhdr._get_frame_offset(), 1024)
         assert_equal(self.subhdr._get_frame_offset(), 1536)
         dat = self.subhdr.raw_data_from_fileobj()
         assert_equal(dat.shape, self.subhdr.get_shape())
         scale_factor = self.subhdr.subheaders[0]['scale_factor']
-        assert_equal(self.subhdr.subheaders[0]['scale_factor'].item(),1.0)
+        assert_equal(self.subhdr.subheaders[0]['scale_factor'].item(), 1.0)
         ecat_calib_factor = self.hdr['ecat_calibration_factor']
         assert_equal(ecat_calib_factor, 25007614.0)
+
 
 class TestEcatImage(TestCase):
     image_class = EcatImage
@@ -194,10 +182,8 @@ class TestEcatImage(TestCase):
     img = image_class.load(example_file)
 
     def test_file(self):
-        assert_equal(self.img.file_map['header'].filename,
-                     self.example_file)
-        assert_equal(self.img.file_map['image'].filename,
-                     self.example_file)
+        assert_equal(self.img.file_map['header'].filename, self.example_file)
+        assert_equal(self.img.file_map['image'].filename, self.example_file)
 
     def test_save(self):
         tmp_file = 'tinypet_tmp.v'
@@ -213,7 +199,7 @@ class TestEcatImage(TestCase):
         dat = self.img.get_data()
         assert_equal(dat.shape, self.img.shape)
         frame = self.img.get_frame(0)
-        assert_array_equal(frame, dat[:,:,:,0])
+        assert_array_equal(frame, dat[:, :, :, 0])
 
     def test_array_proxy(self):
         # Get the cached data copy

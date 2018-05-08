@@ -28,22 +28,22 @@ def test_unpacker():
     up_str = Unpacker(s, endian='<')
     assert_equal(up_str.read(4), asbytes('1234'))
     up_str.ptr = 0
-    assert_equal(up_str.unpack('4s'), (asbytes('1234'),))
-    assert_equal(up_str.unpack('h'), (le_int,))
+    assert_equal(up_str.unpack('4s'), (asbytes('1234'), ))
+    assert_equal(up_str.unpack('h'), (le_int, ))
     up_str = Unpacker(s, endian='>')
-    assert_equal(up_str.unpack('4s'), (asbytes('1234'),))
-    assert_equal(up_str.unpack('h'), (be_int,))
+    assert_equal(up_str.unpack('4s'), (asbytes('1234'), ))
+    assert_equal(up_str.unpack('h'), (be_int, ))
     # now test conflict of endian
     up_str = Unpacker(s, ptr=4, endian='>')
-    assert_equal(up_str.unpack('<h'), (le_int,))
+    assert_equal(up_str.unpack('<h'), (le_int, ))
     up_str = Unpacker(s, ptr=4, endian=swapped_code)
-    assert_equal(up_str.unpack('h'), (swapped_int,))
+    assert_equal(up_str.unpack('h'), (swapped_int, ))
     up_str.ptr = 4
-    assert_equal(up_str.unpack('<h'), (le_int,))
+    assert_equal(up_str.unpack('<h'), (le_int, ))
     up_str.ptr = 4
-    assert_equal(up_str.unpack('>h'), (be_int,))
+    assert_equal(up_str.unpack('>h'), (be_int, ))
     up_str.ptr = 4
-    assert_equal(up_str.unpack('@h'), (native_int,))
+    assert_equal(up_str.unpack('@h'), (native_int, ))
     # test -1 for read
     up_str.ptr = 2
     assert_equal(up_str.read(), asbytes('34\x00\x01'))

@@ -5,19 +5,21 @@ from mdp import numx
 from mdp.utils import mult, matmult, invert_exp_funcs2
 from mdp.nodes import GrowingNeuralGasNode
 
+
 def nmonomials(degree, nvariables):
     """Return the number of monomials of a given degree in a given number
     of variables."""
-    return int(mdp.utils.comb(nvariables+degree-1, degree))
+    return int(mdp.utils.comb(nvariables + degree - 1, degree))
+
 
 def expanded_dim(degree, nvariables):
     """Return the size of a vector of dimension ``nvariables`` after
     a polynomial expansion of degree ``degree``."""
-    return int(mdp.utils.comb(nvariables+degree, degree))-1
+    return int(mdp.utils.comb(nvariables + degree, degree)) - 1
+
 
 class _ExpansionNode(mdp.Node):
-
-    def __init__(self, input_dim = None, dtype = None):
+    def __init__(self, input_dim=None, dtype=None):
         super(_ExpansionNode, self).__init__(input_dim, None, dtype)
 
     def expanded_dim(self, dim):
@@ -39,10 +41,11 @@ class _ExpansionNode(mdp.Node):
         msg = "Output dim cannot be set explicitly!"
         raise mdp.NodeException(msg)
 
+
 class PolynomialExpansionNode(_ExpansionNode):
     """Perform expansion in a polynomial space."""
 
-    def __init__(self, degree, input_dim = None, dtype = None):
+    def __init__(self, degree, input_dim=None, dtype=None):
         """
         Input arguments:
         degree -- degree of the polynomial space where the input is expanded
@@ -72,23 +75,24 @@ class PolynomialExpansionNode(_ExpansionNode):
 
         k = n
         prec_end = 0
-        next_lens = numx.ones((dim+1, ))
+        next_lens = numx.ones((dim + 1, ))
         next_lens[0] = 0
-        for i in range(2, degree+1):
+        for i in range(2, degree + 1):
             prec_start = prec_end
-            prec_end += nmonomials(i-1, dim)
+            prec_end += nmonomials(i - 1, dim)
             prec = dexp[prec_start:prec_end, :]
 
             lens = next_lens[:-1].cumsum(axis=0)
-            next_lens = numx.zeros((dim+1, ))
+            next_lens = numx.zeros((dim + 1, ))
             for j in range(dim):
                 factor = prec[lens[j]:, :]
                 len_ = factor.shape[0]
-                dexp[k:k+len_, :] = x[:, j] * factor
-                next_lens[j+1] = len_
-                k = k+len_
+                dexp[k:k + len_, :] = x[:, j] * factor
+                next_lens[j + 1] = len_
+                k = k + len_
 
         return dexp.T
+
 
 class QuadraticExpansionNode(PolynomialExpansionNode):
     """Perform expansion in the space formed by all linear and quadratic
@@ -96,9 +100,10 @@ class QuadraticExpansionNode(PolynomialExpansionNode):
     ``QuadraticExpansionNode()`` is equivalent to a
     ``PolynomialExpansionNode(2)``"""
 
-    def __init__(self, input_dim = None, dtype = None):
-        super(QuadraticExpansionNode, self).__init__(2, input_dim = input_dim,
-                                                     dtype = dtype)
+    def __init__(self, input_dim=None, dtype=None):
+        super(QuadraticExpansionNode, self).__init__(
+            2, input_dim=input_dim, dtype=dtype)
+
 
 class RBFExpansionNode(mdp.Node):
     """Expand input space with Gaussian Radial Basis Functions (RBFs).
@@ -115,7 +120,7 @@ class RBFExpansionNode(mdp.Node):
     for anisotropic RBFs.
     """
 
-    def __init__(self, centers, sizes, dtype = None):
+    def __init__(self, centers, sizes, dtype=None):
         """
         :Arguments:
           centers
@@ -153,13 +158,13 @@ class RBFExpansionNode(mdp.Node):
 
         # multiply sizes if necessary
         sizes = numx.array(sizes, self.dtype)
-        if sizes.ndim==0 or sizes.ndim==2:
-            sizes = numx.array([sizes]*self._output_dim)
+        if sizes.ndim == 0 or sizes.ndim == 2:
+            sizes = numx.array([sizes] * self._output_dim)
         else:
             # check number of sizes correct
             if sizes.shape[0] != self._output_dim:
                 msg = "There must be as many RBF sizes as centers"
-                raise mdp.NodeException, msg
+                raise mdp.NodeException(msg)
 
         if numx.isscalar(sizes[0]):
             # isotropic RBFs
@@ -169,31 +174,32 @@ class RBFExpansionNode(mdp.Node):
             self._isotropic = False
 
             # check size
-            if (sizes.shape[1] != self._input_dim or
-                sizes.shape[2] != self._input_dim):
+            if (sizes.shape[1] != self._input_dim
+                    or sizes.shape[2] != self._input_dim):
                 msg = ("Dimensionality of size matrices should be the same " +
-                       "as input dimensionality (%d != %d)"
-                       % (sizes.shape[1], self._input_dim))
-                raise mdp.NodeException, msg
+                       "as input dimensionality (%d != %d)" %
+                       (sizes.shape[1], self._input_dim))
+                raise mdp.NodeException(msg)
 
             # compute inverse covariance matrix
             for i in range(sizes.shape[0]):
-                sizes[i,:,:] = mdp.utils.inv(sizes[i,:,:])
+                sizes[i, :, :] = mdp.utils.inv(sizes[i, :, :])
 
         self._centers = centers
         self._sizes = sizes
 
     def _execute(self, x):
-        y = numx.zeros((x.shape[0], self._output_dim), dtype = self.dtype)
+        y = numx.zeros((x.shape[0], self._output_dim), dtype=self.dtype)
         c, s = self._centers, self._sizes
         for i in range(self._output_dim):
-            dist = x - c[i,:]
+            dist = x - c[i, :]
             if self._isotropic:
                 tmp = (dist**2.).sum(axis=1) / s[i]
             else:
-                tmp = (dist*matmult(dist, s[i,:,:])).sum(axis=1)
-            y[:,i] = numx.exp(-0.5*tmp)
+                tmp = (dist * matmult(dist, s[i, :, :])).sum(axis=1)
+            y[:, i] = numx.exp(-0.5 * tmp)
         return y
+
 
 class GrowingNeuralGasExpansionNode(GrowingNeuralGasNode):
     """
@@ -216,9 +222,17 @@ class GrowingNeuralGasExpansionNode(GrowingNeuralGasNode):
     and supervised learning. Neural Networks 7, p. 1441--1460 (1994).
     """
 
-    def __init__(self, start_poss=None, eps_b=0.2, eps_n=0.006, max_age=50,
-                 lambda_=100, alpha=0.5, d=0.995, max_nodes=100,
-                 input_dim=None, dtype=None):
+    def __init__(self,
+                 start_poss=None,
+                 eps_b=0.2,
+                 eps_n=0.006,
+                 max_age=50,
+                 lambda_=100,
+                 alpha=0.5,
+                 d=0.995,
+                 max_nodes=100,
+                 input_dim=None,
+                 dtype=None):
         """
         For a full list of input arguments please check the documentation
         of GrowingNeuralGasNode.
@@ -233,9 +247,16 @@ class GrowingNeuralGasExpansionNode(GrowingNeuralGasNode):
         # practically unlimited, possibly leading to very
         # high-dimensional expansions.
         super(GrowingNeuralGasExpansionNode, self).__init__(
-            start_poss=start_poss, eps_b=eps_b, eps_n=eps_n, max_age=max_age,
-            lambda_=lambda_, alpha=alpha, d=d, max_nodes=max_nodes,
-            input_dim=input_dim, dtype=dtype)
+            start_poss=start_poss,
+            eps_b=eps_b,
+            eps_n=eps_n,
+            max_age=max_age,
+            lambda_=lambda_,
+            alpha=alpha,
+            d=d,
+            max_nodes=max_nodes,
+            input_dim=input_dim,
+            dtype=dtype)
 
     def _set_input_dim(self, n):
         # Needs to be overwritten because GrowingNeuralGasNode would
@@ -267,18 +288,19 @@ class GrowingNeuralGasExpansionNode(GrowingNeuralGasNode):
         # use the mean distances to the neighbours as size of the RBF expansion
         sizes = []
 
-        for i,node in enumerate(self.graph.nodes):
+        for i, node in enumerate(self.graph.nodes):
 
             # calculate the size of the current RBF
             pos = node.data.pos
-            sizes.append(numx.array([((pos-neighbor.data.pos)**2).sum()
-                                     for neighbor in node.neighbors() ]).mean())
+            sizes.append(
+                numx.array([((pos - neighbor.data.pos)**2).sum()
+                            for neighbor in node.neighbors()]).mean())
 
         # initialize the radial basis function expansion with centers and sizes
-        self.rbf_expansion = mdp.nodes.RBFExpansionNode(centers = centers,
-                                                        sizes = sizes)
+        self.rbf_expansion = mdp.nodes.RBFExpansionNode(
+            centers=centers, sizes=sizes)
 
-    def _execute(self,x):
+    def _execute(self, x):
         return self.rbf_expansion(x)
 
 
@@ -294,7 +316,8 @@ class GeneralExpansionNode(_ExpansionNode):
 
     Original code contributed by Alberto Escalante.
     """
-    def __init__(self, funcs, input_dim = None, dtype = None):
+
+    def __init__(self, funcs, input_dim=None, dtype=None):
         """
         Short argument description:
 
@@ -309,12 +332,12 @@ class GeneralExpansionNode(_ExpansionNode):
         functions f_i to a zero input of dimension n.
         """
         return int(self.output_sizes(n).sum())
-    
+
     def output_sizes(self, n):
         """Return the individual output sizes of each expansion function
         when the input has lenght n"""
         sizes = numx.zeros(len(self.funcs))
-        x = numx.zeros((1,n))
+        x = numx.zeros((1, n))
         for i, func in enumerate(self.funcs):
             outx = func(x)
             sizes[i] = outx.shape[1]
@@ -339,13 +362,10 @@ class GeneralExpansionNode(_ExpansionNode):
         This method requires scipy."""
 
         try:
-            app_x_2, app_ex_x_2 = invert_exp_funcs2(x,
-                                                    self.input_dim,
-                                                    self.funcs,
-                                                    use_hint=use_hint,
-                                                    k=0.001)
+            app_x_2, app_ex_x_2 = invert_exp_funcs2(
+                x, self.input_dim, self.funcs, use_hint=use_hint, k=0.001)
             return app_x_2.astype(self.dtype)
-        except NotImplementedError, exc:
+        except NotImplementedError as exc:
             raise mdp.MDPException(exc)
 
     def _execute(self, x):
@@ -359,9 +379,10 @@ class GeneralExpansionNode(_ExpansionNode):
 
         current_pos = 0
         for i, func in enumerate(self.funcs):
-            out[:,current_pos:current_pos+sizes[i]] = func(x)
+            out[:, current_pos:current_pos + sizes[i]] = func(x)
             current_pos += sizes[i]
         return out
+
 
 ### old weave inline code to perform a quadratic expansion
 # weave C code executed in the function QuadraticExpansionNode.execute

@@ -12,17 +12,15 @@ import numpy as np
 
 from .spatialimages import HeaderDataError
 from .batteryrunners import Report
-from . import spm99analyze as spm99 # module import
+from . import spm99analyze as spm99  # module import
 
 image_dimension_dtd = spm99.image_dimension_dtd[:]
-image_dimension_dtd[
-    image_dimension_dtd.index(('funused2', 'f4'))
-    ] = ('scl_inter', 'f4')
+image_dimension_dtd[image_dimension_dtd.index(('funused2',
+                                               'f4'))] = ('scl_inter', 'f4')
 
 # Full header numpy dtype combined across sub-fields
-header_dtype = np.dtype(spm99.header_key_dtd +
-                        image_dimension_dtd +
-                        spm99.data_history_dtd)
+header_dtype = np.dtype(
+    spm99.header_key_dtd + image_dimension_dtd + spm99.data_history_dtd)
 
 
 class Spm2AnalyzeHeader(spm99.Spm99AnalyzeHeader):
@@ -119,9 +117,9 @@ class Spm2AnalyzeHeader(spm99.Spm99AnalyzeHeader):
         if not scale is None or hdr['scl_slope'] == 0:
             return hdr, rep
         rep.problem_level = 30
-        rep.problem_msg = ('no valid scaling in scalefactor (=%s) '
-                           'or cal / gl fields; scalefactor assumed 1.0'
-                           % scale)
+        rep.problem_msg = (
+            'no valid scaling in scalefactor (=%s) '
+            'or cal / gl fields; scalefactor assumed 1.0' % scale)
         if fix:
             hdr['scl_slope'] = 1
             rep.fix_msg = 'setting scalefactor "scl_slope" to 1'

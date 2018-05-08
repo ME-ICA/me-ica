@@ -4,10 +4,11 @@ import warnings
 # import numeric module (scipy, Numeric or numarray)
 numx = mdp.numx
 
+
 def _check_roundoff(t, dtype):
     """Check if t is so large that t+1 == t up to 2 precision digits"""
     # limit precision
-    limit = 10.**(numx.finfo(dtype).precision-2)
+    limit = 10.**(numx.finfo(dtype).precision - 2)
     if int(t) >= limit:
         wr = ('You have summed %e entries in the covariance matrix.'
               '\nAs you are using dtype \'%s\', you are '
@@ -15,6 +16,7 @@ def _check_roundoff(t, dtype):
               '\nerrors. See CovarianceMatrix docstring for more'
               ' information.' % (t, dtype.name))
         warnings.warn(wr, mdp.MDPWarning)
+
 
 class CovarianceMatrix(object):
     """This class stores an empirical covariance matrix that can be updated
@@ -112,9 +114,9 @@ class CovarianceMatrix(object):
         if center:
             avg_mtx = numx.outer(avg, avg)
             if self.bias:
-                avg_mtx /= tlen*(tlen)
+                avg_mtx /= tlen * (tlen)
             else:
-                avg_mtx /= tlen*(tlen - 1)
+                avg_mtx /= tlen * (tlen - 1)
             cov_mtx -= avg_mtx
 
         # fix the average
@@ -200,17 +202,17 @@ class DelayCovarianceMatrix(object):
 
         # the number of data points in each block should be at least dt+1
         tlen = x.shape[0]
-        if tlen < (dt+1):
-            err = 'Block length is %d, should be at least %d.' % (tlen, dt+1)
+        if tlen < (dt + 1):
+            err = 'Block length is %d, should be at least %d.' % (tlen, dt + 1)
             raise mdp.MDPException(err)
 
         # update the covariance matrix, the average and the number of
         # observations (try to do everything inplace)
-        self._cov_mtx += mdp.utils.mult(x[:tlen-dt, :].T, x[dt:tlen, :])
+        self._cov_mtx += mdp.utils.mult(x[:tlen - dt, :].T, x[dt:tlen, :])
         totalsum = x.sum(axis=0)
-        self._avg += totalsum - x[tlen-dt:, :].sum(axis=0)
+        self._avg += totalsum - x[tlen - dt:, :].sum(axis=0)
         self._avg_dt += totalsum - x[:dt, :].sum(axis=0)
-        self._tlen += tlen-dt
+        self._tlen += tlen - dt
 
     def fix(self, A=None):
         """The collected data is adjusted to compute the covariance matrix of
@@ -264,6 +266,7 @@ class MultipleCovarianceMatrices(object):
     """Container class for multiple covariance matrices to easily
     execute operations on all matrices at the same time.
     Note: all operations are done in place where possible."""
+
     def __init__(self, covs):
         """Insantiate with a sequence of covariance matrices."""
         # swap axes to get the different covmat on to the 3rd axis
@@ -278,7 +281,7 @@ class MultipleCovarianceMatrices(object):
         """Symmetrize matrices: C -> (C+C^T)/2 ."""
         # symmetrize cov matrices
         covs = self.covs
-        covs = 0.5*(covs+covs.transpose([1, 0, 2]))
+        covs = 0.5 * (covs + covs.transpose([1, 0, 2]))
         self.covs = covs
 
     def weight(self, weights):
@@ -301,14 +304,14 @@ class MultipleCovarianceMatrices(object):
         # you need to copy the first column that is modified
         covs_i = covs[:, i, :] + 0
         covs_j = covs[:, j, :]
-        covs[:, i, :] =  cos_*covs_i - sin_*covs_j
-        covs[:, j, :] =  sin_*covs_i + cos_*covs_j
+        covs[:, i, :] = cos_ * covs_i - sin_ * covs_j
+        covs[:, j, :] = sin_ * covs_i + cos_ * covs_j
         # rotate rows
         # you need to copy the first row that is modified
         covs_i = covs[i, :, :] + 0
         covs_j = covs[j, :, :]
-        covs[i, :, :] =  cos_*covs_i - sin_*covs_j
-        covs[j, :, :] =  sin_*covs_i + cos_*covs_j
+        covs[i, :, :] = cos_ * covs_i - sin_ * covs_j
+        covs[j, :, :] = sin_ * covs_i + cos_ * covs_j
         self.covs = covs
 
     def permute(self, indices):
@@ -335,13 +338,11 @@ class MultipleCovarianceMatrices(object):
 
 
 class CrossCovarianceMatrix(CovarianceMatrix):
-
     def _init_internals(self, x, y):
         if self._dtype is None:
             self._dtype = x.dtype
             if y.dtype != x.dtype:
-                err = 'dtype mismatch: x (%s) != y (%s)'%(x.dtype,
-                                                          y.dtype)
+                err = 'dtype mismatch: x (%s) != y (%s)' % (x.dtype, y.dtype)
                 raise mdp.MDPException(err)
         dim_x = x.shape[1]
         dim_y = y.shape[1]
@@ -350,12 +351,11 @@ class CrossCovarianceMatrix(CovarianceMatrix):
         self._avgx = numx.zeros(dim_x, type_)
         self._avgy = numx.zeros(dim_y, type_)
 
-
     def update(self, x, y):
         # check internal dimensions consistency
         if x.shape[0] != y.shape[0]:
-            err = '# samples mismatch: x (%d) != y (%d)'%(x.shape[0],
-                                                          y.shape[0])
+            err = '# samples mismatch: x (%d) != y (%d)' % (x.shape[0],
+                                                            y.shape[0])
             raise mdp.MDPException(err)
 
         if self._cov_mtx is None:
@@ -383,10 +383,10 @@ class CrossCovarianceMatrix(CovarianceMatrix):
         avg_mtx = numx.outer(avgx, avgy)
 
         if self.bias:
-            avg_mtx /= tlen*(tlen)
+            avg_mtx /= tlen * (tlen)
             cov_mtx /= tlen
         else:
-            avg_mtx /= tlen*(tlen - 1)
+            avg_mtx /= tlen * (tlen - 1)
             cov_mtx /= tlen - 1
         cov_mtx -= avg_mtx
         # fix the average

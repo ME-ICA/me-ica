@@ -2,6 +2,7 @@
 
 from mdp import config
 
+
 class TestConfig(object):
     def teardown_method(self, method):
         delattr(config, 'has_test_property')

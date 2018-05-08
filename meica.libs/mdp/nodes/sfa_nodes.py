@@ -2,8 +2,9 @@ __docformat__ = "restructuredtext en"
 
 import mdp
 from mdp import numx, Node, NodeException, TrainingException
-from mdp.utils import (mult, pinv, CovarianceMatrix, QuadraticForm,
-                       symeig, SymeigException)
+from mdp.utils import (mult, pinv, CovarianceMatrix, QuadraticForm, symeig,
+                       SymeigException)
+
 
 class SFANode(Node):
     """Extract the slowly varying components from the input data.
@@ -68,7 +69,10 @@ class SFANode(Node):
           corresponding switch in the `train` method.
     """
 
-    def __init__(self, input_dim=None, output_dim=None, dtype=None,
+    def __init__(self,
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None,
                  include_last_sample=True):
         """
         For the ``include_last_sample`` switch have a look at the
@@ -96,7 +100,7 @@ class SFANode(Node):
     def time_derivative(self, x):
         """Compute the linear approximation of the time derivative."""
         # this is faster than a linear_filter or a weave-inline solution
-        return x[1:, :]-x[:-1, :]
+        return x[1:, :] - x[:-1, :]
 
     def _set_range(self):
         if self.output_dim is not None and self.output_dim <= self.input_dim:
@@ -112,10 +116,10 @@ class SFANode(Node):
         # check that we have at least 2 time samples to
         # compute the update for the derivative covariance matrix
         s = x.shape[0]
-        if  s < 2:
+        if s < 2:
             raise TrainingException('Need at least 2 time samples to '
-                                    'compute time derivative (%d given)'%s)
-        
+                                    'compute time derivative (%d given)' % s)
+
     def _train(self, x, include_last_sample=None):
         """
         For the ``include_last_sample`` switch have a look at the
@@ -146,18 +150,19 @@ class SFANode(Node):
         #### solve the generalized eigenvalue problem
         # the eigenvalues are already ordered in ascending order
         try:
-            self.d, self.sf = self._symeig(self.dcov_mtx, self.cov_mtx,
-                                     range=rng, overwrite=(not debug))
+            self.d, self.sf = self._symeig(
+                self.dcov_mtx, self.cov_mtx, range=rng, overwrite=(not debug))
             d = self.d
             # check that we get only *positive* eigenvalues
             if d.min() < 0:
-                err_msg = ("Got negative eigenvalues: %s."
-                           " You may either set output_dim to be smaller,"
-                           " or prepend the SFANode with a PCANode(reduce=True)"
-                           " or PCANode(svd=True)"% str(d))
+                err_msg = (
+                    "Got negative eigenvalues: %s."
+                    " You may either set output_dim to be smaller,"
+                    " or prepend the SFANode with a PCANode(reduce=True)"
+                    " or PCANode(svd=True)" % str(d))
                 raise NodeException(err_msg)
-        except SymeigException, exception:
-            errstr = str(exception)+"\n Covariance matrices may be singular."
+        except SymeigException as exception:
+            errstr = str(exception) + "\n Covariance matrices may be singular."
             raise NodeException(errstr)
 
         if not debug:
@@ -225,10 +230,13 @@ class SFA2Node(SFANode):
     Wiskott, L. and Sejnowski, T.J., Slow Feature Analysis: Unsupervised
     Learning of Invariances, Neural Computation, 14(4):715-770 (2002)."""
 
-    def __init__(self, input_dim=None, output_dim=None, dtype=None,
+    def __init__(self,
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None,
                  include_last_sample=True):
-        self._expnode = mdp.nodes.QuadraticExpansionNode(input_dim=input_dim,
-                                                         dtype=dtype)
+        self._expnode = mdp.nodes.QuadraticExpansionNode(
+            input_dim=input_dim, dtype=dtype)
         super(SFA2Node, self).__init__(input_dim, output_dim, dtype,
                                        include_last_sample)
 
@@ -246,8 +254,8 @@ class SFA2Node(SFANode):
         super(SFA2Node, self)._train(self._expnode(x), include_last_sample)
 
     def _set_range(self):
-        if (self.output_dim is not None) and (
-            self.output_dim <= self._expnode.output_dim):
+        if (self.output_dim is not None) and (self.output_dim <=
+                                              self._expnode.output_dim):
             # (eigenvalues sorted in ascending order)
             rng = (1, self.output_dim)
         else:
@@ -286,15 +294,14 @@ class SFA2Node(SFANode):
             for j in range(n):
                 if j > i:
                     h[i, j] = sf[k]
-                    k = k+1
+                    k = k + 1
                 elif j == i:
-                    h[i, j] = 2*sf[k]
-                    k = k+1
+                    h[i, j] = 2 * sf[k]
+                    k = k + 1
                 else:
                     h[i, j] = h[j, i]
 
         return QuadraticForm(h, f, c, dtype=self.dtype)
-
 
 
 ### old weave inline code to perform the time derivative

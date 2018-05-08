@@ -6,6 +6,7 @@ from mdp.utils import mult
 # ??? For the future: add an optional second phase to compute
 # residuals, significance of the slope.
 
+
 class LinearRegressionNode(Node):
     """Compute least-square, multivariate linear regression on the input
     data, i.e., learn coefficients ``b_j`` so that::
@@ -25,8 +26,12 @@ class LinearRegressionNode(Node):
           The coefficients of the linear regression
     """
 
-    def __init__(self, with_bias=True, use_pinv=False,
-                 input_dim=None, output_dim=None, dtype=None):
+    def __init__(self,
+                 with_bias=True,
+                 use_pinv=False,
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None):
         """
         :Arguments:
 
@@ -44,7 +49,8 @@ class LinearRegressionNode(Node):
             the linear regression coefficients, which is more robust
             in some cases
         """
-        super(LinearRegressionNode, self).__init__(input_dim, output_dim, dtype)
+        super(LinearRegressionNode, self).__init__(input_dim, output_dim,
+                                                   dtype)
 
         self.with_bias = with_bias
         self.use_pinv = use_pinv
@@ -74,7 +80,8 @@ class LinearRegressionNode(Node):
         self._check_output(y)
         if y.shape[0] != x.shape[0]:
             msg = ("The number of output points should be equal to the "
-                   "number of datapoints (%d != %d)" % (y.shape[0], x.shape[0]))
+                   "number of datapoints (%d != %d)" % (y.shape[0],
+                                                        x.shape[0]))
             raise TrainingException(msg)
 
     def _train(self, x, y):
@@ -109,7 +116,7 @@ class LinearRegressionNode(Node):
             else:
                 invfun = utils.inv
             inv_xTx = invfun(self._xTx)
-        except numx_linalg.LinAlgError, exception:
+        except numx_linalg.LinAlgError as exception:
             errstr = (str(exception) +
                       "\n Input data may be redundant (i.e., some of the " +
                       "variables may be linearly dependent).")
@@ -130,5 +137,5 @@ class LinearRegressionNode(Node):
         """Add a constant term to the vector 'x'.
         x -> [1 x]
         """
-        return numx.concatenate((numx.ones((x.shape[0], 1),
-                                           dtype=self.dtype), x), axis=1)
+        return numx.concatenate(
+            (numx.ones((x.shape[0], 1), dtype=self.dtype), x), axis=1)

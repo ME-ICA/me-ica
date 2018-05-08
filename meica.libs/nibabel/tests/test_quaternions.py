@@ -15,6 +15,7 @@ from numpy import pi
 try:
     from numpy.testing.decorators import slow
 except ImportError:
+
     def slow(t):
         t.slow = True
         return t
@@ -29,24 +30,24 @@ from .. import eulerangles as nea
 
 # Example rotations '''
 eg_rots = []
-params = (-pi,pi,pi/2)
+params = (-pi, pi, pi / 2)
 zs = np.arange(*params)
 ys = np.arange(*params)
 xs = np.arange(*params)
 for z in zs:
     for y in ys:
         for x in xs:
-            eg_rots.append(nea.euler2mat(z,y,x))
+            eg_rots.append(nea.euler2mat(z, y, x))
 # Example quaternions (from rotations)
 eg_quats = []
 for M in eg_rots:
     eg_quats.append(nq.mat2quat(M))
 # M, quaternion pairs
-eg_pairs = zip(eg_rots, eg_quats)
+eg_pairs = list(zip(eg_rots, eg_quats))
 
 # Set of arbitrary unit quaternions
 unit_quats = set()
-params = range(-2,3)
+params = list(range(-2, 3))
 for w in params:
     for x in params:
         for y in params:
@@ -60,20 +61,20 @@ for w in params:
 
 def test_fillpos():
     # Takes np array
-    xyz = np.zeros((3,))
-    w,x,y,z = nq.fillpositive(xyz)
+    xyz = np.zeros((3, ))
+    w, x, y, z = nq.fillpositive(xyz)
     yield assert_true, w == 1
     # Or lists
     xyz = [0] * 3
-    w,x,y,z = nq.fillpositive(xyz)
+    w, x, y, z = nq.fillpositive(xyz)
     yield assert_true, w == 1
     # Errors with wrong number of values
     yield assert_raises, ValueError, nq.fillpositive, [0, 0]
-    yield assert_raises, ValueError, nq.fillpositive, [0]*4
+    yield assert_raises, ValueError, nq.fillpositive, [0] * 4
     # Errors with negative w2
-    yield assert_raises, ValueError, nq.fillpositive, [1.0]*3
+    yield assert_raises, ValueError, nq.fillpositive, [1.0] * 3
     # Test corner case where w is near zero
-    wxyz = nq.fillpositive([1,0,0])
+    wxyz = nq.fillpositive([1, 0, 0])
     yield assert_true, wxyz[0] == 0.0
 
 
@@ -96,7 +97,7 @@ def test_quat2mat():
     yield assert_array_almost_equal, M, np.diag([1, -1, -1])
     M = nq.quat2mat([0, 0, 0, 0])
     yield assert_array_almost_equal, M, np.eye(3)
-    
+
 
 def test_inverse():
     # Takes sequence
@@ -113,7 +114,7 @@ def test_inverse():
 def test_eye():
     qi = nq.eye()
     yield assert_true, qi.dtype.kind == 'f'
-    yield assert_true, np.all([1,0,0,0]==qi)
+    yield assert_true, np.all([1, 0, 0, 0] == qi)
     yield assert_true, np.allclose(nq.quat2mat(qi), np.eye(3))
 
 
@@ -127,11 +128,11 @@ def test_norm():
 
 @slow
 def test_mult():
-    # Test that quaternion * same as matrix * 
+    # Test that quaternion * same as matrix *
     for M1, q1 in eg_pairs[0::4]:
         for M2, q2 in eg_pairs[1::4]:
             q21 = nq.mult(q2, q1)
-            yield assert_array_almost_equal, np.dot(M2,M1), nq.quat2mat(q21)
+            yield assert_array_almost_equal, np.dot(M2, M1), nq.quat2mat(q21)
 
 
 def test_inverse():
@@ -144,7 +145,7 @@ def test_inverse():
 
 def test_eye():
     qi = nq.eye()
-    yield assert_true, np.all([1,0,0,0]==qi)
+    yield assert_true, np.all([1, 0, 0, 0] == qi)
     yield assert_true, np.allclose(nq.quat2mat(qi), np.eye(3))
 
 

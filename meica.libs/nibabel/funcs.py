@@ -1,4 +1,3 @@
-
 # emacs: -*- mode: python-mode; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ##
@@ -82,10 +81,7 @@ def squeeze_image(img):
     shape = shape[:slen]
     data = img.get_data()
     data = data.reshape(shape)
-    return klass(data,
-                 img.get_affine(),
-                 img.get_header(),
-                 img.extra)
+    return klass(data, img.get_affine(), img.get_header(), img.extra)
 
 
 def concat_images(images, check_affines=True):
@@ -123,7 +119,7 @@ def concat_images(images, check_affines=True):
             if not np.all(img.get_affine() == affine):
                 raise ValueError('Affines do not match')
         out_data[i] = img.get_data()
-    out_data = np.rollaxis(out_data, 0, len(i0shape)+1)
+    out_data = np.rollaxis(out_data, 0, len(i0shape) + 1)
     klass = img0.__class__
     return klass(out_data, affine, header)
 
@@ -181,9 +177,7 @@ def as_closest_canonical(img, enforce_diag=False):
     '''
     aff = img.get_affine()
     ornt = io_orientation(aff)
-    if np.all(ornt == [[0, 1],
-                       [1,1],
-                       [2,1]]): # canonical already
+    if np.all(ornt == [[0, 1], [1, 1], [2, 1]]):  # canonical already
         # however, the affine may not be diagonal
         if enforce_diag and not _aff_is_diag(aff):
             raise OrientationError('Transformed affine is not diagonal')
@@ -204,4 +198,3 @@ def _aff_is_diag(aff):
     ''' Utility function returning True if affine is nearly diagonal '''
     rzs_aff = aff[:3, :3]
     return np.allclose(rzs_aff, np.diag(np.diag(rzs_aff)))
-

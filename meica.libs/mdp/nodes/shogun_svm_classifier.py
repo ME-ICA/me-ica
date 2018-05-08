@@ -1,19 +1,19 @@
 __docformat__ = "restructuredtext en"
 
-from shogun import (Kernel as sgKernel,
-                    Features as sgFeatures,
-                    Classifier as sgClassifier)
+from shogun import (Kernel as sgKernel, Features as sgFeatures, Classifier as
+                    sgClassifier)
 
 import mdp
 from mdp.utils import OrderedDict as _OrderedDict
 
-from svm_classifiers import _SVMClassifier, _LabelNormalizer
+from .svm_classifiers import _SVMClassifier, _LabelNormalizer
 
 # switch off spurious warnings from shogun
 import warnings
 warnings.filterwarnings('ignore',
                         '.*Perceptron algorithm did not converge after.*',
                         RuntimeWarning)
+
 
 # maybe integrate to the class
 def is_shogun_classifier(test_classifier):
@@ -23,6 +23,7 @@ def is_shogun_classifier(test_classifier):
     except (TypeError, NameError):
         # need to fetch NameError for some swig reasons
         return False
+
 
 default_shogun_classifiers = []
 for labels in dir(sgClassifier):
@@ -83,9 +84,11 @@ class Classifier(object):
                 raise mdp.NodeException(msg)
 
         # If classifier is a string: Check, if it's the name of a default library
-        elif isinstance(classifier, basestring):
-            possibleClasses = [labels for labels in default_shogun_classifiers
-                               if labels.__name__.lower() == classifier.lower()]
+        elif isinstance(classifier, str):
+            possibleClasses = [
+                labels for labels in default_shogun_classifiers
+                if labels.__name__.lower() == classifier.lower()
+            ]
 
             if not len(possibleClasses):
                 msg = "Library '%s' is not a known subclass of Machine." % classifier
@@ -110,7 +113,6 @@ class Classifier(object):
         if self.classifier_type() == "CT_NONE":
             msg = "The classifier '%s' is not valid." % classifier
             raise mdp.NodeException(msg)
-
 
     def classifier_type(self):
         """Returns the SHOGUN classifier type as a string."""
@@ -225,16 +227,22 @@ class ShogunSVMClassifier(_SVMClassifier):
         'GaussianKernel': [('size', 10), ('width', 1.9)],
         'LinearKernel': [],
         'PolyKernel': [('size', 10), ('degree', 3), ('inhomogene', True)],
-        'PyramidChi2': [('size',), ('num_cells2',),
-                        ('weights_foreach_cell2',), ('width_computation_type2',),
-                        ('width2',)],
+        'PyramidChi2':
+        [('size', ), ('num_cells2', ), ('weights_foreach_cell2', ),
+         ('width_computation_type2', ), ('width2', )],
         'SigmoidKernel': [('size', 10), ('gamma', 1), ('coef0', 0)]
     }
 
-    def __init__(self, classifier="libsvmmulticlass", classifier_arguments=(),
-                 classifier_options=None, kernel_name=None, kernel_options=None,
+    def __init__(self,
+                 classifier="libsvmmulticlass",
+                 classifier_arguments=(),
+                 classifier_options=None,
+                 kernel_name=None,
+                 kernel_options=None,
                  num_threads="autodetect",
-                 input_dim=None, output_dim=None, dtype=None):
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None):
         """
         Initialises a new ShogunSVMClassifier.
 
@@ -252,9 +260,8 @@ class ShogunSVMClassifier(_SVMClassifier):
 
             Attention: this could crash on windows
         """
-        super(ShogunSVMClassifier, self).__init__(input_dim=input_dim,
-                                                  output_dim=output_dim,
-                                                  dtype=dtype)
+        super(ShogunSVMClassifier, self).__init__(
+            input_dim=input_dim, output_dim=output_dim, dtype=dtype)
 
         if classifier_options is None:
             classifier_options = {}
@@ -264,7 +271,7 @@ class ShogunSVMClassifier(_SVMClassifier):
         self.classifier_options = self.default_parameters
         self.classifier_options.update(classifier_options)
 
-        for p in self.classifier_options.keys():
+        for p in list(self.classifier_options.keys()):
             try:
                 self.set_classifier_param(p, self.classifier_options[p])
             except Exception:
@@ -279,13 +286,14 @@ class ShogunSVMClassifier(_SVMClassifier):
     def _get_supported_dtypes(self):
         """Return the list of dtypes supported by this node."""
         # Support only float64 because of external library
-        return ('float64',)
+        return ('float64', )
 
     def _set_num_threads(self):
         # init number of threads
         if self._num_threads == "autodetect":
             try:
-                self._num_threads = self.classifier._instance.parallel.get_num_cpus()
+                self._num_threads = self.classifier._instance.parallel.get_num_cpus(
+                )
             except SystemError:
                 # We're helping shogun here
                 self._num_threads = 1
@@ -326,14 +334,15 @@ class ShogunSVMClassifier(_SVMClassifier):
             kernel_options = {}
         if kernel_name in ShogunSVMClassifier.kernel_parameters \
             and not isinstance(kernel_options, list):
-            default_opts = _OrderedDict(ShogunSVMClassifier.kernel_parameters[kernel_name])
+            default_opts = _OrderedDict(
+                ShogunSVMClassifier.kernel_parameters[kernel_name])
             default_opts.update(kernel_options)
-            options = default_opts.values()
+            options = list(default_opts.values())
 
         kernel_meth = getattr(sgKernel, kernel_name)
         try:
             kernel = kernel_meth(*options)
-        except NotImplementedError, msg:
+        except NotImplementedError as msg:
             msg = ("Tried to call %s with arguments %s\n" %
                    (kernel_meth.__module__ + '.' + kernel_meth.__name__,
                     tuple(options).__repr__()) +
@@ -364,7 +373,7 @@ class ShogunSVMClassifier(_SVMClassifier):
                 data[k].append(v)
             return data
         else:
-            return zip(self.labels, self.data)
+            return list(zip(self.labels, self.data))
 
     def _label(self, x):
         """Classify the input data 'x'

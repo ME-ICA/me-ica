@@ -1,4 +1,3 @@
-from __future__ import with_statement
 import os
 from os.path import join as pjoin
 import getpass
@@ -12,7 +11,6 @@ from numpy.testing import assert_equal
 
 from .. import read_geometry, read_morph_data, read_annot, read_label, \
                 write_geometry
-
 
 have_freesurfer = True
 if 'SUBJECTS_DIR' not in os.environ:
@@ -47,7 +45,7 @@ def test_geometry():
     with InTemporaryDirectory():
         surf_path = 'test'
         create_stamp = "created by %s on %s" % (getpass.getuser(),
-            time.ctime())
+                                                time.ctime())
         write_geometry(surf_path, coords, faces, create_stamp)
 
         coords2, faces2 = read_geometry(surf_path)

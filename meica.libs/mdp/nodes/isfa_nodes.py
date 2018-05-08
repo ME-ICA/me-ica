@@ -7,22 +7,23 @@ from mdp.nodes import WhiteningNode
 from mdp.utils import (DelayCovarianceMatrix, MultipleCovarianceMatrices,
                        rotate, mult)
 
-
 # TODO: support floats of size different than 64-bit; will need to change SQRT_EPS_D
 
 # rename often used functions
 sum, cos, sin, PI = numx.sum, numx.cos, numx.sin, numx.pi
 SQRT_EPS_D = numx.sqrt(numx.finfo('d').eps)
 
+
 def _triu(m, k=0):
     """ returns the elements on and above the k-th diagonal of m.  k=0 is the
         main diagonal, k > 0 is above and k < 0 is below the main diagonal."""
     N = m.shape[0]
     M = m.shape[1]
-    x = numx.greater_equal(numx.subtract.outer(numx.arange(N),
-                                               numx.arange(M)),1-k)
-    out = (1-x)*m
+    x = numx.greater_equal(
+        numx.subtract.outer(numx.arange(N), numx.arange(M)), 1 - k)
+    out = (1 - x) * m
     return out
+
 
 #############
 class ISFANode(Node):
@@ -71,10 +72,21 @@ class ISFANode(Node):
     Neural Computation 19(4):994-1021 (2007)
     http://itb.biologie.hu-berlin.de/~wiskott/Publications/BlasZitoWisk2007-ISFA-NeurComp.pdf
     """
-    def __init__(self, lags=1, sfa_ica_coeff=(1., 1.), icaweights=None,
-                 sfaweights=None, whitened=False, white_comp = None,
-                 white_parm = None, eps_contrast=1e-6, max_iter=10000,
-                 RP=None, verbose=False, input_dim=None, output_dim=None,
+
+    def __init__(self,
+                 lags=1,
+                 sfa_ica_coeff=(1., 1.),
+                 icaweights=None,
+                 sfaweights=None,
+                 whitened=False,
+                 white_comp=None,
+                 white_parm=None,
+                 eps_contrast=1e-6,
+                 max_iter=10000,
+                 RP=None,
+                 verbose=False,
+                 input_dim=None,
+                 output_dim=None,
                  dtype=None):
         """
         Perform Independent Slow Feature Analysis.
@@ -163,8 +175,8 @@ class ISFANode(Node):
             would give the same solution only much faster.
         """
         # check that the "lags" argument has some meaningful value
-        if isinstance(lags, (int, long)):
-            lags = range(1, lags+1)
+        if isinstance(lags, int):
+            lags = list(range(1, lags + 1))
         elif isinstance(lags, (list, tuple)):
             lags = numx.array(lags, "i")
         elif isinstance(lags, numx.ndarray):
@@ -190,7 +202,7 @@ class ISFANode(Node):
             self.icaweights = icaweights
 
         if sfaweights is None:
-            self.sfaweights = [0]*len(lags)
+            self.sfaweights = [0] * len(lags)
             self.sfaweights[0] = 1.
         else:
             if (len(sfaweights) != len(lags)):
@@ -214,12 +226,14 @@ class ISFANode(Node):
                 white_comp = output_dim
             elif white_comp is not None:
                 output_dim = white_comp
-            self.white = WhiteningNode(input_dim=input_dim,
-                                       output_dim=white_comp,
-                                       dtype=dtype, **white_parm)
+            self.white = WhiteningNode(
+                input_dim=input_dim,
+                output_dim=white_comp,
+                dtype=dtype,
+                **white_parm)
 
         # initialize covariance matrices
-        self.covs = [ DelayCovarianceMatrix(dt, dtype=dtype) for dt in lags ]
+        self.covs = [DelayCovarianceMatrix(dt, dtype=dtype) for dt in lags]
 
         # initialize the global rotation-permutation matrix
         # if not set that we'll eventually be an identity matrix
@@ -227,19 +241,21 @@ class ISFANode(Node):
 
         # initialize verbose structure to print nice and useful progress info
         if verbose:
-            info = { 'sweep' : max(len(str(self.max_iter)), 5),
-                     'perturbe': max(len(str(self.max_iter)), 5),
-                     'float' : 5+8,
-                     'fmt' : "%.5e",
-                     'sep' : " | "}
+            info = {
+                'sweep': max(len(str(self.max_iter)), 5),
+                'perturbe': max(len(str(self.max_iter)), 5),
+                'float': 5 + 8,
+                'fmt': "%.5e",
+                'sep': " | "
+            }
             f1 = "Sweep".center(info['sweep'])
-            f1_2 = "Pertb". center(info['perturbe'])
+            f1_2 = "Pertb".center(info['perturbe'])
             f2 = "SFA part".center(info['float'])
             f3 = "ICA part".center(info['float'])
             f4 = "Contrast".center(info['float'])
             header = info['sep'].join([f1, f1_2, f2, f3, f4])
-            info['header'] = header+'\n'
-            info['line'] = len(header)*"-"
+            info['header'] = header + '\n'
+            info['line'] = len(header) * "-"
             self._info = info
 
         # finally call base class constructor
@@ -250,7 +266,7 @@ class ISFANode(Node):
       
         Support floating point types with size larger or equal than 64 bits.
         """
-        return [t for t in mdp.utils.get_dtypes('Float') if t.itemsize>=8]
+        return [t for t in mdp.utils.get_dtypes('Float') if t.itemsize >= 8]
 
     def _set_dtype(self, dtype):
         # when typecode is set, we set the whitening node if needed and
@@ -290,7 +306,7 @@ class ISFANode(Node):
             x = self.white.inverse(x)
         return x
 
-    def _fmt_prog_info(self, sweep, pert, contrast, sfa = None, ica = None):
+    def _fmt_prog_info(self, sweep, pert, contrast, sfa=None, ica=None):
         # for internal use only!
         # format the progress information
         # don't try to understand this code: it Just Works (TM)
@@ -298,19 +314,16 @@ class ISFANode(Node):
         sweep_str = str(sweep).rjust(fmt['sweep'])
         pert_str = str(pert).rjust(fmt['perturbe'])
         if sfa is None:
-            sfa_str = fmt['float']*' '
+            sfa_str = fmt['float'] * ' '
         else:
-            sfa_str = (fmt['fmt']%(sfa)).rjust(fmt['float'])
+            sfa_str = (fmt['fmt'] % (sfa)).rjust(fmt['float'])
         if ica is None:
-            ica_str = fmt['float']*' '
+            ica_str = fmt['float'] * ' '
         else:
             ica_str = (fmt['fmt'] % (ica)).rjust(fmt['float'])
         contrast_str = (fmt['fmt'] % (contrast)).rjust(fmt['float'])
-        table_entry = fmt['sep'].join([sweep_str,
-                                       pert_str,
-                                       sfa_str,
-                                       ica_str,
-                                       contrast_str])
+        table_entry = fmt['sep'].join(
+            [sweep_str, pert_str, sfa_str, ica_str, contrast_str])
         return table_entry
 
     def _get_eye(self):
@@ -335,12 +348,11 @@ class ISFANode(Node):
         if bica_bsfa is None:
             bica_bsfa = self._bica_bsfa
         if j < self.output_dim:
-            return self._givens_angle_case1(i, j, covs,
-                                            bica_bsfa, complete=complete)
+            return self._givens_angle_case1(
+                i, j, covs, bica_bsfa, complete=complete)
         else:
-            return self._givens_angle_case2(i, j, covs,
-                                            bica_bsfa, complete=complete)
-
+            return self._givens_angle_case2(
+                i, j, covs, bica_bsfa, complete=complete)
 
     def _givens_angle_case2(self, m, n, covs, bica_bsfa, complete=0):
         # This function makes use of the constants computed in the paper
@@ -360,22 +372,22 @@ class ISFANode(Node):
         bica, bsfa = bica_bsfa
 
         Cmm, Cmn, Cnn = covs[m, m, :], covs[m, n, :], covs[n, n, :]
-        d0 =   (sfaweights * Cmm*Cmm).sum()
-        d1 = 4*(sfaweights * Cmn*Cmm).sum()
-        d2 = 2*(sfaweights * (2*Cmn*Cmn + Cmm*Cnn)).sum()
-        d3 = 4*(sfaweights * Cmn*Cnn).sum()
-        d4 =   (sfaweights * Cnn*Cnn).sum()
-        e0 = 2*(icaweights * ((covs[:R, m, :]*covs[:R, m, :]).sum(axis=0)
-                              - Cmm*Cmm)).sum()
-        e1 = 4*(icaweights * ((covs[:R, m, :]*covs[:R, n, :]).sum(axis=0)
-                              - Cmm*Cmn)).sum()
-        e2 = 2*(icaweights * ((covs[:R, n, :]*covs[:R, n, :]).sum(axis=0)
-                              - Cmn*Cmn)).sum()
+        d0 = (sfaweights * Cmm * Cmm).sum()
+        d1 = 4 * (sfaweights * Cmn * Cmm).sum()
+        d2 = 2 * (sfaweights * (2 * Cmn * Cmn + Cmm * Cnn)).sum()
+        d3 = 4 * (sfaweights * Cmn * Cnn).sum()
+        d4 = (sfaweights * Cnn * Cnn).sum()
+        e0 = 2 * (icaweights * (
+            (covs[:R, m, :] * covs[:R, m, :]).sum(axis=0) - Cmm * Cmm)).sum()
+        e1 = 4 * (icaweights * (
+            (covs[:R, m, :] * covs[:R, n, :]).sum(axis=0) - Cmm * Cmn)).sum()
+        e2 = 2 * (icaweights * (
+            (covs[:R, n, :] * covs[:R, n, :]).sum(axis=0) - Cmn * Cmn)).sum()
 
-        s22 = 0.25 * bsfa*(d1+d3)   + 0.5* bica*(e1)
-        c22 = 0.5  * bsfa*(d0-d4)   + 0.5* bica*(e0-e2)
-        s24 = 0.125* bsfa*(d1-d3)
-        c24 = 0.125* bsfa*(d0-d2+d4)
+        s22 = 0.25 * bsfa * (d1 + d3) + 0.5 * bica * (e1)
+        c22 = 0.5 * bsfa * (d0 - d4) + 0.5 * bica * (e0 - e2)
+        s24 = 0.125 * bsfa * (d1 - d3)
+        c24 = 0.125 * bsfa * (d0 - d2 + d4)
 
         # Compute the contrast function in a grid of angles to find a
         # first approximation for the minimum.  Repeat two times
@@ -386,15 +398,15 @@ class ISFANode(Node):
         # funtion appears to be constant. This is because we hit the
         # maximum resolution for the cosine function (ca. 1e-15)
         npoints = 100
-        left = -PI/2 - PI/(npoints+1)
-        right = PI/2 + PI/(npoints+1)
+        left = -PI / 2 - PI / (npoints + 1)
+        right = PI / 2 + PI / (npoints + 1)
         for iter in (1, 2):
-            phi = numx.linspace(left, right, npoints+3)
+            phi = numx.linspace(left, right, npoints + 3)
             contrast = c22*cos(-2*phi)+s22*sin(-2*phi)+\
                        c24*cos(-4*phi)+s24*sin(-4*phi)
             minidx = contrast.argmin()
-            left = phi[max(minidx-1, 0)]
-            right = phi[min(minidx+1, len(phi)-1)]
+            left = phi[max(minidx - 1, 0)]
+            right = phi[min(minidx + 1, len(phi) - 1)]
 
         # The contrast is almost a parabola around the minimum.
         # To find the minimum we can therefore compute the derivative
@@ -408,33 +420,36 @@ class ISFANode(Node):
         if abs(der_left - der_right) < SQRT_EPS_D:
             minimum = phi[minidx]
         else:
-            minimum = right - der_right*(right-left)/(der_right-der_left)
+            minimum = right - der_right * (right - left) / (
+                der_right - der_left)
 
-        dc = numx.zeros((ncovs,), dtype = self.dtype)
+        dc = numx.zeros((ncovs, ), dtype=self.dtype)
         for t in range(ncovs):
             dg = covs[:R, :R, t].diagonal()
-            dc[t] = (dg*dg).sum(axis=0)
-        dc = ((dc-Cmm*Cmm)*sfaweights).sum()
+            dc[t] = (dg * dg).sum(axis=0)
+        dc = ((dc - Cmm * Cmm) * sfaweights).sum()
 
-        ec = numx.zeros((ncovs, ), dtype = self.dtype)
+        ec = numx.zeros((ncovs, ), dtype=self.dtype)
         for t in range(ncovs):
-            ec[t] = sum([covs[i, j, t]*covs[i, j, t] for i in range(R-1)
-                         for j in range(i+1, R) if i != m and j != m])
-        ec = 2*(ec*icaweights).sum()
-        a20 = 0.125*bsfa*(3*d0+d2+3*d4+8*dc)+0.5*bica*(e0+e2+2*ec)
+            ec[t] = sum([
+                covs[i, j, t] * covs[i, j, t] for i in range(R - 1)
+                for j in range(i + 1, R) if i != m and j != m
+            ])
+        ec = 2 * (ec * icaweights).sum()
+        a20 = 0.125 * bsfa * (3 * d0 + d2 + 3 * d4 + 8 * dc) + 0.5 * bica * (
+            e0 + e2 + 2 * ec)
         minimum_contrast = a20+c22*cos(-2*minimum)+s22*sin(-2*minimum)+\
                            c24*cos(-4*minimum)+s24*sin(-4*minimum)
         if complete:
             # Compute the contrast between -pi/2 and pi/2
             # (useful for testing purposes)
             npoints = 1000
-            phi = numx.linspace(-PI/2, PI/2, npoints+1)
+            phi = numx.linspace(-PI / 2, PI / 2, npoints + 1)
             contrast = a20 + c22*cos(-2*phi) + s22*sin(-2*phi) +\
                        c24*cos(-4*phi) + s24*sin(-4*phi)
             return phi, contrast, minimum, minimum_contrast
         else:
             return minimum, minimum_contrast
-
 
     def _givens_angle_case1(self, m, n, covs, bica_bsfa, complete=0):
         # This function makes use of the constants computed in the paper
@@ -452,15 +467,15 @@ class ISFANode(Node):
         bica, bsfa = bica_bsfa
 
         Cmm, Cmn, Cnn = covs[m, m, :], covs[m, n, :], covs[n, n, :]
-        d0 =   (sfaweights * (Cmm*Cmm+Cnn*Cnn)).sum()
-        d1 = 4*(sfaweights * (Cmm*Cmn-Cmn*Cnn)).sum()
-        d2 = 2*(sfaweights * (2*Cmn*Cmn+Cmm*Cnn)).sum()
-        e0 = 2*(icaweights * Cmn*Cmn).sum()
-        e1 = 4*(icaweights * (Cmn*Cnn-Cmm*Cmn)).sum()
-        e2 =   (icaweights * ((Cmm-Cnn)*(Cmm-Cnn)-2*Cmn*Cmn)).sum()
+        d0 = (sfaweights * (Cmm * Cmm + Cnn * Cnn)).sum()
+        d1 = 4 * (sfaweights * (Cmm * Cmn - Cmn * Cnn)).sum()
+        d2 = 2 * (sfaweights * (2 * Cmn * Cmn + Cmm * Cnn)).sum()
+        e0 = 2 * (icaweights * Cmn * Cmn).sum()
+        e1 = 4 * (icaweights * (Cmn * Cnn - Cmm * Cmn)).sum()
+        e2 = (icaweights * ((Cmm - Cnn) * (Cmm - Cnn) - 2 * Cmn * Cmn)).sum()
 
-        s24 = 0.25* (bsfa * d1    + bica * e1)
-        c24 = 0.25* (bsfa *(d0-d2)+ bica *(e0-e2))
+        s24 = 0.25 * (bsfa * d1 + bica * e1)
+        c24 = 0.25 * (bsfa * (d0 - d2) + bica * (e0 - e2))
 
         # compute the exact minimum
         # Note that 'arctan' finds always the first maximum
@@ -469,41 +484,43 @@ class ISFANode(Node):
         # In other words we want that: abs(minimum) < pi/4
         phi4 = numx.arctan2(s24, c24)
         # use if-structure until bug in numx.sign is solved
-        if  phi4 >= 0:
-            minimum = -0.25*(phi4-PI)
+        if phi4 >= 0:
+            minimum = -0.25 * (phi4 - PI)
         else:
-            minimum = -0.25*(phi4+PI)
+            minimum = -0.25 * (phi4 + PI)
 
         # compute all constants:
         R = self.output_dim
-        dc = numx.zeros((ncovs, ), dtype = self.dtype)
+        dc = numx.zeros((ncovs, ), dtype=self.dtype)
         for t in range(ncovs):
             dg = covs[:R, :R, t].diagonal()
-            dc[t] = (dg*dg).sum(axis=0)
-        dc = ((dc-Cnn*Cnn-Cmm*Cmm)*sfaweights).sum()
-        ec = numx.zeros((ncovs, ), dtype = self.dtype)
+            dc[t] = (dg * dg).sum(axis=0)
+        dc = ((dc - Cnn * Cnn - Cmm * Cmm) * sfaweights).sum()
+        ec = numx.zeros((ncovs, ), dtype=self.dtype)
         for t in range(ncovs):
             triu_covs = _triu(covs[:R, :R, t], 1).ravel()
-            ec[t] = ((triu_covs*triu_covs).sum() - covs[m, n, t]*covs[m, n, t])
-        ec = 2*(icaweights*ec).sum()
-        a20 = 0.25*(bsfa*(4*dc+d2+3*d0)+bica*(4*ec+e2+3*e0))
-        minimum_contrast = a20+c24*cos(-4*minimum)+s24*sin(-4*minimum)
+            ec[t] = (
+                (triu_covs * triu_covs).sum() - covs[m, n, t] * covs[m, n, t])
+        ec = 2 * (icaweights * ec).sum()
+        a20 = 0.25 * (bsfa * (4 * dc + d2 + 3 * d0) + bica *
+                      (4 * ec + e2 + 3 * e0))
+        minimum_contrast = a20 + c24 * cos(-4 * minimum) + s24 * sin(
+            -4 * minimum)
         npoints = 1000
         if complete == 1:
             # Compute the contrast between -pi/2 and pi/2
             # (useful for testing purposes)
-            phi = numx.linspace(-PI/2, PI/2, npoints+1)
-            contrast = a20 + c24*cos(-4*phi) + s24*sin(-4*phi)
+            phi = numx.linspace(-PI / 2, PI / 2, npoints + 1)
+            contrast = a20 + c24 * cos(-4 * phi) + s24 * sin(-4 * phi)
             return phi, contrast, minimum, minimum_contrast
         elif complete == 2:
-            phi = numx.linspace(-PI/4, PI/4, npoints+1)
-            contrast = a20 + c24*cos(-4*phi) + s24*sin(-4*phi)
+            phi = numx.linspace(-PI / 4, PI / 4, npoints + 1)
+            contrast = a20 + c24 * cos(-4 * phi) + s24 * sin(-4 * phi)
             return phi, contrast, minimum, minimum_contrast
         else:
             return minimum, minimum_contrast
 
-
-    def _get_contrast(self, covs, bica_bsfa = None):
+    def _get_contrast(self, covs, bica_bsfa=None):
         if bica_bsfa is None:
             bica_bsfa = self._bica_bsfa
         # return current value of the contrast
@@ -517,10 +534,10 @@ class ISFANode(Node):
         sfa = numx.zeros((ncovs, ), dtype=self.dtype)
         ica = numx.zeros((ncovs, ), dtype=self.dtype)
         for t in range(ncovs):
-            sq_corr =  covs[:R, :R, t]*covs[:R, :R, t]
+            sq_corr = covs[:R, :R, t] * covs[:R, :R, t]
             sfa[t] = sq_corr.trace()
-            ica[t] = 2*_triu(sq_corr, 1).ravel().sum()
-        return (bsfa*sfaweights*sfa).sum(), (bica*icaweights*ica).sum()
+            ica[t] = 2 * _triu(sq_corr, 1).ravel().sum()
+        return (bsfa * sfaweights * sfa).sum(), (bica * icaweights * ica).sum()
 
     def _adjust_ica_sfa_coeff(self):
         # adjust sfa/ica ratio. ica and sfa term are scaled
@@ -528,10 +545,10 @@ class ISFANode(Node):
         # whereas ica accounts for the off-diagonal terms
         ncomp = self.output_dim
         if ncomp > 1:
-            bica =  self.sfa_ica_coeff[1]/(ncomp*(ncomp-1))
-            bsfa = -self.sfa_ica_coeff[0]/ncomp
+            bica = self.sfa_ica_coeff[1] / (ncomp * (ncomp - 1))
+            bsfa = -self.sfa_ica_coeff[0] / ncomp
         else:
-            bica =  0.#self.sfa_ica_coeff[1]
+            bica = 0.  #self.sfa_ica_coeff[1]
             bsfa = -self.sfa_ica_coeff[0]
         self._bica_bsfa = [bica, bsfa]
 
@@ -560,16 +577,14 @@ class ISFANode(Node):
 
         # save initial contrast
         sfa, ica = self._get_contrast(self.covs)
-        self.initial_contrast = {'SFA': sfa,
-                                 'ICA': ica,
-                                 'TOT': sfa + ica}
+        self.initial_contrast = {'SFA': sfa, 'ICA': ica, 'TOT': sfa + ica}
         # info headers
         if self.verbose:
-            print self._info['header']+self._info['line']
+            print(self._info['header'] + self._info['line'])
 
         # initialize control variables
         # contrast
-        contrast = sfa+ica
+        contrast = sfa + ica
         # local rotation matrix
         Q = self._get_eye()
         # local copy of correlation matrices
@@ -589,7 +604,7 @@ class ISFANode(Node):
         perturbed = 0
 
         # size of the perturbation matrix
-        psize = self._effective_input_dim-self.output_dim
+        psize = self._effective_input_dim - self.output_dim
 
         # if there is no outer space don't perturbe
         if self._effective_input_dim == self.output_dim:
@@ -617,12 +632,12 @@ class ISFANode(Node):
                 else:
                     perturbed = -perturbed
 
-            if (max_increase < self.eps_contrast) and (max_increase) >= 0 :
+            if (max_increase < self.eps_contrast) and (max_increase) >= 0:
                 # rate of change is small for all pairs in a sweep
                 if perturbed == 0:
                     # perturbe the outer space one time with a random rotation
                     perturbed = 1
-                elif perturbed >= 1 and part_sweep == sweep-1:
+                elif perturbed >= 1 and part_sweep == sweep - 1:
                     # after the last pertubation no useful step has
                     # been done. exit!
                     sweeping = False
@@ -650,10 +665,8 @@ class ISFANode(Node):
 
             # verbose progress information
             if self.verbose:
-                table_entry = self._fmt_prog_info(sweep,
-                                                  perturbed,
-                                                  contrast)
-                _sys.stdout.write(table_entry+len(table_entry)*'\b')
+                table_entry = self._fmt_prog_info(sweep, perturbed, contrast)
+                _sys.stdout.write(table_entry + len(table_entry) * '\b')
                 _sys.stdout.flush()
 
             # if we made too many sweeps exit with error!
@@ -665,17 +678,14 @@ class ISFANode(Node):
         # if we land here, we have converged!
         # calculate output contrast
 
-        sfa, ica =  self._get_contrast(covs)
-        contrast = sfa+ica
+        sfa, ica = self._get_contrast(covs)
+        contrast = sfa + ica
         # print final information
         if self.verbose:
-            print self._fmt_prog_info(sweep, perturbed,
-                                      contrast, sfa, ica)
-            print self._info['line']
+            print(self._fmt_prog_info(sweep, perturbed, contrast, sfa, ica))
+            print(self._info['line'])
 
-        self.final_contrast = {'SFA': sfa,
-                               'ICA': ica,
-                               'TOT': sfa + ica}
+        self.final_contrast = {'SFA': sfa, 'ICA': ica, 'TOT': sfa + ica}
 
         # finally return optimal rotation matrix
         return Q
@@ -699,7 +709,7 @@ class ISFANode(Node):
                 break
 
             # relative improvement in the contrast function
-            relative_diff = (prev_contrast-contrast)/abs(prev_contrast)
+            relative_diff = (prev_contrast - contrast) / abs(prev_contrast)
             if relative_diff < 0:
                 # if rate of change is negative we hit numerical precision
                 # or we already sit on the optimum for this pair of axis.
@@ -756,7 +766,7 @@ class ISFANode(Node):
         self._adjust_ica_sfa_coeff()
         # initialize all possible rotation axes
         self.rot_axis = [(i, j) for i in range(0, self.output_dim)
-                         for j in range(i+1, self._effective_input_dim)]
+                         for j in range(i + 1, self._effective_input_dim)]
 
         # initialize the global rotation-permutation matrix (RP):
         RP = self.RP

@@ -44,21 +44,22 @@ class FlowNode(mdp.Node):
         if dtype is None:
             dtype = self._flow[-1].dtype
         # store which nodes are pretrained up to what phase
-        self._pretrained_phase = [node.get_current_train_phase()
-                                  for node in flow]
+        self._pretrained_phase = [
+            node.get_current_train_phase() for node in flow
+        ]
         # check if all the nodes are already fully trained
         train_len = 0
         for i_node, node in enumerate(self._flow):
             if node.is_trainable():
-                train_len += (len(node._get_train_seq())
-                              - self._pretrained_phase[i_node])
+                train_len += (len(node._get_train_seq()) -
+                              self._pretrained_phase[i_node])
         if train_len:
             self._is_trainable = True
         else:
             self._is_trainable = False
         # remaining standard node initialisation
-        super(FlowNode, self).__init__(input_dim=input_dim,
-                                       output_dim=output_dim, dtype=dtype)
+        super(FlowNode, self).__init__(
+            input_dim=input_dim, output_dim=output_dim, dtype=dtype)
 
     @property
     def flow(self):
@@ -92,14 +93,14 @@ class FlowNode(mdp.Node):
                     raise mdp.InconsistentDimException(err)
                 # now we can safely try to set the dimension
                 last_node.output_dim = n
-        # the last_node dim is now set 
+        # the last_node dim is now set
         if n != last_node.output_dim:
             err = (("FlowNode can't be set to output_dim %d" % n) +
                    " because the last internal node already has " +
                    "output_dim %d." % last_node.output_dim)
             raise mdp.InconsistentDimException(err)
         self._output_dim = n
-    
+
     def _fix_nodes_dimensions(self):
         """Try to fix the dimensions of the internal nodes."""
         if len(self._flow) > 1:
@@ -136,24 +137,26 @@ class FlowNode(mdp.Node):
 
     def _get_train_seq(self):
         """Return a training sequence containing all training phases."""
-        
+
         def get_train_function(_i_node, _node):
             # This internal function is needed to channel the data through
             # the nodes in front of the current nodes.
             # using nested scopes here instead of default args, see pep-0227
             def _train(x, *args, **kwargs):
                 if i_node > 0:
-                    _node.train(self._flow.execute(x, nodenr=_i_node-1),
-                                *args, **kwargs)
+                    _node.train(
+                        self._flow.execute(x, nodenr=_i_node - 1), *args,
+                        **kwargs)
                 else:
                     _node.train(x, *args, **kwargs)
+
             return _train
-        
+
         train_seq = []
         for i_node, node in enumerate(self._flow):
             if node.is_trainable():
-                remaining_len = (len(node._get_train_seq())
-                                 - self._pretrained_phase[i_node])
+                remaining_len = (len(node._get_train_seq()) -
+                                 self._pretrained_phase[i_node])
                 train_seq += ([(get_train_function(i_node, node),
                                 node.stop_training)] * remaining_len)
 
@@ -163,12 +166,13 @@ class FlowNode(mdp.Node):
             def _stop_training_wrapper(*args, **kwargs):
                 func(*args, **kwargs)
                 self._fix_nodes_dimensions()
+
             return _stop_training_wrapper
-        
+
         if train_seq:
             train_seq[-1] = (train_seq[-1][0],
-                             _get_stop_training_wrapper(self, self._flow[-1],
-                                                        train_seq[-1][1]))
+                             _get_stop_training_wrapper(
+                                 self, self._flow[-1], train_seq[-1][1]))
         return train_seq
 
     def _execute(self, x, *args, **kwargs):
@@ -186,8 +190,10 @@ class FlowNode(mdp.Node):
         The protocol parameter should not be used.
         """
         if protocol is not None:
-            _warnings.warn("protocol parameter to copy() is ignored",
-                           mdp.MDPDeprecationWarning, stacklevel=2)
+            _warnings.warn(
+                "protocol parameter to copy() is ignored",
+                mdp.MDPDeprecationWarning,
+                stacklevel=2)
         # Warning: If we create a new FlowNode with the copied internal
         #    nodes then it will differ from the original one if some nodes
         #    were trained in the meantime. Especially _get_train_seq would

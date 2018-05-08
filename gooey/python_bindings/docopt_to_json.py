@@ -1,4 +1,3 @@
-
 """
 Naval Fate.
 
@@ -27,37 +26,37 @@ Options:
 #
 # types?
 
-
 import re
 from docopt import docopt, Option, Argument
 
 
 class MyOption(Option):
-  def __init__(self, *args, **kwargs):
-    self.description = kwargs.pop('description', None)
-    super(MyOption, self).__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        self.description = kwargs.pop('description', None)
+        super(MyOption, self).__init__(*args, **kwargs)
 
+    @classmethod
+    def parse(class_, option_description):
+        short, int, argcount, value = None, None, 0, False
+        options, _, description = option_description.strip().partition('  ')
+        options = options.replace(',', ' ').replace('=', ' ')
+        for s in options.split():
+            if s.startswith('--'):
+                long = s
+            elif s.startswith('-'):
+                short = s
+            else:
+                argcount = 1
+        if argcount:
+            matched = re.findall(r'\[default: (.*)\]', description, flags=re.I)
+            value = matched[0] if matched else None
+        return class_(
+            short, int, argcount, value, description=description.strip())
 
-  @classmethod
-  def parse(class_, option_description):
-      short, long, argcount, value = None, None, 0, False
-      options, _, description = option_description.strip().partition('  ')
-      options = options.replace(',', ' ').replace('=', ' ')
-      for s in options.split():
-          if s.startswith('--'):
-              long = s
-          elif s.startswith('-'):
-              short = s
-          else:
-              argcount = 1
-      if argcount:
-          matched = re.findall(r'\[default: (.*)\]', description, flags=re.I)
-          value = matched[0] if matched else None
-      return class_(short, long, argcount, value, description=description.strip())
-
-  def __repr__(self):
-      return 'Option(%r, %r, %r, %r, %r)' % (self.short, self.long,
-                                       self.argcount, self.value, self.description)
+    def __repr__(self):
+        return 'Option(%r, %r, %r, %r, %r)' % (self.short, self.long,
+                                               self.argcount, self.value,
+                                               self.description)
 
 
 if __name__ == '__main__':
@@ -72,5 +71,5 @@ if __name__ == '__main__':
     # #return options, arguments
     # print arguments
     # print options
-    print a
+    print(a)
     a = 10

@@ -15,15 +15,15 @@ from nose.tools import assert_true, assert_false, assert_equal, assert_raises
 
 TEST_DATA_PATH = pjoin(dirname(__file__), 'data')
 
-N_EG_ELS = 11 # number of elements for example variable
-VARTYPE_EG = 'b' # var type for example variable
+N_EG_ELS = 11  # number of elements for example variable
+VARTYPE_EG = 'b'  # var type for example variable
 
 
 def make_simple(*args, **kwargs):
     f = netcdf_file(*args, **kwargs)
     f.history = 'Created for a test'
     f.createDimension('time', N_EG_ELS)
-    time = f.createVariable('time', VARTYPE_EG, ('time',))
+    time = f.createVariable('time', VARTYPE_EG, ('time', ))
     time[:] = np.arange(N_EG_ELS)
     time.units = 'days since 2008-01-01'
     f.flush()
@@ -35,8 +35,8 @@ def gen_for_simple(ncfileobj):
     yield assert_equal, ncfileobj.history, asbytes('Created for a test')
     time = ncfileobj.variables['time']
     yield assert_equal, time.units, asbytes('days since 2008-01-01')
-    yield assert_equal, time.shape, (N_EG_ELS,)
-    yield assert_equal, time[-1], N_EG_ELS-1
+    yield assert_equal, time.shape, (N_EG_ELS, )
+    yield assert_equal, time[-1], N_EG_ELS - 1
 
 
 def test_read_write_files():
@@ -117,4 +117,3 @@ def test_read_example_data():
     for fname in glob(pjoin(TEST_DATA_PATH, '*.nc')):
         f = netcdf_file(fname, 'r')
         f = netcdf_file(fname, 'r', mmap=False)
-

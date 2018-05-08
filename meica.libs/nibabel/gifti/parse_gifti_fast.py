@@ -10,7 +10,7 @@
 import base64
 import sys
 import zlib
-from StringIO import StringIO
+from io import StringIO
 from xml.parsers.expat import ParserCreate, ExpatError
 
 import numpy as np
@@ -19,7 +19,6 @@ from ..nifti1 import data_type_codes, xform_codes, intent_codes
 from . import gifti as gi
 from .util import (array_index_order_codes, gifti_encoding_codes,
                    gifti_endian_codes)
-
 
 DEBUG_PRINT = False
 
@@ -40,9 +39,9 @@ def read_data_block(encoding, endian, ordering, datatype, shape, data):
         dec = base64.decodestring(data.encode('ascii'))
         dt = data_type_codes.type[datatype]
         sh = tuple(shape)
-        newarr = np.fromstring(dec, dtype = dt)
+        newarr = np.fromstring(dec, dtype=dt)
         if len(newarr.shape) != len(sh):
-            newarr = newarr.reshape(sh, order = ord)
+            newarr = newarr.reshape(sh, order=ord)
     elif enclabel == 'B64GZ':
         # GIFTI_ENCODING_B64GZ
         # convert to bytes array for python 3.2
@@ -51,9 +50,9 @@ def read_data_block(encoding, endian, ordering, datatype, shape, data):
         zdec = zlib.decompress(dec)
         dt = data_type_codes.type[datatype]
         sh = tuple(shape)
-        newarr = np.fromstring(zdec, dtype = dt)
+        newarr = np.fromstring(zdec, dtype=dt)
         if len(newarr.shape) != len(sh):
-            newarr = newarr.reshape(sh, order = ord)
+            newarr = newarr.reshape(sh, order=ord)
     elif enclabel == 'External':
         # GIFTI_ENCODING_EXTBIN
         raise NotImplementedError("In what format are the external files?")
@@ -61,14 +60,13 @@ def read_data_block(encoding, endian, ordering, datatype, shape, data):
         return 0
     # check if we need to byteswap
     required_byteorder = gifti_endian_codes.byteorder[endian]
-    if (required_byteorder in ('big', 'little') and
-        required_byteorder != sys.byteorder):
+    if (required_byteorder in ('big', 'little')
+            and required_byteorder != sys.byteorder):
         newarr = newarr.byteswap()
     return newarr
 
 
 class Outputter(object):
-
     def __init__(self):
         self.initialize()
 
@@ -99,7 +97,7 @@ class Outputter(object):
     def StartElementHandler(self, name, attrs):
         self.flush_chardata()
         if DEBUG_PRINT:
-            print 'Start element:\n\t', repr(name), attrs
+            print('Start element:\n\t', repr(name), attrs)
         if name == 'GIFTI':
             # create gifti image
             self.img = gi.GiftiImage()
@@ -157,7 +155,8 @@ class Outputter(object):
             if "DataType" in attrs:
                 self.da.datatype = data_type_codes.code[attrs["DataType"]]
             if "ArrayIndexingOrder" in attrs:
-                self.da.ind_ord = array_index_order_codes.code[attrs["ArrayIndexingOrder"]]
+                self.da.ind_ord = array_index_order_codes.code[attrs[
+                    "ArrayIndexingOrder"]]
             if "Dimensionality" in attrs:
                 self.da.num_dim = int(attrs["Dimensionality"])
             for i in range(self.da.num_dim):
@@ -201,7 +200,7 @@ class Outputter(object):
     def EndElementHandler(self, name):
         self.flush_chardata()
         if DEBUG_PRINT:
-            print 'End element:\n\t', repr(name)
+            print('End element:\n\t', repr(name))
         if name == 'GIFTI':
             # remove last element of the list
             self.fsm_state.pop()
@@ -312,7 +311,7 @@ class Outputter(object):
         return not self._char_blocks is None
 
 
-def parse_gifti_file(fname, buffer_size = None):
+def parse_gifti_file(fname, buffer_size=None):
     """ Parse gifti file named `fname`, return image
 
     Parameters
@@ -329,10 +328,10 @@ def parse_gifti_file(fname, buffer_size = None):
     img : gifti image
     """
     if buffer_size is None:
-        buffer_sz_val =  35000000
+        buffer_sz_val = 35000000
     else:
         buffer_sz_val = buffer_size
-    datasource = open(fname,'rb')
+    datasource = open(fname, 'rb')
     parser = ParserCreate()
     parser.buffer_text = True
     try:
@@ -340,16 +339,16 @@ def parse_gifti_file(fname, buffer_size = None):
     except AttributeError:
         if not buffer_size is None:
             raise ValueError('Cannot set buffer size for parser')
-    HANDLER_NAMES = ['StartElementHandler',
-                     'EndElementHandler',
-                     'CharacterDataHandler']
+    HANDLER_NAMES = [
+        'StartElementHandler', 'EndElementHandler', 'CharacterDataHandler'
+    ]
     out = Outputter()
     for name in HANDLER_NAMES:
         setattr(parser, name, getattr(out, name))
     try:
         parser.ParseFile(datasource)
     except ExpatError:
-        print 'An expat error occured while parsing the  Gifti file.'
+        print('An expat error occured while parsing the  Gifti file.')
     # Reality check for pending data
     assert out.pending_data is False
     # update filename

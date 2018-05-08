@@ -52,9 +52,8 @@ from .minc import MincImage
 from .freesurfer import MGHImage
 from .funcs import (squeeze_image, concat_images, four_to_three,
                     as_closest_canonical)
-from .orientations import (io_orientation, orientation_affine,
-                           flip_axis, OrientationError,
-                           apply_orientation, aff2axcodes)
+from .orientations import (io_orientation, orientation_affine, flip_axis,
+                           OrientationError, apply_orientation, aff2axcodes)
 from .imageclasses import class_map, ext_map
 from . import trackvis
 
@@ -66,7 +65,10 @@ try:
     bench = Tester().bench
     del Tester
 except ImportError:
-    def test(*args, **kwargs): raise RuntimeError('Need numpy >= 1.2 for tests')
+
+    def test(*args, **kwargs):
+        raise RuntimeError('Need numpy >= 1.2 for tests')
+
 
 from .pkg_info import get_pkg_info as _get_pkg_info
-get_info = lambda : _get_pkg_info(os.path.dirname(__file__))
+get_info = lambda: _get_pkg_info(os.path.dirname(__file__))

@@ -39,7 +39,6 @@ class ScalingError(WriterError):
 
 
 class ArrayWriter(object):
-
     def __init__(self, array, out_dtype=None, calc_scale=True):
         """ Initialize array writer
 
@@ -111,7 +110,7 @@ class ArrayWriter(object):
         if out_dtype.kind == 'f':
             return False
         # Now we need to look at the data for special cases
-        mn, mx = self.finite_range() # this is cached
+        mn, mx = self.finite_range()  # this is cached
         if (mn, mx) in ((0, 0), (np.inf, -np.inf)):
             # Data all zero, or no data is finite
             return False
@@ -150,7 +149,7 @@ class ArrayWriter(object):
         """ Finite range for thresholding on write """
         if self._out_dtype.kind in 'iu' and self._array.dtype.kind == 'f':
             mn, mx = self.finite_range()
-            if (mn, mx) == (np.inf, -np.inf): # no finite data
+            if (mn, mx) == (np.inf, -np.inf):  # no finite data
                 mn, mx = 0, 0
             return mn, mx
         return None, None
@@ -170,14 +169,15 @@ class ArrayWriter(object):
             point output.
         """
         mn, mx = self._writing_range()
-        array_to_file(self._array,
-                      fileobj,
-                      self._out_dtype,
-                      offset=None,
-                      mn=mn,
-                      mx=mx,
-                      order=order,
-                      nan2zero=nan2zero)
+        array_to_file(
+            self._array,
+            fileobj,
+            self._out_dtype,
+            offset=None,
+            mn=mn,
+            mx=mx,
+            order=order,
+            nan2zero=nan2zero)
 
 
 class SlopeArrayWriter(ArrayWriter):
@@ -196,7 +196,10 @@ class SlopeArrayWriter(ArrayWriter):
     * calc_scale() - calculate slope to best write self.array
     """
 
-    def __init__(self, array, out_dtype=None, calc_scale=True,
+    def __init__(self,
+                 array,
+                 out_dtype=None,
+                 calc_scale=True,
                  scaler_dtype=np.float32):
         """ Initialize array writer
 
@@ -251,8 +254,10 @@ class SlopeArrayWriter(ArrayWriter):
 
     def _get_slope(self):
         return self._slope
+
     def _set_slope(self, val):
         self._slope = np.squeeze(self.scaler_dtype.type(val))
+
     slope = property(_get_slope, _set_slope, None, 'get/set slope')
 
     def calc_scale(self, force=False):
@@ -282,15 +287,16 @@ class SlopeArrayWriter(ArrayWriter):
             point output.
         """
         mn, mx = self._writing_range()
-        array_to_file(self._array,
-                      fileobj,
-                      self._out_dtype,
-                      offset=None,
-                      divslope=self.slope,
-                      mn=mn,
-                      mx=mx,
-                      order=order,
-                      nan2zero=nan2zero)
+        array_to_file(
+            self._array,
+            fileobj,
+            self._out_dtype,
+            offset=None,
+            divslope=self.slope,
+            mn=mn,
+            mx=mx,
+            order=order,
+            nan2zero=nan2zero)
 
     def _do_scaling(self):
         arr = self._array
@@ -306,8 +312,7 @@ class SlopeArrayWriter(ArrayWriter):
         out_max, out_min = info.max, info.min
         # If left as int64, uint64, comparisons will default to floats, and
         # these are inexact for > 2**53 - so convert to int
-        if (as_int(mx) <= as_int(out_max) and
-            as_int(mn) >= as_int(out_min)):
+        if (as_int(mx) <= as_int(out_max) and as_int(mn) >= as_int(out_min)):
             # already in range
             return
         # (u)int to (u)int scaling
@@ -324,7 +329,7 @@ class SlopeArrayWriter(ArrayWriter):
             # Need abs that deals with max neg ints. abs problem only arises
             # when all the data is set to max neg integer value
             imax = np.iinfo(self._out_dtype).max
-            if mx <= 0 and int_abs(mn) <= imax: # sign flip enough?
+            if mx <= 0 and int_abs(mn) <= imax:  # sign flip enough?
                 # -1.0 * arr will be in scaler_dtype precision
                 self.slope = -1.0
                 return
@@ -332,7 +337,7 @@ class SlopeArrayWriter(ArrayWriter):
 
     def _range_scale(self):
         """ Calculate scaling based on data range and output type """
-        mn, mx = self.finite_range() # These can be floats or integers
+        mn, mx = self.finite_range()  # These can be floats or integers
         out_dtype = self._out_dtype
         info = type_info(out_dtype)
         t_mn_mx = info['min'], info['max']
@@ -340,16 +345,16 @@ class SlopeArrayWriter(ArrayWriter):
         if out_dtype.kind == 'f':
             # But we want maximum precision for the calculations. Casting will
             # not lose precision because min/max are of fp type.
-            t_min, t_max = np.array(t_mn_mx, dtype = big_float)
-        else: # (u)int
+            t_min, t_max = np.array(t_mn_mx, dtype=big_float)
+        else:  # (u)int
             t_min, t_max = [int_to_float(v, big_float) for v in t_mn_mx]
         if self._out_dtype.kind == 'u':
             if mn < 0 and mx > 0:
                 raise WriterError('Cannot scale negative and positive '
                                   'numbers to uint without intercept')
-            if mx <= 0: # All input numbers <= 0
+            if mx <= 0:  # All input numbers <= 0
                 self.slope = mn / t_max
-            else: # All input numbers > 0
+            else:  # All input numbers > 0
                 self.slope = mx / t_max
             return
         # Scaling to int. We need the bigger slope of (mn/t_min) and
@@ -378,7 +383,10 @@ class SlopeInterArrayWriter(SlopeArrayWriter):
     * calc_scale() - calculate inter, slope to best write self.array
     """
 
-    def __init__(self, array, out_dtype=None, calc_scale=True,
+    def __init__(self,
+                 array,
+                 out_dtype=None,
+                 calc_scale=True,
                  scaler_dtype=np.float32):
         """ Initialize array writer
 
@@ -413,10 +421,8 @@ class SlopeInterArrayWriter(SlopeArrayWriter):
         >>> (aw.slope, aw.inter) == (1.0, 128)
         True
         """
-        super(SlopeInterArrayWriter, self).__init__(array,
-                                                    out_dtype,
-                                                    calc_scale,
-                                                    scaler_dtype)
+        super(SlopeInterArrayWriter, self).__init__(array, out_dtype,
+                                                    calc_scale, scaler_dtype)
 
     def reset(self):
         """ Set object to values before any scaling calculation """
@@ -425,8 +431,10 @@ class SlopeInterArrayWriter(SlopeArrayWriter):
 
     def _get_inter(self):
         return self._inter
+
     def _set_inter(self, val):
         self._inter = np.squeeze(self.scaler_dtype.type(val))
+
     inter = property(_get_inter, _set_inter, None, 'get/set inter')
 
     def to_fileobj(self, fileobj, order='F', nan2zero=True):
@@ -444,16 +452,17 @@ class SlopeInterArrayWriter(SlopeArrayWriter):
             point output.
         """
         mn, mx = self._writing_range()
-        array_to_file(self._array,
-                      fileobj,
-                      self._out_dtype,
-                      offset=None,
-                      intercept=self.inter,
-                      divslope=self.slope,
-                      mn=mn,
-                      mx=mx,
-                      order=order,
-                      nan2zero=nan2zero)
+        array_to_file(
+            self._array,
+            fileobj,
+            self._out_dtype,
+            offset=None,
+            intercept=self.inter,
+            divslope=self.slope,
+            mn=mn,
+            mx=mx,
+            order=order,
+            nan2zero=nan2zero)
 
     def _iu2iu(self):
         # (u)int to (u)int
@@ -464,13 +473,13 @@ class SlopeInterArrayWriter(SlopeArrayWriter):
         t_min, t_max = np.iinfo(out_dtype).min, np.iinfo(out_dtype).max
         type_range = as_int(t_max) - as_int(t_min)
         mn2mx = mx - mn
-        if mn2mx <= type_range: # might offset be enough?
-            if t_min == 0: # uint output - take min to 0
+        if mn2mx <= type_range:  # might offset be enough?
+            if t_min == 0:  # uint output - take min to 0
                 # decrease offset with floor_exact, meaning mn >= t_min after
                 # subtraction.  But we may have pushed the data over t_max,
                 # which we check below
                 inter = floor_exact(mn - t_min, self.scaler_dtype)
-            else: # int output - take midpoint to 0
+            else:  # int output - take midpoint to 0
                 # ceil below increases inter, pushing scale up to 0.5 towards
                 # -inf, because ints have abs min == abs max + 1
                 midpoint = mn + as_int(np.ceil(mn2mx / 2.0))
@@ -488,18 +497,18 @@ class SlopeInterArrayWriter(SlopeArrayWriter):
 
     def _range_scale(self):
         """ Calculate scaling, intercept based on data range and output type """
-        mn, mx = self.finite_range() # Values of self.array.dtype type
+        mn, mx = self.finite_range()  # Values of self.array.dtype type
         out_dtype = self._out_dtype
-        if mx == mn: # Only one number in array
+        if mx == mn:  # Only one number in array
             self.inter = mn
             return
         # Straight mx-mn can overflow.
-        big_float = best_float() # usually longdouble except in win 32
-        if mn.dtype.kind == 'f': # Already floats
+        big_float = best_float()  # usually longdouble except in win 32
+        if mn.dtype.kind == 'f':  # Already floats
             # float64 and below cast correctly to longdouble.  Longdouble needs
             # no casting
             mn2mx = np.diff(np.array([mn, mx], dtype=big_float))
-        else: # max possible (u)int range is 2**64-1 (int64, uint64)
+        else:  # max possible (u)int range is 2**64-1 (int64, uint64)
             # int_to_float covers this range.  On windows longdouble is the same
             # as double so mn2mx will be 2**64 - thus overestimating slope
             # slightly.  Casting to int needed to allow mx-mn to be larger than
@@ -511,11 +520,11 @@ class SlopeInterArrayWriter(SlopeArrayWriter):
             t_mn_mx = info['min'], info['max']
         else:
             t_mn_mx = np.iinfo(out_dtype).min, np.iinfo(out_dtype).max
-            t_mn_mx= [int_to_float(v, big_float) for v in t_mn_mx]
+            t_mn_mx = [int_to_float(v, big_float) for v in t_mn_mx]
         # We want maximum precision for the calculations. Casting will
         # not lose precision because min/max are of fp type.
         assert [v.dtype.kind for v in t_mn_mx] == ['f', 'f']
-        scaled_mn2mx = np.diff(np.array(t_mn_mx, dtype = big_float))
+        scaled_mn2mx = np.diff(np.array(t_mn_mx, dtype=big_float))
         slope = mn2mx / scaled_mn2mx
         self.inter = mn - t_mn_mx[0] * slope
         self.slope = slope
@@ -558,7 +567,10 @@ def get_slope_inter(writer):
     return slope, inter
 
 
-def make_array_writer(data, out_type, has_slope=True, has_intercept=True,
+def make_array_writer(data,
+                      out_type,
+                      has_slope=True,
+                      has_intercept=True,
                       **kwargs):
     """ Make array writer instance for array `data` and output type `out_type`
 

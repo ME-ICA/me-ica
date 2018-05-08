@@ -1,5 +1,6 @@
 import py.test
-from _tools import *
+from ._tools import *
+
 
 def test_FDANode():
     mean1 = [0., 2.]
@@ -12,15 +13,15 @@ def test_FDANode():
     def distr(size):
         return normal(0, 1., size=(size)) * std_
 
-    x1 = distr((npoints,2)) + mean1
+    x1 = distr((npoints, 2)) + mean1
     utils.rotate(x1, rot, units='degrees')
-    x2 = distr((npoints,2)) + mean2
+    x2 = distr((npoints, 2)) + mean2
     utils.rotate(x2, rot, units='degrees')
     x = numx.concatenate((x1, x2), axis=0)
 
     # labels
-    cl1 = numx.ones((x1.shape[0],), dtype='d')
-    cl2 = 2.*numx.ones((x2.shape[0],), dtype='d')
+    cl1 = numx.ones((x1.shape[0], ), dtype='d')
+    cl2 = 2. * numx.ones((x2.shape[0], ), dtype='d')
     classes = numx.concatenate((cl1, cl2))
 
     # shuffle the data
@@ -30,8 +31,7 @@ def test_FDANode():
     classes = numx.take(classes, perm_idx)
 
     flow = mdp.Flow([mdp.nodes.FDANode()])
-    py.test.raises(mdp.TrainingException,
-                   flow[0].train, x, numx.ones((2,)))
+    py.test.raises(mdp.TrainingException, flow[0].train, x, numx.ones((2, )))
 
     flow.train([[(x, classes)]])
     fda_node = flow[0]
@@ -47,11 +47,11 @@ def test_FDANode():
     assert_array_almost_equal(fda_node.means[2], m2, 2)
 
     y = flow.execute(x)
-    assert_array_almost_equal(mean(y, axis=0), [0., 0.], decimal-2)
-    assert_array_almost_equal(std(y, axis=0), [1., 1.], decimal-2)
-    assert_almost_equal(mult(y[:,0], y[:,1].T), 0., decimal-2)
+    assert_array_almost_equal(mean(y, axis=0), [0., 0.], decimal - 2)
+    assert_array_almost_equal(std(y, axis=0), [1., 1.], decimal - 2)
+    assert_almost_equal(mult(y[:, 0], y[:, 1].T), 0., decimal - 2)
 
-    v1 = fda_node.v[:,0]/fda_node.v[0,0]
+    v1 = fda_node.v[:, 0] / fda_node.v[0, 0]
     assert_array_almost_equal(v1, [1., -1.], 2)
-    v1 = fda_node.v[:,1]/fda_node.v[0,1]
+    v1 = fda_node.v[:, 1] / fda_node.v[0, 1]
     assert_array_almost_equal(v1, [1., 1.], 2)

@@ -1,8 +1,9 @@
-from _tools import *
+from ._tools import *
 
 import mdp.parallel as parallel
 import mdp.hinet as hinet
 n = numx
+
 
 class TestParallelHinetNodes():
     """Tests for ParallelFlowNode."""
@@ -20,14 +21,18 @@ class TestParallelHinetNodes():
 
     def test_flownode(self):
         """Test ParallelFlowNode."""
-        flow = mdp.Flow([mdp.nodes.SFANode(output_dim=5),
-                         mdp.nodes.PolynomialExpansionNode(degree=2),
-                         mdp.nodes.SFANode(output_dim=3)])
+        flow = mdp.Flow([
+            mdp.nodes.SFANode(output_dim=5),
+            mdp.nodes.PolynomialExpansionNode(degree=2),
+            mdp.nodes.SFANode(output_dim=3)
+        ])
         flownode = mdp.hinet.FlowNode(flow)
-        x = n.random.random([100,50])
+        x = n.random.random([100, 50])
         chunksize = 25
-        chunks = [x[i*chunksize : (i+1)*chunksize]
-                    for i in xrange(len(x)//chunksize)]
+        chunks = [
+            x[i * chunksize:(i + 1) * chunksize]
+            for i in range(len(x) // chunksize)
+        ]
         while flownode.get_remaining_train_phase() > 0:
             for chunk in chunks:
                 forked_node = flownode.fork()
@@ -36,12 +41,14 @@ class TestParallelHinetNodes():
             flownode.stop_training()
         # test execution
         flownode.execute(x)
-        
+
     def test_flownode_forksingle(self):
         """Test that ParallelFlowNode forks only the first training node."""
-        flow = mdp.Flow([mdp.nodes.SFANode(output_dim=5),
-                         mdp.nodes.PolynomialExpansionNode(degree=2),
-                         mdp.nodes.SFANode(output_dim=3)])
+        flow = mdp.Flow([
+            mdp.nodes.SFANode(output_dim=5),
+            mdp.nodes.PolynomialExpansionNode(degree=2),
+            mdp.nodes.SFANode(output_dim=3)
+        ])
         flownode = mdp.hinet.FlowNode(flow)
         forked_flownode = flownode.fork()
         assert flownode._flow[0] is not forked_flownode._flow[0]
@@ -58,18 +65,17 @@ class TestParallelHinetNodes():
         Includes ParallelFlowNode, ParallelCloneLayer, ParallelSFANode
         and training via a ParallelFlow.
         """
-        noisenode = mdp.nodes.NormalNoiseNode(input_dim=20*20,
-                                              noise_args=(0,0.0001))
-        sfa_node = mdp.nodes.SFANode(input_dim=20*20, output_dim=10)
-        switchboard = hinet.Rectangular2dSwitchboard(in_channels_xy=100,
-                                                     field_channels_xy=20,
-                                                     field_spacing_xy=10)
+        noisenode = mdp.nodes.NormalNoiseNode(
+            input_dim=20 * 20, noise_args=(0, 0.0001))
+        sfa_node = mdp.nodes.SFANode(input_dim=20 * 20, output_dim=10)
+        switchboard = hinet.Rectangular2dSwitchboard(
+            in_channels_xy=100, field_channels_xy=20, field_spacing_xy=10)
         flownode = mdp.hinet.FlowNode(mdp.Flow([noisenode, sfa_node]))
-        sfa_layer = mdp.hinet.CloneLayer(flownode,
-                                                switchboard.output_channels)
+        sfa_layer = mdp.hinet.CloneLayer(flownode, switchboard.output_channels)
         flow = parallel.ParallelFlow([switchboard, sfa_layer])
-        data_iterables = [None,
-                          [n.random.random((10, 100*100)) for _ in xrange(3)]]
+        data_iterables = [
+            None, [n.random.random((10, 100 * 100)) for _ in range(3)]
+        ]
         scheduler = parallel.Scheduler()
         flow.train(data_iterables, scheduler=scheduler)
 
@@ -80,8 +86,6 @@ class TestParallelHinetNodes():
         node3 = mdp.nodes.SFANode(input_dim=3, output_dim=1)
         layer = mdp.hinet.Layer([node1, node2, node3])
         flow = parallel.ParallelFlow([layer])
-        data_iterables = [[n.random.random((10, 30)) for _ in xrange(3)]]
+        data_iterables = [[n.random.random((10, 30)) for _ in range(3)]]
         scheduler = parallel.Scheduler()
         flow.train(data_iterables, scheduler=scheduler)
-
-

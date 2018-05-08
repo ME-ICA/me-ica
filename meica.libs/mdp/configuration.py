@@ -1,25 +1,26 @@
-from __future__ import with_statement
 import sys
 import os
 import tempfile
 import inspect
 import mdp
-from repo_revision import get_git_revision
-import cStringIO as StringIO
-
+from .repo_revision import get_git_revision
+import io as StringIO
 
 __docformat__ = "restructuredtext en"
+
 
 class MetaConfig(type):
     """Meta class for config object to allow for pretty printing
     of class config (as we never instantiate it)"""
+
     def __str__(self):
         return self.info()
 
     def __repr__(self):
         return self.info()
 
-class config(object):
+
+class config(object, metaclass=MetaConfig):
     """Provide information about optional dependencies.
 
     This class should not be instantiated, it serves as a namespace
@@ -70,15 +71,13 @@ class config(object):
         otherwise a work around for debian bug #620551 is activated.
     """
 
-    __metaclass__ = MetaConfig
-
     _HAS_NUMBER = 0
 
     class _ExternalDep(object):
         def __init__(self, name, version=None, failmsg=None):
             assert (version is not None) + (failmsg is not None) == 1
 
-            self.version = str(version) # convert e.g. exception to str
+            self.version = str(version)  # convert e.g. exception to str
             self.failmsg = str(failmsg) if failmsg is not None else None
 
             global config
@@ -86,7 +85,7 @@ class config(object):
             config._HAS_NUMBER += 1
             setattr(config, 'has_' + name, self)
 
-        def __nonzero__(self):
+        def __bool__(self):
             return self.failmsg is None
 
         def __repr__(self):
@@ -154,8 +153,9 @@ class config(object):
                              for f in dir(cls) if f.startswith('has_')]
         maxlen = max(len(f[0]) for f in listable_features)
         listable_features = sorted(listable_features, key=lambda f: f[1].order)
-        return '\n'.join('%*s: %r' % (maxlen+1, f[0], f[1])
-                         for f in listable_features)
+        return '\n'.join(
+            '%*s: %r' % (maxlen + 1, f[0], f[1]) for f in listable_features)
+
 
 def get_numx():
     # find out the numerical extension
@@ -177,13 +177,11 @@ def get_numx():
     if USR_LABEL is None or USR_LABEL == 'scipy':
         try:
             import scipy as numx
-            from scipy import (linalg as numx_linalg,
-                               fftpack as numx_fft,
-                               random as numx_rand,
-                               version as numx_version)
+            from scipy import (linalg as numx_linalg, fftpack as numx_fft,
+                               random as numx_rand, version as numx_version)
             numx_description = 'scipy'
             config.ExternalDepFound('numx', 'scipy ' + numx_version.version)
-        except ImportError, exc:
+        except ImportError as exc:
             if USR_LABEL:
                 raise ImportError(exc)
             else:
@@ -193,13 +191,11 @@ def get_numx():
     if USR_LABEL == 'numpy' or numx_description is None:
         try:
             import numpy as numx
-            from numpy import (linalg as numx_linalg,
-                               fft as numx_fft,
-                               random as numx_rand,
-                               version as numx_version)
+            from numpy import (linalg as numx_linalg, fft as numx_fft, random
+                               as numx_rand, version as numx_version)
             numx_description = 'numpy'
             config.ExternalDepFound('numx', 'numpy ' + numx_version.version)
-        except ImportError, exc:
+        except ImportError as exc:
             config.ExternalDepFailed('numx', exc)
             numx_exception['numpy'] = exc
 
@@ -207,14 +203,16 @@ def get_numx():
     # the test is for numx_description, not numx, because numx could
     # be imported successfully, but e.g. numx_rand could later fail.
     if numx_description is None:
-        msg = ([ "Could not import any of the numeric backends.",
-                 "Import errors:" ] +
-               [ lab+': '+str(exc) for lab, exc in numx_exception.items() ]
-               + ["sys.path: " + str(sys.path)])
+        msg = ([
+            "Could not import any of the numeric backends.", "Import errors:"
+        ] + [
+            lab + ': ' + str(exc) for lab, exc in list(numx_exception.items())
+        ] + ["sys.path: " + str(sys.path)])
         raise ImportError('\n'.join(msg))
 
-    return (numx_description, numx, numx_linalg,
-            numx_fft, numx_rand, numx_version)
+    return (numx_description, numx, numx_linalg, numx_fft, numx_rand,
+            numx_version)
+
 
 def get_symeig(numx_linalg):
     # if we have scipy, check if the version of
@@ -222,14 +220,15 @@ def get_symeig(numx_linalg):
     args = inspect.getargspec(numx_linalg.eigh)[0]
     if len(args) > 4:
         # if yes, just wrap it
-        from utils._symeig import wrap_eigh as symeig
+        from .utils._symeig import wrap_eigh as symeig
         config.ExternalDepFound('symeig', 'scipy.linalg.eigh')
     else:
         # either we have numpy, or we have an old scipy
         # we need to use our own rich wrapper
-        from utils._symeig import _symeig_fake as symeig
+        from .utils._symeig import _symeig_fake as symeig
         config.ExternalDepFound('symeig', 'symeig_fake')
     return symeig
+
 
 def _version_too_old(version, known_good):
     """Return True iff a version is smaller than a tuple of integers.
@@ -250,7 +249,7 @@ def _version_too_old(version, known_good):
     False
     >>> _version_too_old('0.4.devel', (0,4,3))
     """
-    for part,expected in zip(version.split('.'), known_good):
+    for part, expected in zip(version.split('.'), known_good):
         try:
             p = int(part)
         except ValueError:
@@ -261,14 +260,18 @@ def _version_too_old(version, known_good):
             break
     return False
 
+
 class _sys_stdout_replaced(object):
     "Replace systdout temporarily"
+
     def __enter__(self):
         self.sysstdout = sys.stdout
         sys.stdout = StringIO.StringIO()
         return sys.stdout
+
     def __exit__(self, *args):
         sys.stdout = self.sysstdout
+
 
 def _pp_needs_monkeypatching():
     # only run this function the first time mdp is imported
@@ -291,19 +294,20 @@ def _pp_needs_monkeypatching():
         import pp
         server = pp.Server()
         with _sys_stdout_replaced() as capture:
-            server.submit(lambda: None, (), (), ('numpy',))()
+            server.submit(lambda: None, (), (), ('numpy', ))()
             server.destroy()
 
         # read error from hijacked stdout
         error = capture.getvalue()
-        mdp._pp_needs_monkeypatching = 'ImportError' in error 
-        
+        mdp._pp_needs_monkeypatching = 'ImportError' in error
+
     return mdp._pp_needs_monkeypatching
+
 
 def set_configuration():
     # set python version
-    config.ExternalDepFound('python', '.'.join([str(x)
-                                                for x in sys.version_info]))
+    config.ExternalDepFound('python',
+                            '.'.join([str(x) for x in sys.version_info]))
     version = mdp.__version__
     if mdp.__revision__:
         version += ', ' + mdp.__revision__
@@ -321,7 +325,7 @@ def set_configuration():
         import user
         if not hasattr(user, 'pp_secret'):
             user.pp_secret = pp_secret
-    except ImportError, exc:
+    except ImportError as exc:
         config.ExternalDepFailed('parallel_python', exc)
     else:
         if os.getenv('MDP_DISABLE_PARALLEL_PYTHON'):
@@ -329,11 +333,11 @@ def set_configuration():
         else:
             if _pp_needs_monkeypatching():
                 if os.getenv('MDP_DISABLE_MONKEYPATCH_PP'):
-                    config.ExternalDepFailed('parallel_python', pp.version +
-                                             ' broken on Debian')
+                    config.ExternalDepFailed('parallel_python',
+                                             pp.version + ' broken on Debian')
                 else:
-                    config.ExternalDepFound('parallel_python', pp.version +
-                                            '-monkey-patched')
+                    config.ExternalDepFound('parallel_python',
+                                            pp.version + '-monkey-patched')
                     config.pp_monkeypatch_dirname = tempfile.gettempdir()
             else:
                 config.ExternalDepFound('parallel_python', pp.version)
@@ -341,10 +345,9 @@ def set_configuration():
     # shogun
     try:
         import shogun
-        from shogun import (Kernel as sgKernel,
-                            Features as sgFeatures,
+        from shogun import (Kernel as sgKernel, Features as sgFeatures,
                             Classifier as sgClassifier)
-    except ImportError, exc:
+    except ImportError as exc:
         config.ExternalDepFailed('shogun', exc)
     else:
         if os.getenv('MDP_DISABLE_SHOGUN'):
@@ -355,12 +358,12 @@ def set_configuration():
             try:
                 version = sgKernel.Version_get_version_release()
             except AttributeError:
-                config.ExternalDepFailed('shogun',
-                                         'too old, upgrade to at least version 1.0')
+                config.ExternalDepFailed(
+                    'shogun', 'too old, upgrade to at least version 1.0')
             else:
                 if not version.startswith('v1.'):
-                    config.ExternalDepFailed('shogun',
-                                             'too old, upgrade to at least version 1.0.')
+                    config.ExternalDepFailed(
+                        'shogun', 'too old, upgrade to at least version 1.0.')
                 else:
                     config.ExternalDepFound('shogun', version)
 
@@ -368,9 +371,9 @@ def set_configuration():
     try:
         import svm as libsvm
         libsvm.libsvm
-    except ImportError, exc:
+    except ImportError as exc:
         config.ExternalDepFailed('libsvm', exc)
-    except AttributeError, exc:
+    except AttributeError as exc:
         config.ExternalDepFailed('libsvm', 'libsvm version >= 2.91 required')
     else:
         if os.getenv('MDP_DISABLE_LIBSVM'):
@@ -381,13 +384,13 @@ def set_configuration():
     # joblib
     try:
         import joblib
-    except ImportError, exc:
+    except ImportError as exc:
         config.ExternalDepFailed('joblib', exc)
     else:
         version = joblib.__version__
         if os.getenv('MDP_DISABLE_JOBLIB'):
             config.ExternalDepFailed('joblib', 'disabled')
-        elif _version_too_old(version, (0,4,3)):
+        elif _version_too_old(version, (0, 4, 3)):
             config.ExternalDepFailed('joblib',
                                      'version %s is too old' % version)
         else:
@@ -400,14 +403,14 @@ def set_configuration():
         except ImportError:
             import scikits.learn as sklearn
         version = sklearn.__version__
-    except ImportError, exc:
+    except ImportError as exc:
         config.ExternalDepFailed('sklearn', exc)
-    except AttributeError, exc:
+    except AttributeError as exc:
         config.ExternalDepFailed('sklearn', exc)
-    else:   
+    else:
         if os.getenv('MDP_DISABLE_SKLEARN'):
             config.ExternalDepFailed('sklearn', 'disabled')
-        elif _version_too_old(version, (0,6)):
+        elif _version_too_old(version, (0, 6)):
             config.ExternalDepFailed('sklearn',
                                      'version %s is too old' % version)
         else:

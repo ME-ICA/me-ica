@@ -12,31 +12,31 @@ http://javascript.internet.com/miscellaneous/image-slideshow.html
 (which in turn seems to be based on something from http://www.ricocheting.com)
 """
 
-from __future__ import with_statement
-
 import random
 import tempfile
 import os
 import webbrowser
 import warnings
 
-import templet
+from . import templet
 
 _BASIC_CSS_FILENAME = "basic.css"
 _SLIDESHOW_CSS_FILENAME = "slideshow.css"
 
+
 def basic_css():
     """Return the basic default CSS."""
-    css_filename = os.path.join(os.path.split(__file__)[0],
-                                _BASIC_CSS_FILENAME)
+    css_filename = os.path.join(
+        os.path.split(__file__)[0], _BASIC_CSS_FILENAME)
     with open(css_filename, 'r') as css_file:
         css = css_file.read()
     return css
 
+
 def slideshow_css():
     """Return the additional CSS for a slideshow."""
-    css_filename = os.path.join(os.path.split(__file__)[0],
-                                _SLIDESHOW_CSS_FILENAME)
+    css_filename = os.path.join(
+        os.path.split(__file__)[0], _SLIDESHOW_CSS_FILENAME)
     with open(css_filename, 'r') as css_file:
         css = css_file.read()
     return css
@@ -49,8 +49,14 @@ class HTMLSlideShow(templet.Template):
     some of the templating attributes. See ImageHTMLSlideShow for an example.
     """
 
-    def __init__(self, title=None, delay=100, delay_delta=20,
-                 loop=True, slideshow_id=None, shortcuts=True, **kwargs):
+    def __init__(self,
+                 title=None,
+                 delay=100,
+                 delay_delta=20,
+                 loop=True,
+                 slideshow_id=None,
+                 shortcuts=True,
+                 **kwargs):
         """Return the complete HTML code for the slideshow.
 
         title -- Optional slideshow title (for defualt None not title is shown).
@@ -81,7 +87,6 @@ class HTMLSlideShow(templet.Template):
     def _get_random_id(self):
         """Factory method for random slideshow id."""
         return "slideshow%d" % random.randint(10000, 99999)
-
 
     template = r'''
 <script language="JavaScript">
@@ -373,14 +378,14 @@ class SectionHTMLSlideShow(HTMLSlideShow):
         kwargs["only_one_section"] = only_one_section
         # translate section_id_list into JavaScript list
         section_ids = [str(section_id) for section_id in section_ids]
-        js_section_ids = "".join(['        "%s_section_id_%s",\n' %
-                                  (slideshow_id, section_id)
-                                  for section_id in section_ids])
+        js_section_ids = "".join([
+            '        "%s_section_id_%s",\n' % (slideshow_id, section_id)
+            for section_id in section_ids
+        ])
         js_section_ids = "\n" + js_section_ids[:-2]
         kwargs["js_section_ids"] = js_section_ids
         del kwargs["self"]
         super(SectionHTMLSlideShow, self).__init__(**kwargs)
-
 
     js_update_template = r'''
     // maps slide index to section slideshow_id
@@ -536,8 +541,12 @@ class ImageHTMLSlideShow(HTMLSlideShow):
     HTMLSlideShow.
     """
 
-    def __init__(self, filenames, image_size,
-                 magnification=1, mag_control=True, **kwargs):
+    def __init__(self,
+                 filenames,
+                 image_size,
+                 magnification=1,
+                 mag_control=True,
+                 **kwargs):
         """Return the complete HTML code for a slideshow of the given images.
 
         filenames -- sequence of strings, containing the path for each image
@@ -692,9 +701,18 @@ class SectionImageHTMLSlideShow(SectionHTMLSlideShow, ImageHTMLSlideShow):
 # TODO: extract image size automatically,
 #    but this introduces an optional dependency on PIL
 
-def image_slideshow(filenames, image_size, title=None, section_ids=None,
-                    delay=100, delay_delta=20, loop=True, slideshow_id=None,
-                    magnification=1, mag_control=True, shortcuts=True):
+
+def image_slideshow(filenames,
+                    image_size,
+                    title=None,
+                    section_ids=None,
+                    delay=100,
+                    delay_delta=20,
+                    loop=True,
+                    slideshow_id=None,
+                    magnification=1,
+                    mag_control=True,
+                    shortcuts=True):
     """Return a string with the JS and HTML code for an image slideshow.
 
     Note that the CSS code for the slideshow is not included, so you should
@@ -716,10 +734,19 @@ def image_slideshow(filenames, image_size, title=None, section_ids=None,
         slideshow = ImageHTMLSlideShow(**vars())
     return str(slideshow)
 
-def show_image_slideshow(filenames, image_size, filename=None, title=None,
-                         section_ids=None, delay=100, delay_delta=20,
-                         loop=True, slideshow_id=None,
-                         magnification=1, mag_control=True, open_browser=True):
+
+def show_image_slideshow(filenames,
+                         image_size,
+                         filename=None,
+                         title=None,
+                         section_ids=None,
+                         delay=100,
+                         delay_delta=20,
+                         loop=True,
+                         slideshow_id=None,
+                         magnification=1,
+                         mag_control=True,
+                         open_browser=True):
     """Write the slideshow into a HTML file, open it in the browser and
     return a file object pointing to the file. If the filename is not given,
     a temporary file is used, and will be deleted when the returned file object

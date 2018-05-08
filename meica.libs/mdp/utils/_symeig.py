@@ -1,15 +1,24 @@
 import mdp
 from mdp import numx, numx_linalg
 
+
 class SymeigException(mdp.MDPException):
     pass
+
 
 # the following functions and classes were part of the scipy_emulation.py file
 
 _type_keys = ['f', 'd', 'F', 'D']
-_type_conv = {('f','d'): 'd', ('f','F'): 'F', ('f','D'): 'D',
-              ('d','F'): 'D', ('d','D'): 'D',
-              ('F','d'): 'D', ('F','D'): 'D'}
+_type_conv = {
+    ('f', 'd'): 'd',
+    ('f', 'F'): 'F',
+    ('f', 'D'): 'D',
+    ('d', 'F'): 'D',
+    ('d', 'D'): 'D',
+    ('F', 'd'): 'D',
+    ('F', 'D'): 'D'
+}
+
 
 def _greatest_common_dtype(alist):
     """
@@ -29,6 +38,7 @@ def _greatest_common_dtype(alist):
             dtype = _type_conv[transition]
     return dtype
 
+
 def _assert_eigenvalues_real_and_positive(w, dtype):
     tol = numx.finfo(dtype.type).eps * 100
     if abs(w.imag).max() > tol:
@@ -38,8 +48,14 @@ def _assert_eigenvalues_real_and_positive(w, dtype):
     #    err = "Got negative eigenvalues: %s" % str(w)
     #    raise SymeigException(err)
 
-def wrap_eigh(A, B = None, eigenvectors = True, turbo = "on", range = None,
-              type = 1, overwrite = False):
+
+def wrap_eigh(A,
+              B=None,
+              eigenvectors=True,
+              turbo="on",
+              range=None,
+              type=1,
+              overwrite=False):
     """Wrapper for scipy.linalg.eigh for scipy version > 0.7"""
     args = {}
     args['a'] = A
@@ -70,11 +86,17 @@ def wrap_eigh(A, B = None, eigenvectors = True, turbo = "on", range = None,
     args['eigvals'] = range
     try:
         return numx_linalg.eigh(**args)
-    except numx_linalg.LinAlgError, exception:
+    except numx_linalg.LinAlgError as exception:
         raise SymeigException(str(exception))
 
-def _symeig_fake(A, B = None, eigenvectors = True, turbo = "on", range = None,
-                 type = 1, overwrite = False):
+
+def _symeig_fake(A,
+                 B=None,
+                 eigenvectors=True,
+                 turbo="on",
+                 range=None,
+                 type=1,
+                 overwrite=False):
     """Solve standard and generalized eigenvalue problem for symmetric
 (hermitian) definite positive matrices.
 This function is a wrapper of LinearAlgebra.eigenvectors or
@@ -128,7 +150,7 @@ numarray.linear_algebra.eigenvectors with an interface compatible with symeig.
             # diagonalize A
             w, ZA = numx_linalg.eigh(A)
             Z = mdp.utils.mult(ZB, ZA)
-    except numx_linalg.LinAlgError, exception:
+    except numx_linalg.LinAlgError as exception:
         raise SymeigException(str(exception))
 
     _assert_eigenvalues_real_and_positive(w, dtype)
@@ -152,8 +174,8 @@ numarray.linear_algebra.eigenvectors with an interface compatible with symeig.
         if lo > hi:
             lo, hi = hi, lo
 
-        Z = Z[:, lo-1:hi]
-        w = w[lo-1:hi]
+        Z = Z[:, lo - 1:hi]
+        w = w[lo - 1:hi]
 
     # the final call to refcast is necessary because of a bug in the casting
     # behavior of Numeric and numarray: eigenvector does not wrap the LAPACK
@@ -162,4 +184,3 @@ numarray.linear_algebra.eigenvectors with an interface compatible with symeig.
         return mdp.utils.refcast(w, dtype), mdp.utils.refcast(Z, dtype)
     else:
         return mdp.utils.refcast(w, dtype)
-

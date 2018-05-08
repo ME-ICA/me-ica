@@ -46,7 +46,7 @@ class ParallelExtensionNode(mdp.ExtensionNode, mdp.Node):
     # TODO: allow that forked nodes are not forkable themselves,
     #    and are not joinable either
     #    this implies that caching does not work for these
-    
+
     def fork(self):
         """Return a new instance of this node class for remote training.
 
@@ -85,16 +85,15 @@ class ParallelExtensionNode(mdp.ExtensionNode, mdp.Node):
         You can use _default_fork, if that is compatible with your node class,
         typically the hard part is the joining.
         """
-        raise NotForkableParallelException("fork is not implemented " +
-                                           "by this node (%s)" %
-                                           str(self.__class__))
+        raise NotForkableParallelException(
+            "fork is not implemented " +
+            "by this node (%s)" % str(self.__class__))
 
     def _join(self, forked_node):
         """Hook method for joining, to be overridden."""
         raise JoinParallelException("join is not implemented " +
-                                    "by this node (%s)" %
-                                    str(self.__class__))
-    
+                                    "by this node (%s)" % str(self.__class__))
+
     @staticmethod
     def use_execute_fork():
         """Return True if node requires a fork / join even during execution.
@@ -106,7 +105,7 @@ class ParallelExtensionNode(mdp.ExtensionNode, mdp.Node):
         methods.
         """
         return False
-    
+
     ## helper methods ##
 
     def _default_fork(self):
@@ -137,13 +136,13 @@ class ParallelExtensionNode(mdp.ExtensionNode, mdp.Node):
             non_default_keys = args[:-len(defaults)]
         else:
             non_default_keys = []
-        kwargs = dict((key, getattr(self, key))
-                      for key in args if hasattr(self, key))
+        kwargs = dict(
+            (key, getattr(self, key)) for key in args if hasattr(self, key))
         # look for the key with an underscore in front
         for key in kwargs:
             args.remove(key)
-        under_kwargs = dict((key, getattr(self, '_' + key))
-                            for key in args if hasattr(self, '_' + key))
+        under_kwargs = dict((key, getattr(self, '_' + key)) for key in args
+                            if hasattr(self, '_' + key))
         for key in under_kwargs:
             args.remove(key)
         kwargs.update(under_kwargs)
@@ -156,7 +155,7 @@ class ParallelExtensionNode(mdp.ExtensionNode, mdp.Node):
                 raise NotForkableParallelException(err)
         # create new instance
         return self.__class__(**kwargs)
-    
+
     @staticmethod
     def _join_covariance(cov, forked_cov):
         """Helper method to join two CovarianceMatrix instances.
@@ -167,9 +166,10 @@ class ParallelExtensionNode(mdp.ExtensionNode, mdp.Node):
         cov._cov_mtx += forked_cov._cov_mtx
         cov._avg += forked_cov._avg
         cov._tlen += forked_cov._tlen
-        
+
 
 ## MDP parallel node implementations ##
+
 
 class ParallelPCANode(ParallelExtensionNode, mdp.nodes.PCANode):
     """Parallel version of MDP PCA node."""
@@ -204,7 +204,6 @@ class ParallelSFANode(ParallelExtensionNode, mdp.nodes.SFANode):
 
 
 class ParallelFDANode(ParallelExtensionNode, mdp.nodes.FDANode):
-
     def _fork(self):
         if self.get_current_train_phase() == 1:
             forked_node = self.copy()
@@ -245,8 +244,9 @@ class ParallelHistogramNode(ParallelExtensionNode, mdp.nodes.HistogramNode):
         return self._default_fork()
 
     def _join(self, forked_node):
-        if (self.data_hist is not None) and (forked_node.data_hist is not None):
-            self.data_hist = numx.concatenate([self.data_hist,
-                                            forked_node.data_hist])
+        if (self.data_hist is not None) and (forked_node.data_hist is
+                                             not None):
+            self.data_hist = numx.concatenate(
+                [self.data_hist, forked_node.data_hist])
         elif forked_node.data_hist != None:
             self.data_hist = forked_node.data_hist

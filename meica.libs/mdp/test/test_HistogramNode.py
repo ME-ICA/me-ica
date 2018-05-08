@@ -1,4 +1,5 @@
-from _tools import *
+from ._tools import *
+
 
 def testHistogramNode_nofraction():
     """Test HistogramNode with fraction set to 1.0."""
@@ -9,6 +10,7 @@ def testHistogramNode_nofraction():
     node.train(x1)
     node.train(x2)
     assert numx.all(x == node.data_hist)
+
 
 def testHistogramNode_fraction():
     """Test HistogramNode with fraction set to 0.5."""

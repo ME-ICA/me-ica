@@ -10,11 +10,13 @@
 
 import os
 
+
 class TypesFilenamesError(Exception):
     pass
 
 
-def types_filenames(template_fname, types_exts,
+def types_filenames(template_fname,
+                    types_exts,
                     trailing_suffixes=('.gz', '.bz2'),
                     enforce_extensions=True,
                     match_case=False):
@@ -77,7 +79,7 @@ def types_filenames(template_fname, types_exts,
     >>> tfns == {'t1': '/path/test.funny', 't2': '/path/test.ext2'}
     True
     '''
-    if not isinstance(template_fname, basestring):
+    if not isinstance(template_fname, str):
         raise TypesFilenamesError('Need file name as input '
                                   'to set_filenames')
     if template_fname.endswith('.'):
@@ -96,18 +98,17 @@ def types_filenames(template_fname, types_exts,
             if found_ext:
                 # an extension, but the wrong one
                 raise TypesFilenamesError(
-                    'File extension "%s" was not in expected list: %s'
-                    % (found_ext, [e for t, e in types_exts]))
-            elif ignored: # there was no extension, but an ignored suffix
+                    'File extension "%s" was not in expected list: %s' %
+                    (found_ext, [e for t, e in types_exts]))
+            elif ignored:  # there was no extension, but an ignored suffix
                 # This is a special case like 'test.gz' (where .gz
                 # is ignored). It's confusing to change
                 # this to test.img.gz, or test.gz.img, so error
                 raise TypesFilenamesError(
-                    'Confusing ignored suffix %s without extension'
-                    % ignored)
+                    'Confusing ignored suffix %s without extension' % ignored)
         # if we've got to here, we have a guessed name and a found
-        # extension. 
-    else: # not enforcing extensions. If there's an extension, we set the
+        # extension.
+    else:  # not enforcing extensions. If there's an extension, we set the
         # filename directly from input, for the first types_exts type
         # only.  Also, if there was no extension, but an ignored suffix
         # ('test.gz' type case), we set the filename directly.
@@ -121,12 +122,12 @@ def types_filenames(template_fname, types_exts,
     # we've found .IMG as the extension, we want .HDR as the matching
     # one.  Let's only do this when the extension is all upper or all
     # lower case.
-    proc_ext = lambda s : s
+    proc_ext = lambda s: s
     if found_ext:
         if found_ext == found_ext.upper():
-            proc_ext = lambda s : s.upper()
+            proc_ext = lambda s: s.upper()
         elif found_ext == found_ext.lower():
-            proc_ext = lambda s : s.lower()
+            proc_ext = lambda s: s.lower()
     for name, ext in types_exts:
         if name == direct_set_name:
             tfns[name] = template_fname
@@ -140,10 +141,7 @@ def types_filenames(template_fname, types_exts,
     return tfns
 
 
-def parse_filename(filename,
-                   types_exts,
-                   trailing_suffixes,
-                   match_case=False):
+def parse_filename(filename, types_exts, trailing_suffixes, match_case=False):
     ''' Splits filename into tuple of
     (fileroot, extension, trailing_suffix, guessed_name)
 
@@ -222,9 +220,7 @@ def _iendswith(whole, end):
     return whole.lower().endswith(end.lower())
 
 
-def splitext_addext(filename,
-                    addexts=('.gz', '.bz2'),
-                    match_case=False):
+def splitext_addext(filename, addexts=('.gz', '.bz2'), match_case=False):
     ''' Split ``/pth/fname.ext.gz`` into ``/pth/fname, .ext, .gz``
 
     where ``.gz`` may be any of passed `addext` trailing suffixes.
@@ -268,4 +264,4 @@ def splitext_addext(filename,
             break
     else:
         addext = ''
-    return os.path.splitext(filename) + (addext,)
+    return os.path.splitext(filename) + (addext, )

@@ -12,7 +12,6 @@ When we give up 2.5 compatibility we can use python's own
 ``tests.test_support.check_warnings``
 
 '''
-from __future__ import with_statement
 
 import warnings
 
@@ -35,6 +34,7 @@ class ErrorWarnings(object):
     The manager will raise a RuntimeError if another warning filter gets put on
     top of the one it has just added.
     """
+
     def __init__(self):
         self.added = None
 
@@ -46,7 +46,7 @@ class ErrorWarnings(object):
         if warnings.filters[0] != self.added:
             raise RuntimeError('Somone has done something to the filters')
         warnings.filters.pop(0)
-        return False # allow any exceptions to propagate
+        return False  # allow any exceptions to propagate
 
 
 class IgnoreWarnings(ErrorWarnings):

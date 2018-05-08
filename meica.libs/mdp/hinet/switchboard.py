@@ -5,7 +5,6 @@ Note that additional args and kwargs for train or execute are currently not
 supported.
 """
 
-
 import mdp
 from mdp import numx
 
@@ -17,6 +16,7 @@ class SwitchboardException(mdp.NodeException):
 
 # TODO: deal with input_dim, output_dim and dtype correctly,
 #    like in IdentityNode
+
 
 class Switchboard(mdp.Node):
     """Does the routing associated with the connections between layers.
@@ -55,11 +55,11 @@ class Switchboard(mdp.Node):
         # checks passed
         self.connections = numx.array(connections)
         output_dim = len(connections)
-        super(Switchboard, self).__init__(input_dim=input_dim,
-                                          output_dim=output_dim)
+        super(Switchboard, self).__init__(
+            input_dim=input_dim, output_dim=output_dim)
         # try to invert connections
-        if (self.input_dim == self.output_dim and
-            len(numx.unique(self.connections)) == self.input_dim):
+        if (self.input_dim == self.output_dim
+                and len(numx.unique(self.connections)) == self.input_dim):
             self.inverse_connections = numx.argsort(self.connections)
         else:
             self.inverse_connections = None
@@ -89,6 +89,7 @@ class Switchboard(mdp.Node):
                 mdp.utils.get_dtypes('AllInteger') +
                 mdp.utils.get_dtypes('Character'))
 
+
 class MeanInverseSwitchboard(Switchboard):
     """Variant of Switchboard with modified inverse.
 
@@ -109,9 +110,9 @@ class MeanInverseSwitchboard(Switchboard):
         while True:
             n_cons = n_y_cons[i_y]
             if n_cons > 0:
-                y[:,i_y] = numx.sum(x[:,y_cons[i_x_counter:
-                                               i_x_counter + n_cons]],
-                                    axis=1) / n_cons
+                y[:, i_y] = numx.sum(
+                    x[:, y_cons[i_x_counter:i_x_counter + n_cons]],
+                    axis=1) / n_cons
                 i_x_counter += n_cons
                 if i_x_counter >= self.output_dim:
                     break
@@ -134,7 +135,10 @@ class ChannelSwitchboard(Switchboard):
         output_channels
     """
 
-    def __init__(self, input_dim, connections, out_channel_dim,
+    def __init__(self,
+                 input_dim,
+                 connections,
+                 out_channel_dim,
                  in_channel_dim=1):
         """Initialize the switchboard.
 
@@ -169,7 +173,7 @@ class ChannelSwitchboard(Switchboard):
         channel -- index of the requested channel (starting at 0)
         """
         index = channel * self.out_channel_dim
-        return self.connections[index : index+self.out_channel_dim]
+        return self.connections[index:index + self.out_channel_dim]
 
     def get_out_channel_node(self, channel):
         """Return a Switchboard that does the routing for a single
@@ -209,7 +213,7 @@ def to_2tuple(value):
         return tuple(value)
     return (value, value)
 
-    
+
 class Rectangular2dSwitchboardException(SwitchboardException):
     """Exception for routing problems in the Rectangular2dSwitchboard class."""
     pass
@@ -234,9 +238,13 @@ class Rectangular2dSwitchboard(ChannelSwitchboard):
         unused_channels_xy
         out_channels_xy
     """
-    
-    def __init__(self, in_channels_xy, field_channels_xy,
-                 field_spacing_xy=1, in_channel_dim=1, ignore_cover=False):
+
+    def __init__(self,
+                 in_channels_xy,
+                 field_channels_xy,
+                 field_spacing_xy=1,
+                 in_channel_dim=1,
+                 ignore_cover=False):
         """Calculate the connections.
 
         Keyword arguments:
@@ -260,27 +268,28 @@ class Rectangular2dSwitchboard(ChannelSwitchboard):
         self.field_channels_xy = field_channels_xy
         self.field_spacing_xy = field_spacing_xy
         # number of channels which are not covered
-        out_channel_dim = (in_channel_dim *
-                           field_channels_xy[0] * field_channels_xy[1])
+        out_channel_dim = (
+            in_channel_dim * field_channels_xy[0] * field_channels_xy[1])
         ## check parameters for inconsistencies
         for i, name in enumerate(["x", "y"]):
             if (field_channels_xy[i] > in_channels_xy[i]):
                 err = ("Number of field channels exceeds the number of "
                        "input channels in %s-direction. "
-                       "This would lead to an empty connection list." %
-                       name)
+                       "This would lead to an empty connection list." % name)
                 raise Rectangular2dSwitchboardException(err)
         # number of output channels in x-direction
-        x_out_channels = (((in_channels_xy[0] - field_channels_xy[0]) //
-                           field_spacing_xy[0]) + 1)
+        x_out_channels = ((
+            (in_channels_xy[0] - field_channels_xy[0]) // field_spacing_xy[0])
+                          + 1)
         x_unused_channels = in_channels_xy[0] - field_channels_xy[0]
         if x_unused_channels > 0:
             x_unused_channels %= field_spacing_xy[0]
         elif x_unused_channels < 0:
             x_unused_channels = in_channels_xy[0]
         # number of output channels in y-direction
-        y_out_channels = (((in_channels_xy[1] - field_channels_xy[1]) //
-                           field_spacing_xy[1]) + 1)
+        y_out_channels = ((
+            (in_channels_xy[1] - field_channels_xy[1]) // field_spacing_xy[1])
+                          + 1)
         y_unused_channels = in_channels_xy[1] - field_channels_xy[1]
         if y_unused_channels > 0:
             y_unused_channels %= field_spacing_xy[1]
@@ -302,8 +311,8 @@ class Rectangular2dSwitchboard(ChannelSwitchboard):
         # input-output mapping of connections
         # connections has an entry for each output connection,
         # containing the index of the input connection.
-        connections = numx.zeros([out_channels * out_channel_dim],
-                                 dtype=numx.int32)
+        connections = numx.zeros(
+            [out_channels * out_channel_dim], dtype=numx.int32)
         first_out_con = 0
         for y_out_chan in range(self.out_channels_xy[1]):
             for x_out_chan in range(self.out_channels_xy[0]):
@@ -312,21 +321,19 @@ class Rectangular2dSwitchboard(ChannelSwitchboard):
                 y_start_chan = y_out_chan * field_spacing_xy[1]
                 for y_in_chan in range(y_start_chan,
                                        y_start_chan + field_channels_xy[1]):
-                    for x_in_chan in range(x_start_chan,
-                                        x_start_chan + field_channels_xy[0]):
+                    for x_in_chan in range(
+                            x_start_chan, x_start_chan + field_channels_xy[0]):
                         first_in_con = (in_trans.image_to_index(
-                                                    x_in_chan, y_in_chan) *
-                                        in_channel_dim)
+                            x_in_chan, y_in_chan) * in_channel_dim)
                         connections[first_out_con:
                                     first_out_con + in_channel_dim] = \
-                            range(first_in_con, first_in_con + in_channel_dim)
+                            list(range(first_in_con, first_in_con + in_channel_dim))
                         first_out_con += in_channel_dim
         super(Rectangular2dSwitchboard, self).__init__(
-                                input_dim=(in_channel_dim *
-                                    in_channels_xy[0] * in_channels_xy[1]),
-                                connections=connections,
-                                out_channel_dim=out_channel_dim,
-                                in_channel_dim=in_channel_dim)
+            input_dim=(in_channel_dim * in_channels_xy[0] * in_channels_xy[1]),
+            connections=connections,
+            out_channel_dim=out_channel_dim,
+            in_channel_dim=in_channel_dim)
 
 
 class DoubleRect2dSwitchboardException(SwitchboardException):
@@ -374,8 +381,11 @@ class DoubleRect2dSwitchboard(ChannelSwitchboard):
 
     # TODO: settle on 'long' or 'even' term?
 
-    def __init__(self, in_channels_xy, field_channels_xy,
-                 in_channel_dim=1, ignore_cover=False):
+    def __init__(self,
+                 in_channels_xy,
+                 field_channels_xy,
+                 in_channel_dim=1,
+                 ignore_cover=False):
         """Calculate the connections.
 
         Keyword arguments:
@@ -396,8 +406,8 @@ class DoubleRect2dSwitchboard(ChannelSwitchboard):
         ## count channels and stuff
         self.in_channels_xy = in_channels_xy
         self.field_channels_xy = field_channels_xy
-        out_channel_dim = (in_channel_dim *
-                           field_channels_xy[0] * field_channels_xy[1])
+        out_channel_dim = (
+            in_channel_dim * field_channels_xy[0] * field_channels_xy[1])
         ## check parameters for inconsistencies
         for i, name in enumerate(["x", "y"]):
             if field_channels_xy[i] % 2:
@@ -410,8 +420,7 @@ class DoubleRect2dSwitchboard(ChannelSwitchboard):
             if (field_channels_xy[i] > in_channels_xy[i]):
                 err = ("Number of field channels"
                        "exceeds the number of input channels in %s-direction. "
-                       "This would lead to an empty connection list." %
-                       name)
+                       "This would lead to an empty connection list." % name)
                 raise Rectangular2dSwitchboardException(err)
         # number of output channels in x-direction
         xl = in_channels_xy[0] // field_channels_xy[0]
@@ -424,7 +433,8 @@ class DoubleRect2dSwitchboard(ChannelSwitchboard):
             err = ("Channel fields do not "
                    "cover all input channels in x-direction.")
             raise Rectangular2dSwitchboardException(err)
-        if (in_channels_xy[0] - xl * field_channels_xy[0]) >= (field_channels_xy[0] // 2):
+        if (in_channels_xy[0] - xl * field_channels_xy[0]) >= (
+                field_channels_xy[0] // 2):
             err = ("x short rows have same length as long rows.")
             raise Rectangular2dSwitchboardException(err)
         # number of output channels in y-direction
@@ -446,10 +456,10 @@ class DoubleRect2dSwitchboard(ChannelSwitchboard):
         ## end of parameters checks
         self.long_out_channels_xy = (xl, yl)
         self.unused_channels_xy = (x_unused_channels, y_unused_channels)
-        out_channels = xl * yl + (xl-1) * (yl-1)
+        out_channels = xl * yl + (xl - 1) * (yl - 1)
         in_trans = CoordinateTranslator(*in_channels_xy)
-        connections = numx.zeros([out_channels * out_channel_dim],
-                                 dtype=numx.int32)
+        connections = numx.zeros(
+            [out_channels * out_channel_dim], dtype=numx.int32)
         first_out_con = 0
         ## first create the even connections
         even_x_out_channels = in_channels_xy[0] // (2 * field_spacing_xy[0])
@@ -459,44 +469,47 @@ class DoubleRect2dSwitchboard(ChannelSwitchboard):
                 # inner loop over field
                 x_start_chan = x_out_chan * (2 * field_spacing_xy[0])
                 y_start_chan = y_out_chan * (2 * field_spacing_xy[1])
-                for y_in_chan in range(y_start_chan,
-                                    y_start_chan + self.field_channels_xy[1]):
-                    for x_in_chan in range(x_start_chan,
-                                    x_start_chan + self.field_channels_xy[0]):
+                for y_in_chan in range(
+                        y_start_chan,
+                        y_start_chan + self.field_channels_xy[1]):
+                    for x_in_chan in range(
+                            x_start_chan,
+                            x_start_chan + self.field_channels_xy[0]):
                         first_in_con = (in_trans.image_to_index(
-                                            x_in_chan, y_in_chan) *
-                                        in_channel_dim)
+                            x_in_chan, y_in_chan) * in_channel_dim)
                         connections[first_out_con:
                                     first_out_con + in_channel_dim] = \
-                            range(first_in_con,
-                                  first_in_con + in_channel_dim)
+                            list(range(first_in_con,
+                                  first_in_con + in_channel_dim))
                         first_out_con += in_channel_dim
         ## create the uneven connections
         for y_out_chan in range(even_y_out_channels - 1):
             for x_out_chan in range(even_x_out_channels - 1):
                 # inner loop over field
-                x_start_chan = (x_out_chan * (2 * field_spacing_xy[0]) +
-                                field_spacing_xy[0])
-                y_start_chan = (y_out_chan * (2 * field_spacing_xy[1]) +
-                                field_spacing_xy[1])
-                for y_in_chan in range(y_start_chan,
-                                       y_start_chan + self.field_channels_xy[1]):
-                    for x_in_chan in range(x_start_chan,
-                                       x_start_chan + self.field_channels_xy[0]):
+                x_start_chan = (
+                    x_out_chan *
+                    (2 * field_spacing_xy[0]) + field_spacing_xy[0])
+                y_start_chan = (
+                    y_out_chan *
+                    (2 * field_spacing_xy[1]) + field_spacing_xy[1])
+                for y_in_chan in range(
+                        y_start_chan,
+                        y_start_chan + self.field_channels_xy[1]):
+                    for x_in_chan in range(
+                            x_start_chan,
+                            x_start_chan + self.field_channels_xy[0]):
                         first_in_con = (in_trans.image_to_index(
-                                                    x_in_chan, y_in_chan) *
-                                        in_channel_dim)
+                            x_in_chan, y_in_chan) * in_channel_dim)
                         connections[first_out_con:
                                     first_out_con + in_channel_dim] = \
-                            range(first_in_con,
-                                  first_in_con + in_channel_dim)
+                            list(range(first_in_con,
+                                  first_in_con + in_channel_dim))
                         first_out_con += in_channel_dim
         super(DoubleRect2dSwitchboard, self).__init__(
-                                input_dim=in_channel_dim *
-                                    in_channels_xy[0] * in_channels_xy[1],
-                                connections=connections,
-                                out_channel_dim=out_channel_dim,
-                                in_channel_dim=in_channel_dim)
+            input_dim=in_channel_dim * in_channels_xy[0] * in_channels_xy[1],
+            connections=connections,
+            out_channel_dim=out_channel_dim,
+            in_channel_dim=in_channel_dim)
 
 
 class DoubleRhomb2dSwitchboardException(SwitchboardException):
@@ -527,8 +540,10 @@ class DoubleRhomb2dSwitchboard(ChannelSwitchboard):
         out_channels_xy
     """
 
-    def __init__(self, long_in_channels_xy,
-                 diag_field_channels, in_channel_dim=1):
+    def __init__(self,
+                 long_in_channels_xy,
+                 diag_field_channels,
+                 in_channel_dim=1):
         """Calculate the connections.
 
         Note that the incoming data will be interpreted as a rhombic grid,
@@ -554,22 +569,22 @@ class DoubleRhomb2dSwitchboard(ChannelSwitchboard):
         # helper variables for the field range
         _x_chan_field_range = (long_in_channels_xy[0] -
                                (1 - started_in_short) - diag_field_channels)
-        _y_chan_field_range = (long_in_channels_xy[1] - started_in_short -
-                               diag_field_channels)
-        if (_x_chan_field_range % (diag_field_channels // 2) or
-            _x_chan_field_range < 0):
+        _y_chan_field_range = (
+            long_in_channels_xy[1] - started_in_short - diag_field_channels)
+        if (_x_chan_field_range % (diag_field_channels // 2)
+                or _x_chan_field_range < 0):
             err = ("diag_field_channels value is not compatible with "
                    "long_in_channels_xy[0]")
             raise DoubleRhomb2dSwitchboardException(err)
-        if (_y_chan_field_range % (diag_field_channels // 2) or
-            _y_chan_field_range < 0):
+        if (_y_chan_field_range % (diag_field_channels // 2)
+                or _y_chan_field_range < 0):
             err = ("diag_field_channels value is not compatible with "
                    "long_in_channels_xy[1]")
             raise DoubleRhomb2dSwitchboardException(err)
         ## count channels and stuff
         self.in_channel_dim = in_channel_dim
-        input_dim = ((2 * long_in_channels_xy[0] * long_in_channels_xy[1]
-                     - long_in_channels_xy[0] - long_in_channels_xy[1] + 1) *
+        input_dim = ((2 * long_in_channels_xy[0] * long_in_channels_xy[1] -
+                      long_in_channels_xy[0] - long_in_channels_xy[1] + 1) *
                      in_channel_dim)
         out_channel_dim = in_channel_dim * diag_field_channels**2
         x_out_channels = (2 * _x_chan_field_range // diag_field_channels + 1)
@@ -580,8 +595,9 @@ class DoubleRhomb2dSwitchboard(ChannelSwitchboard):
         short_in_trans = CoordinateTranslator(long_in_channels_xy[0] - 1,
                                               long_in_channels_xy[1] - 1)
         short_in_offset = long_in_channels_xy[0] * long_in_channels_xy[1]
-        connections = numx.zeros([x_out_channels * y_out_channels *
-                                  out_channel_dim], dtype=numx.int32)
+        connections = numx.zeros(
+            [x_out_channels * y_out_channels * out_channel_dim],
+            dtype=numx.int32)
         first_out_con = 0
         for y_out_chan in range(y_out_channels):
             for x_out_chan in range(x_out_channels):
@@ -592,44 +608,44 @@ class DoubleRhomb2dSwitchboard(ChannelSwitchboard):
                 x_start_chan -= started_in_short
                 y_start_chan += started_in_short
                 # iterate over both long and short rows
-                for iy, y_in_chan in enumerate(range(y_start_chan,
-                                y_start_chan + (2 * diag_field_channels - 1))):
+                for iy, y_in_chan in enumerate(
+                        range(y_start_chan,
+                              y_start_chan + (2 * diag_field_channels - 1))):
                     # half width of the field in the given row
                     if iy <= (diag_field_channels - 1):
                         field_width = iy + 1
                     else:
                         field_width = (diag_field_channels - 1 -
                                        (iy % diag_field_channels))
-                    for x_in_chan in range(x_start_chan - field_width // 2,
-                                           x_start_chan + field_width // 2
-                                                        + field_width % 2):
+                    for x_in_chan in range(
+                            x_start_chan - field_width // 2,
+                            x_start_chan + field_width // 2 + field_width % 2):
                         # array index of the first input connection
                         # for this input channel
                         if not y_in_chan % 2:
                             if started_in_short:
                                 x_in_chan += 1
-                            first_in_con = (
-                                long_in_trans.image_to_index(
-                                                x_in_chan, y_in_chan // 2) *
-                                                        self.in_channel_dim)
+                            first_in_con = (long_in_trans.image_to_index(
+                                x_in_chan, y_in_chan // 2) *
+                                            self.in_channel_dim)
                         else:
-                            first_in_con = (
-                                (short_in_trans.image_to_index(
-                                                x_in_chan, y_in_chan // 2)
-                                 + short_in_offset) * self.in_channel_dim)
+                            first_in_con = ((short_in_trans.image_to_index(
+                                x_in_chan, y_in_chan // 2) + short_in_offset) *
+                                            self.in_channel_dim)
                         connections[first_out_con:
                                     first_out_con + self.in_channel_dim] = \
-                            range(first_in_con,
-                                  first_in_con + self.in_channel_dim)
+                            list(range(first_in_con,
+                                  first_in_con + self.in_channel_dim))
                         first_out_con += self.in_channel_dim
         super(DoubleRhomb2dSwitchboard, self).__init__(
-                                        input_dim=input_dim,
-                                        connections=connections,
-                                        out_channel_dim=out_channel_dim,
-                                        in_channel_dim=in_channel_dim)
+            input_dim=input_dim,
+            connections=connections,
+            out_channel_dim=out_channel_dim,
+            in_channel_dim=in_channel_dim)
 
 
 # utility class for Rectangular2dSwitchboard
+
 
 class CoordinateTranslator(object):
     """Translate between image (PIL) and numpy array coordinates.
@@ -669,18 +685,16 @@ class CoordinateTranslator(object):
         if not 0 <= row < self.y_image_dim:
             raise Exception("row index %d is outside the valid range." % row)
         if not 0 <= col < self.x_image_dim:
-            raise Exception("column index %d is outside the valid range." %
-                            col)
+            raise Exception(
+                "column index %d is outside the valid range." % col)
         return row * self.x_image_dim + col
 
     def index_to_array(self, index):
         if not 0 <= index <= self._max_index:
-            raise Exception("index %d is outside the valid range." %
-                            index)
+            raise Exception("index %d is outside the valid range." % index)
         return index // self.x_image_dim, index % self.x_image_dim
 
     def index_to_image(self, index):
         if not 0 <= index <= self._max_index:
-            raise Exception("index %d is outside the valid range." %
-                            index)
+            raise Exception("index %d is outside the valid range." % index)
         return index % self.x_image_dim, index // self.x_image_dim

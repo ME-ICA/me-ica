@@ -1,5 +1,3 @@
-from __future__ import with_statement
-
 import numpy as np
 import getpass
 import time
@@ -36,7 +34,7 @@ def _fread3_many(fobj, n):
         An array of 3 byte int
     """
     b1, b2, b3 = np.fromfile(fobj, ">u1", 3 * n).reshape(-1,
-                                                    3).astype(np.int).T
+                                                         3).astype(np.int).T
     return (b1 << 16) + (b2 << 8) + b3
 
 
@@ -113,7 +111,7 @@ def write_geometry(filepath, coords, faces, create_stamp=None):
 
     if create_stamp is None:
         create_stamp = "created by %s on %s" % (getpass.getuser(),
-            time.ctime())
+                                                time.ctime())
 
     with open(filepath, 'wb') as fobj:
         magic_bytes.tofile(fobj)
@@ -192,14 +190,13 @@ def read_annot(filepath, orig_ids=False):
 
             names = list()
             ctab = np.zeros((n_entries, 5), np.int)
-            for i in xrange(n_entries):
+            for i in range(n_entries):
                 name_length = np.fromfile(fobj, dt, 1)[0]
                 name = np.fromfile(fobj, "|S%d" % name_length, 1)[0]
                 names.append(name)
                 ctab[i, :4] = np.fromfile(fobj, dt, 4)
-                ctab[i, 4] = (ctab[i, 0] + ctab[i, 1] * (2 ** 8) +
-                              ctab[i, 2] * (2 ** 16) +
-                              ctab[i, 3] * (2 ** 24))
+                ctab[i, 4] = (ctab[i, 0] + ctab[i, 1] * (2**8) + ctab[i, 2] *
+                              (2**16) + ctab[i, 3] * (2**24))
         else:
             ctab_version = -n_entries
             if ctab_version != 2:
@@ -210,14 +207,14 @@ def read_annot(filepath, orig_ids=False):
             _ = np.fromfile(fobj, "|S%d" % length, 1)[0]  # Orig table path
             entries_to_read = np.fromfile(fobj, dt, 1)[0]
             names = list()
-            for i in xrange(entries_to_read):
+            for i in range(entries_to_read):
                 _ = np.fromfile(fobj, dt, 1)[0]  # Structure
                 name_length = np.fromfile(fobj, dt, 1)[0]
                 name = np.fromfile(fobj, "|S%d" % name_length, 1)[0]
                 names.append(name)
                 ctab[i, :4] = np.fromfile(fobj, dt, 4)
-                ctab[i, 4] = (ctab[i, 0] + ctab[i, 1] * (2 ** 8) +
-                                ctab[i, 2] * (2 ** 16))
+                ctab[i, 4] = (ctab[i, 0] + ctab[i, 1] * (2**8) + ctab[i, 2] *
+                              (2**16))
         ctab[:, 3] = 255
     if not orig_ids:
         ord = np.argsort(ctab[:, -1])

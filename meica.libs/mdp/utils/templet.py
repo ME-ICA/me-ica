@@ -177,32 +177,33 @@ class _TemplateBuilder(object):
 
 class _TemplateMetaClass(type):
 
-    __builder = _TemplateBuilder(
-        'self.out.append(%s)', 'self.write(%s)', 'self.%s(vars())')
+    __builder = _TemplateBuilder('self.out.append(%s)', 'self.write(%s)',
+                                 'self.%s(vars())')
 
     def __compile(cls, template, n):
         globals = sys.modules[cls.__module__].__dict__
         if '__file__' not in globals: filename = '<%s %s>' % (cls.__name__, n)
         else: filename = '%s: <%s %s>' % (globals['__file__'], cls.__name__, n)
-        code = compile(cls.__builder.build(template, filename), filename, 'exec')
-        def expand(self, __dict = None, **kw):
-            if __dict: kw.update([i for i in __dict.iteritems() if i[0] not in kw])
+        code = compile(
+            cls.__builder.build(template, filename), filename, 'exec')
+
+        def expand(self, __dict=None, **kw):
+            if __dict: kw.update([i for i in __dict.items() if i[0] not in kw])
             kw['self'] = self
-            exec code in globals, kw
+            exec(code, globals, kw)
+
         return expand
 
     def __init__(cls, *args):
-        for attr, val in cls.__dict__.items():
+        for attr, val in list(cls.__dict__.items()):
             if attr == 'template' or attr.endswith('_template'):
-                if isinstance(val, basestring):
+                if isinstance(val, str):
                     setattr(cls, attr, cls.__compile(val, attr))
         type.__init__(cls, *args)
 
 
-class StringTemplate(object):
+class StringTemplate(object, metaclass=_TemplateMetaClass):
     """A base class for string template classes."""
-
-    __metaclass__ = _TemplateMetaClass
 
     def __init__(self, *args, **kw):
         self.out = []
@@ -219,23 +220,21 @@ class StringTemplate(object):
 Template = StringTemplate
 
 
-class UnicodeTemplate(object):
+class UnicodeTemplate(object, metaclass=_TemplateMetaClass):
     """A base class for unicode template classes."""
-
-    __metaclass__ = _TemplateMetaClass
 
     def __init__(self, *args, **kw):
         self.out = []
         self.template(*args, **kw)
 
     def write(self, *args):
-        self.out.extend([unicode(a) for a in args])
+        self.out.extend([str(a) for a in args])
 
     def __unicode__(self):
-        return u''.join(self.out)
+        return ''.join(self.out)
 
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return str(self).encode('utf-8')
 
 
 def _templatefunction(func, listname, stringtype):
@@ -243,20 +242,23 @@ def _templatefunction(func, listname, stringtype):
     if '__file__' not in globals: filename = '<%s>' % func.__name__
     else: filename = '%s: <%s>' % (globals['__file__'], func.__name__)
     builder = _TemplateBuilder('%s.append(%%s)' % listname,
-                                                         '%s.append(%s(%%s))' % (listname, stringtype))
+                               '%s.append(%s(%%s))' % (listname, stringtype))
     args = inspect.getargspec(func)
     code = [
         'def %s%s:' % (func.__name__, inspect.formatargspec(*args)),
         ' %s = []' % listname,
         builder.build(func.__doc__, filename, ' '),
-        ' return "".join(%s)' % listname]
+        ' return "".join(%s)' % listname
+    ]
     code = compile('\n'.join(code), filename, 'exec')
-    exec code in globals, locals
+    exec(code, globals, locals)
     return locals[func.__name__]
+
 
 def stringfunction(func):
     """Function attribute for string template functions"""
     return _templatefunction(func, listname='out', stringtype='str')
+
 
 def unicodefunction(func):
     """Function attribute for unicode template functions"""
@@ -266,11 +268,13 @@ def unicodefunction(func):
 # When executed as a script, run some testing code.
 if __name__ == '__main__':
     ok = True
+
     def expect(actual, expected):
         global ok
         if expected != actual:
-            print "error - got:\n%s" % repr(actual)
+            print("error - got:\n%s" % repr(actual))
             ok = False
+
     class TestAll(Template):
         """A test of all the $ forms"""
         template = r"""
@@ -282,9 +286,11 @@ if __name__ == '__main__':
             }}
             Total: $$${"%.2f" % (count * price)}
         """
+
     class TestCalls(Template):
         """A recursive test"""
         template = "$name$i ${*[TestCalls(name=name[0], i=n) for n in xrange(i)]}"
+
     expect(
         str(TestAll(count=5, name="template call", price=1.23)),
         "Bought: 5 template calls at $1.23.\n"
@@ -294,14 +300,17 @@ if __name__ == '__main__':
         "template call3 t0 t1 t0 t2 t0 t1 t0 \n"
         "template call4 t0 t1 t0 t2 t0 t1 t0 t3 t0 t1 t0 t2 t0 t1 t0 \n"
         "Total: $6.15\n")
+
     class TestBase(Template):
         template = r"""
             <head>$<head_template></head>
             <body>$<body_template></body>
         """
+
     class TestDerived(TestBase):
         head_template = "<title>$name</title>"
         body_template = "${TestAll(vars())}"
+
     expect(
         str(TestDerived(count=4, name="template call", price=2.88)),
         "<head><title>template call</title></head>\n"
@@ -313,38 +322,43 @@ if __name__ == '__main__':
         "template call3 t0 t1 t0 t2 t0 t1 t0 \n"
         "Total: $11.52\n"
         "</body>\n")
+
     class TestUnicode(UnicodeTemplate):
-        template = u"""
+        template = """
             \N{Greek Small Letter Pi} = $pi
         """
-    expect(
-        unicode(TestUnicode(pi = 3.14)),
-        u"\N{Greek Small Letter Pi} = 3.14\n")
+
+    expect(str(TestUnicode(pi=3.14)), "\N{Greek Small Letter Pi} = 3.14\n")
     goterror = False
     try:
+
         class TestError(Template):
             template = 'Cost of an error: $0'
     except SyntaxError:
         goterror = True
     if not goterror:
-        print 'TestError failed'
+        print('TestError failed')
         ok = False
+
     @stringfunction
     def testBasic(name):
         "Hello $name."
+
     expect(testBasic('Henry'), "Hello Henry.")
+
     @stringfunction
-    def testReps(a, count=5): r"""
+    def testReps(a, count=5):
+        r"""
         ${{ if count == 0: return '' }}
         $a${testReps(a, count - 1)}"""
-    expect(
-        testReps('foo'),
-        "foofoofoofoofoo")
+
+    expect(testReps('foo'), "foofoofoofoofoo")
+
     @unicodefunction
-    def testUnicode(count=4): u"""
+    def testUnicode(count=4):
+        """
         ${{ if not count: return '' }}
         \N{BLACK STAR}${testUnicode(count - 1)}"""
-    expect(
-        testUnicode(count=10),
-        u"\N{BLACK STAR}" * 10)
-    if ok: print "OK"
+
+    expect(testUnicode(count=10), "\N{BLACK STAR}" * 10)
+    if ok: print("OK")

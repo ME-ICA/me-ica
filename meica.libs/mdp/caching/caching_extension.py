@@ -30,6 +30,7 @@ _cached_classes = []
 _cached_instances = []
 _cached_methods = {}
 
+
 def set_cachedir(cachedir=None, verbose=0):
     """Set root directory for the joblib cache.
 
@@ -58,8 +59,10 @@ def set_cachedir(cachedir=None, verbose=0):
         # reset cached methods
         _cached_methods.clear()
 
+
 # initialize cache with temporary directory
 #set_cachedir()
+
 
 class CacheExecuteExtensionNode(ExtensionNode, Node):
     """MDP extension for caching execution results.
@@ -85,8 +88,7 @@ class CacheExecuteExtensionNode(ExtensionNode, Node):
         global _cache_active_global
         global _cached_classes
         global _cached_instances
-        return (_cache_active_global
-                or self.__class__ in _cached_classes
+        return (_cache_active_global or self.__class__ in _cached_classes
                 or self in _cached_instances)
 
     def set_instance_cache(self, active=True):
@@ -114,7 +116,7 @@ class CacheExecuteExtensionNode(ExtensionNode, Node):
         if self not in _cached_methods:
             global _memory
             _cached_methods[self] = _memory.cache(
-                self._non_extension_execute.im_func)
+                self._non_extension_execute.__func__)
             # execute pre-execution checks once so that all automatic
             # settings of things like dtype and input_dim are done, and
             # caching begins from first execution, not the second
@@ -127,8 +129,10 @@ class CacheExecuteExtensionNode(ExtensionNode, Node):
 
 # TODO: check that classes and instances are Nodes
 
+
 def activate_caching(cachedir=None,
-                     cache_classes=None, cache_instances=None,
+                     cache_classes=None,
+                     cache_instances=None,
                      verbose=0):
     """Activate caching extension.
 
@@ -161,6 +165,7 @@ def activate_caching(cachedir=None,
 
     activate_extension('cache_execute')
 
+
 def deactivate_caching(cachedir=None):
     """De-activate caching extension."""
     deactivate_extension('cache_execute')
@@ -174,6 +179,7 @@ def deactivate_caching(cachedir=None):
     _cached_classes = []
     _cached_instances = []
     _cached_methods = {}
+
 
 class cache(object):
     """Context manager for the 'cache_execute' extension.
@@ -189,7 +195,10 @@ class cache(object):
     done in a temporary directory.
     """
 
-    def __init__(self, cachedir=None, cache_classes=None, cache_instances=None,
+    def __init__(self,
+                 cachedir=None,
+                 cache_classes=None,
+                 cache_instances=None,
                  verbose=0):
         """Activate caching extension.
 

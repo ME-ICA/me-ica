@@ -78,7 +78,7 @@ MDP is a Python library for building complex data processing software \
 by combining widely used machine learning algorithms into pipelines \
 and networks."""
 
-__medium_description__ ="""\
+__medium_description__ = """\
 **Modular toolkit for Data Processing (MDP)** is a Python data processing framework.
 
 From the user's perspective, MDP is a collection of supervised and unsupervised
@@ -98,20 +98,23 @@ several classifiers, probabilistic methods (Factor Analysis, RBM),
 data pre-processing methods, and many others.
 """
 
+
 class MDPException(Exception):
     """Base class for exceptions in MDP."""
     pass
 
+
 class MDPWarning(UserWarning):
     """Base class for warnings in MDP."""
     pass
+
 
 class MDPDeprecationWarning(DeprecationWarning, MDPWarning):
     """Warn about deprecated MDP API."""
     pass
 
 
-import configuration
+from . import configuration
 
 __version__ = '3.3'
 __revision__ = configuration.get_git_revision()
@@ -124,100 +127,97 @@ __homepage__ = 'http://mdp-toolkit.sourceforge.net'
 configuration.set_configuration()
 
 config = configuration.config
-(numx_description, numx, numx_linalg, numx_fft,
- numx_rand, numx_version) = configuration.get_numx()
+(numx_description, numx, numx_linalg, numx_fft, numx_rand,
+ numx_version) = configuration.get_numx()
 
 # import the utils module (used by other modules)
-import utils
+from . import utils
 # set symeig
 utils.symeig = configuration.get_symeig(numx_linalg)
 
 # import exceptions from nodes and flows
-from signal_node import (NodeException, InconsistentDimException,
-                         TrainingException,
-                         TrainingFinishedException, IsNotTrainableException,
-                         IsNotInvertibleException)
-from linear_flows import CrashRecoveryException, FlowException, FlowExceptionCR
+from .signal_node import (NodeException, InconsistentDimException,
+                          TrainingException, TrainingFinishedException,
+                          IsNotTrainableException, IsNotInvertibleException)
+from .linear_flows import CrashRecoveryException, FlowException, FlowExceptionCR
 
 # import base nodes and flow classes
-from signal_node import (NodeMetaclass, Node, PreserveDimNode,
-                         Cumulator, VariadicCumulator)
+from .signal_node import (NodeMetaclass, Node, PreserveDimNode, Cumulator,
+                          VariadicCumulator)
 
-from linear_flows import (Flow, CheckpointFlow,
-                          CheckpointFunction, CheckpointSaveFunction)
+from .linear_flows import (Flow, CheckpointFlow, CheckpointFunction,
+                           CheckpointSaveFunction)
 
 # import helper functions:
-from helper_funcs import pca, fastica
+from .helper_funcs import pca, fastica
 
 # import extension mechanism
-from extension import (ExtensionException, extension_method,
-                       ExtensionNodeMetaclass,
-                       ExtensionNode, get_extensions,
-                       get_active_extensions, with_extension,
-                       activate_extension, deactivate_extension,
-                       activate_extensions, deactivate_extensions,
-                       extension)
+from .extension import (ExtensionException, extension_method,
+                        ExtensionNodeMetaclass, ExtensionNode, get_extensions,
+                        get_active_extensions, with_extension,
+                        activate_extension, deactivate_extension,
+                        activate_extensions, deactivate_extensions, extension)
 
 # import classifier node
-from classifier_node import (ClassifierNode, ClassifierCumulator)
+from .classifier_node import (ClassifierNode, ClassifierCumulator)
 
 # import our modules
-import nodes
-import hinet
-import parallel
-from test import test
+from . import nodes
+from . import hinet
+from . import parallel
+from .test import test
 
 # explicitly set __all__, mainly needed for epydoc
-__all__ = ['config',
-           'CheckpointFlow',
-           'CheckpointFunction',
-           'CheckpointSaveFunction',
-           'ClassifierCumulator',
-           'ClassifierNode',
-           'CrashRecoveryException',
-           'Cumulator',
-           'ExtensionNode',
-           'ExtensionNodeMetaclass',
-           'Flow',
-           'FlowException',
-           'FlowExceptionCR',
-           'IsNotInvertibleException',
-           'IsNotTrainableException',
-           'MDPException',
-           'MDPWarning',
-           'Node',
-           'NodeException',
-           'TrainingException',
-           'TrainingFinishedException',
-           'VariadicCumulator',
-           'activate_extension',
-           'activate_extensions',
-           'deactivate_extension',
-           'deactivate_extensions',
-           'extension',
-           'extension_method',
-           'get_extensions',
-           'graph',
-           'hinet',
-           'nodes',
-           'parallel',
-           'pca',
-           'fastica',
-           'utils',
-           'with_extension',
-           ]
+__all__ = [
+    'config',
+    'CheckpointFlow',
+    'CheckpointFunction',
+    'CheckpointSaveFunction',
+    'ClassifierCumulator',
+    'ClassifierNode',
+    'CrashRecoveryException',
+    'Cumulator',
+    'ExtensionNode',
+    'ExtensionNodeMetaclass',
+    'Flow',
+    'FlowException',
+    'FlowExceptionCR',
+    'IsNotInvertibleException',
+    'IsNotTrainableException',
+    'MDPException',
+    'MDPWarning',
+    'Node',
+    'NodeException',
+    'TrainingException',
+    'TrainingFinishedException',
+    'VariadicCumulator',
+    'activate_extension',
+    'activate_extensions',
+    'deactivate_extension',
+    'deactivate_extensions',
+    'extension',
+    'extension_method',
+    'get_extensions',
+    'graph',
+    'hinet',
+    'nodes',
+    'parallel',
+    'pca',
+    'fastica',
+    'utils',
+    'with_extension',
+]
 
 if config.has_joblib:
-    import caching
+    from . import caching
     __all__ += ['caching']
 
-utils.fixup_namespace(__name__, __all__,
-                      ('signal_node',
-                       'linear_flows',
-                       'helper_funcs',
-                       'classifier_node',
-                       'configuration',
-                       'repo_revision',
-                       'extension',
-                       ),('extension',
-                          'configuration'))
+utils.fixup_namespace(__name__, __all__, (
+    'signal_node',
+    'linear_flows',
+    'helper_funcs',
+    'classifier_node',
+    'configuration',
+    'repo_revision',
+    'extension',
+), ('extension', 'configuration'))

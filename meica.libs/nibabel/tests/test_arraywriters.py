@@ -41,13 +41,10 @@ from ..casting import int_abs, type_info
 
 from ..volumeutils import array_from_file, apply_read_scaling
 
-from numpy.testing import (assert_array_almost_equal,
-                           assert_array_equal)
+from numpy.testing import (assert_array_almost_equal, assert_array_equal)
 
-from nose.tools import (assert_true, assert_false,
-                        assert_equal, assert_not_equal,
-                        assert_raises)
-
+from nose.tools import (assert_true, assert_false, assert_equal,
+                        assert_not_equal, assert_raises)
 
 FLOAT_TYPES = np.sctypes['float']
 COMPLEX_TYPES = np.sctypes['complex']
@@ -174,19 +171,19 @@ def test_scaling_needed():
                 assert_false(ArrayWriter(arr, out_t).scaling_needed())
                 continue
             # The output data type does not include the input data range
-            max_min = max(in_min, out_min) # 0 for input or output uint
+            max_min = max(in_min, out_min)  # 0 for input or output uint
             min_max = min(in_max, out_max)
             arr = np.array([max_min, min_max], in_t)
             assert_false(ArrayWriter(arr, out_t).scaling_needed())
             assert_true(SlopeInterArrayWriter(arr + 1, out_t).scaling_needed())
             if in_t in INT_TYPES:
-                assert_true(SlopeInterArrayWriter(arr - 1, out_t).scaling_needed())
+                assert_true(
+                    SlopeInterArrayWriter(arr - 1, out_t).scaling_needed())
 
 
 def test_special_rt():
     # Test that zeros; none finite - round trip to zeros
-    for arr in (np.array([np.inf, np.nan, -np.inf]),
-                np.zeros((3,))):
+    for arr in (np.array([np.inf, np.nan, -np.inf]), np.zeros((3, ))):
         for in_dtt in FLOAT_TYPES:
             for out_dtt in IUINT_TYPES:
                 for klass in (ArrayWriter, SlopeArrayWriter,
@@ -211,15 +208,17 @@ def test_slope_inter_castable():
     # Test special case of all zeros
     for in_dtt in FLOAT_TYPES + IUINT_TYPES:
         for out_dtt in NUMERIC_TYPES:
-            for klass in (ArrayWriter, SlopeArrayWriter, SlopeInterArrayWriter):
-                arr = np.zeros((5,), dtype=in_dtt)
-                aw = klass(arr, out_dtt) # no error
+            for klass in (ArrayWriter, SlopeArrayWriter,
+                          SlopeInterArrayWriter):
+                arr = np.zeros((5, ), dtype=in_dtt)
+                aw = klass(arr, out_dtt)  # no error
     # Test special case of none finite
     arr = np.array([np.inf, np.nan, -np.inf])
     for in_dtt in FLOAT_TYPES:
         for out_dtt in FLOAT_TYPES + IUINT_TYPES:
-            for klass in (ArrayWriter, SlopeArrayWriter, SlopeInterArrayWriter):
-                aw = klass(arr.astype(in_dtt), out_dtt) # no error
+            for klass in (ArrayWriter, SlopeArrayWriter,
+                          SlopeInterArrayWriter):
+                aw = klass(arr.astype(in_dtt), out_dtt)  # no error
     for in_dtt, out_dtt, arr, slope_only, slope_inter, neither in (
         (np.float32, np.float32, 1, True, True, True),
         (np.float64, np.float32, 1, True, True, True),
@@ -230,17 +229,18 @@ def test_slope_inter_castable():
         (np.complex128, np.float32, 1, False, False, False),
         (np.complex128, np.int16, 1, False, False, False),
         (np.uint8, np.int16, 1, True, True, True),
-        # The following tests depend on the input data
-        (np.uint16, np.int16, 1, True, True, True), # 1 is in range
-        (np.uint16, np.int16, 2**16-1, True, True, False), # This not in range
-        (np.uint16, np.int16, (0, 2**16-1), True, True, False),
+            # The following tests depend on the input data
+        (np.uint16, np.int16, 1, True, True, True),  # 1 is in range
+        (np.uint16, np.int16, 2**16 - 1, True, True,
+         False),  # This not in range
+        (np.uint16, np.int16, (0, 2**16 - 1), True, True, False),
         (np.uint16, np.uint8, 1, True, True, True),
-        (np.int16, np.uint16, 1, True, True, True), # in range
-        (np.int16, np.uint16, -1, True, True, False), # flip works for scaling
-        (np.int16, np.uint16, (-1, 1), False, True, False), # not with +-
-        (np.int8, np.uint16, 1, True, True, True), # in range
-        (np.int8, np.uint16, -1, True, True, False), # flip works for scaling
-        (np.int8, np.uint16, (-1, 1), False, True, False), # not with +-
+        (np.int16, np.uint16, 1, True, True, True),  # in range
+        (np.int16, np.uint16, -1, True, True, False),  # flip works for scaling
+        (np.int16, np.uint16, (-1, 1), False, True, False),  # not with +-
+        (np.int8, np.uint16, 1, True, True, True),  # in range
+        (np.int8, np.uint16, -1, True, True, False),  # flip works for scaling
+        (np.int8, np.uint16, (-1, 1), False, True, False),  # not with +-
     ):
         # data for casting
         data = np.array(arr, dtype=in_dtt)
@@ -299,15 +299,15 @@ def test_resets():
         outp = np.array(outp)
         aw = klass(arr, np.uint8)
         assert_array_equal(get_slope_inter(aw), outp)
-        aw.calc_scale() # cached no change
+        aw.calc_scale()  # cached no change
         assert_array_equal(get_slope_inter(aw), outp)
-        aw.calc_scale(force=True) # same data, no change
+        aw.calc_scale(force=True)  # same data, no change
         assert_array_equal(get_slope_inter(aw), outp)
         # Change underlying array
         aw.array[:] = aw.array * 2
-        aw.calc_scale() # cached still
+        aw.calc_scale()  # cached still
         assert_array_equal(get_slope_inter(aw), outp)
-        aw.calc_scale(force=True) # new data, change
+        aw.calc_scale(force=True)  # new data, change
         assert_array_equal(get_slope_inter(aw), outp * 2)
         # Test reset
         aw.reset()
@@ -318,13 +318,8 @@ def test_no_offset_scale():
     # Specific tests of no-offset scaling
     SAW = SlopeArrayWriter
     # Floating point
-    for data in ((-128, 127),
-                  (-128, 126),
-                  (-128, -127),
-                  (-128, 0),
-                  (-128, -1),
-                  (126, 127),
-                  (-127, 127)):
+    for data in ((-128, 127), (-128, 126), (-128, -127), (-128, 0), (-128, -1),
+                 (126, 127), (-127, 127)):
         aw = SAW(np.array(data, dtype=np.float32), np.int8)
         assert_equal(aw.slope, 1.0)
     aw = SAW(np.array([-126, 127 * 2.0], dtype=np.float32), np.int8)
@@ -341,31 +336,31 @@ def test_with_offset_scale():
     # Tests of specific cases in slope, inter
     SIAW = SlopeInterArrayWriter
     aw = SIAW(np.array([0, 127], dtype=np.int8), np.uint8)
-    assert_equal((aw.slope, aw.inter), (1, 0)) # in range
+    assert_equal((aw.slope, aw.inter), (1, 0))  # in range
     aw = SIAW(np.array([-1, 126], dtype=np.int8), np.uint8)
-    assert_equal((aw.slope, aw.inter), (1, -1)) # offset only
+    assert_equal((aw.slope, aw.inter), (1, -1))  # offset only
     aw = SIAW(np.array([-1, 254], dtype=np.int16), np.uint8)
-    assert_equal((aw.slope, aw.inter), (1, -1)) # offset only
+    assert_equal((aw.slope, aw.inter), (1, -1))  # offset only
     aw = SIAW(np.array([-1, 255], dtype=np.int16), np.uint8)
-    assert_not_equal((aw.slope, aw.inter), (1, -1)) # Too big for offset only
+    assert_not_equal((aw.slope, aw.inter), (1, -1))  # Too big for offset only
     aw = SIAW(np.array([-256, -2], dtype=np.int16), np.uint8)
-    assert_equal((aw.slope, aw.inter), (1, -256)) # offset only
+    assert_equal((aw.slope, aw.inter), (1, -256))  # offset only
     aw = SIAW(np.array([-256, -2], dtype=np.int16), np.int8)
-    assert_equal((aw.slope, aw.inter), (1, -129)) # offset only
+    assert_equal((aw.slope, aw.inter), (1, -129))  # offset only
 
 
 def test_io_scaling():
     # Test scaling works for max, min when going from larger to smaller type,
     # and from float to integer.
     bio = BytesIO()
-    for in_type, out_type, err in ((np.int16, np.int16, None),
-                                   (np.int16, np.int8, None),
-                                   (np.uint16, np.uint8, None),
-                                   (np.int32, np.int8, None),
-                                   (np.float32, np.uint8, None),
+    for in_type, out_type, err in ((np.int16, np.int16,
+                                    None), (np.int16, np.int8,
+                                            None), (np.uint16, np.uint8, None),
+                                   (np.int32, np.int8, None), (np.float32,
+                                                               np.uint8, None),
                                    (np.float32, np.int16, None)):
         out_dtype = np.dtype(out_type)
-        arr = np.zeros((3,), dtype=in_type)
+        arr = np.zeros((3, ), dtype=in_type)
         info = type_info(in_type)
         arr[0], arr[1] = info['min'], info['max']
         aw = SlopeInterArrayWriter(arr, out_dtype, calc_scale=False)
@@ -512,7 +507,7 @@ def test_float_int_min_max():
         arr = np.array([finf['min'], finf['max']], dtype=in_dt)
         # Bug in numpy 1.6.2 on PPC leading to infs - abort
         if not np.all(np.isfinite(arr)):
-            print 'Hit PPC max -> inf bug; skip in_type %s' % in_dt
+            print('Hit PPC max -> inf bug; skip in_type %s' % in_dt)
             continue
         for out_dt in IUINT_TYPES:
             try:
@@ -551,7 +546,7 @@ def test_int_int_slope():
         for out_dt in IUINT_TYPES:
             kinds = np.dtype(in_dt).kind + np.dtype(out_dt).kind
             if kinds in ('ii', 'uu', 'ui'):
-                arrs = (np.array([iinf.min, iinf.max], dtype=in_dt),)
+                arrs = (np.array([iinf.min, iinf.max], dtype=in_dt), )
             elif kinds == 'iu':
                 arrs = (np.array([iinf.min, 0], dtype=in_dt),
                         np.array([0, iinf.max], dtype=in_dt))
@@ -578,9 +573,7 @@ def test_float_int_spread():
             aw = SlopeInterArrayWriter(arr_t, out_dt)
             arr_back_sc = round_trip(aw)
             # Get estimate for error
-            max_miss = rt_err_estimate(arr_t,
-                                       arr_back_sc.dtype,
-                                       aw.slope,
+            max_miss = rt_err_estimate(arr_t, arr_back_sc.dtype, aw.slope,
                                        aw.inter)
             # Simulate allclose test with large atol
             diff = np.abs(arr_t - arr_back_sc)
@@ -605,7 +598,7 @@ def test_rt_bias():
     # Check for bias in round trip
     rng = np.random.RandomState(20111214)
     mu, std, count = 100, 10, 100
-    arr = rng.normal(mu, std, size=(count,))
+    arr = rng.normal(mu, std, size=(count, ))
     eps = np.finfo(np.float32).eps
     for in_dt in (np.float32, np.float64):
         arr_t = arr.astype(in_dt)
@@ -614,9 +607,7 @@ def test_rt_bias():
             arr_back_sc = round_trip(aw)
             bias = np.mean(arr_t - arr_back_sc)
             # Get estimate for error
-            max_miss = rt_err_estimate(arr_t,
-                                       arr_back_sc.dtype,
-                                       aw.slope,
+            max_miss = rt_err_estimate(arr_t, arr_back_sc.dtype, aw.slope,
                                        aw.inter)
             # Hokey use of max_miss as a std estimate
             bias_thresh = np.max([max_miss / np.sqrt(count), eps])

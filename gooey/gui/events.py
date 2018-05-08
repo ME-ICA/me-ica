@@ -8,13 +8,13 @@ import wx
 
 new_id = lambda: str(wx.NewId())
 
-WINDOW_STOP     = new_id()
-WINDOW_CANCEL   = new_id()
-WINDOW_CLOSE    = new_id()
-WINDOW_START    = new_id()
-WINDOW_RESTART  = new_id()
-WINDOW_EDIT     = new_id()
+WINDOW_STOP = new_id()
+WINDOW_CANCEL = new_id()
+WINDOW_CLOSE = new_id()
+WINDOW_START = new_id()
+WINDOW_RESTART = new_id()
+WINDOW_EDIT = new_id()
 
-WINDOW_CHANGE   = new_id()
-PANEL_CHANGE    = new_id()
-LIST_BOX        = new_id()
+WINDOW_CHANGE = new_id()
+PANEL_CHANGE = new_id()
+LIST_BOX = new_id()

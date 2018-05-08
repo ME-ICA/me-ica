@@ -3,9 +3,10 @@ __docformat__ = "restructuredtext en"
 import mdp
 from mdp import numx
 
-from svm_classifiers import _SVMClassifier, _LabelNormalizer
+from .svm_classifiers import _SVMClassifier, _LabelNormalizer
 
 import svmutil as libsvmutil
+
 
 class LibSVMClassifier(_SVMClassifier):
     """
@@ -26,8 +27,14 @@ class LibSVMClassifier(_SVMClassifier):
     kernels = ["RBF", "LINEAR", "POLY", "SIGMOID"]
     classifiers = ["C_SVC", "NU_SVC", "ONE_CLASS", "EPSILON_SVR", "NU_SVR"]
 
-    def __init__(self, kernel=None, classifier=None, probability=True, params=None,
-                 input_dim=None, output_dim=None, dtype=None):
+    def __init__(self,
+                 kernel=None,
+                 classifier=None,
+                 probability=True,
+                 params=None,
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None):
         """
         kernel -- The kernel to use
         classifier -- The type of the SVM
@@ -37,38 +44,36 @@ class LibSVMClassifier(_SVMClassifier):
         """
         if not params:
             params = {}
-        
+
         # initialise the parameter and be quiet
         self.parameter = libsvmutil.svm_parameter("-q")
         if probability:
             # allow for probability estimates
             self.parameter.probability = 1
-        
-        super(LibSVMClassifier, self).__init__(input_dim=input_dim,
-                                               output_dim=output_dim,
-                                               dtype=dtype)
+
+        super(LibSVMClassifier, self).__init__(
+            input_dim=input_dim, output_dim=output_dim, dtype=dtype)
         if kernel:
             self.set_kernel(kernel)
         if classifier:
             self.set_classifier(classifier)
         # set all other parameters
-        for k, v in params.iteritems():
+        for k, v in params.items():
             if not k in self.parameter._names:
                 # check that the name is a valid parameter
                 msg = "'{}' is not a valid parameter for libsvm".format(k)
                 raise mdp.NodeException(msg)
-                
+
             if hasattr(self.parameter, k):
                 setattr(self.parameter, k, v)
             else:
                 msg = "'svm_parameter' has no attribute {}".format(k)
                 raise AttributeError(msg)
-            
 
     def _get_supported_dtypes(self):
         """Return the list of dtypes selfupported by this node."""
         # Support only float64 because of external library
-        return ('float64',)
+        return ('float64', )
 
     def set_classifier(self, classifier):
         """
@@ -101,7 +106,7 @@ class LibSVMClassifier(_SVMClassifier):
     def _stop_training(self):
         super(LibSVMClassifier, self)._stop_training()
         self.normalizer = _LabelNormalizer(self.labels)
-                
+
         labels = self.normalizer.normalize(self.labels.tolist())
         features = self.data
 
@@ -113,8 +118,9 @@ class LibSVMClassifier(_SVMClassifier):
     def _label(self, x):
         if isinstance(x, (list, tuple, numx.ndarray)):
             y = [0] * len(x)
-            p_labs, p_acc, p_vals = libsvmutil.svm_predict(y, x.tolist(), self.model)
-            
+            p_labs, p_acc, p_vals = libsvmutil.svm_predict(
+                y, x.tolist(), self.model)
+
             return numx.array(p_labs)
         else:
             msg = "Data must be a sequence of vectors"
@@ -129,9 +135,10 @@ class LibSVMClassifier(_SVMClassifier):
 
     def _prob(self, x):
         y = [0] * len(x)
-        p_labs, p_acc, p_vals = libsvmutil.svm_predict(y, x.tolist(), self.model, "-b 1")
+        p_labs, p_acc, p_vals = libsvmutil.svm_predict(y, x.tolist(),
+                                                       self.model, "-b 1")
         labels = self.model.get_labels()
-        return [dict(zip(labels, ps)) for ps in p_vals]
+        return [dict(list(zip(labels, ps))) for ps in p_vals]
 
     def _train(self, x, labels):
         super(LibSVMClassifier, self)._train(x, labels)

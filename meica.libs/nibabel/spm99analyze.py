@@ -15,25 +15,21 @@ from .py3k import BytesIO
 from .spatialimages import HeaderDataError, HeaderTypeError
 
 from .batteryrunners import Report
-from . import analyze # module import
-
+from . import analyze  # module import
 ''' Support subtle variations of SPM version of Analyze '''
 header_key_dtd = analyze.header_key_dtd
 # funused1 in dime subfield is scalefactor
 image_dimension_dtd = analyze.image_dimension_dtd[:]
-image_dimension_dtd[
-    image_dimension_dtd.index(('funused1', 'f4'))
-    ] = ('scl_slope', 'f4')
+image_dimension_dtd[image_dimension_dtd.index(('funused1',
+                                               'f4'))] = ('scl_slope', 'f4')
 # originator text field used as image origin (translations)
 data_history_dtd = analyze.data_history_dtd[:]
-data_history_dtd[
-    data_history_dtd.index(('originator', 'S10'))
-    ] = ('origin', 'i2', (5,))
+data_history_dtd[data_history_dtd.index(('originator', 'S10'))] = ('origin',
+                                                                   'i2', (5, ))
 
 # Full header numpy dtype combined across sub-fields
-header_dtype = np.dtype(header_key_dtd +
-                        image_dimension_dtd +
-                        data_history_dtd)
+header_dtype = np.dtype(
+    header_key_dtd + image_dimension_dtd + data_history_dtd)
 
 
 class SpmAnalyzeHeader(analyze.AnalyzeHeader):
@@ -94,7 +90,7 @@ class SpmAnalyzeHeader(analyze.AnalyzeHeader):
     @classmethod
     def _get_checks(klass):
         checks = super(SpmAnalyzeHeader, klass)._get_checks()
-        return checks + (klass._chk_scale,)
+        return checks + (klass._chk_scale, )
 
     @staticmethod
     def _chk_scale(hdr, fix=False):
@@ -103,8 +99,7 @@ class SpmAnalyzeHeader(analyze.AnalyzeHeader):
         if np.isfinite(scale):
             return hdr, rep
         rep.problem_level = 30
-        rep.problem_msg = ('scale slope is %s; should be finite'
-                           % scale)
+        rep.problem_msg = ('scale slope is %s; should be finite' % scale)
         if fix:
             hdr['scl_slope'] = 1
             rep.fix_msg = 'setting scalefactor "scl_slope" to 1'
@@ -113,6 +108,7 @@ class SpmAnalyzeHeader(analyze.AnalyzeHeader):
 
 class Spm99AnalyzeHeader(SpmAnalyzeHeader):
     ''' Adds origin functionality to base SPM header '''
+
     def get_origin_affine(self):
         ''' Get affine from header, using SPM origin field if sensible
 
@@ -153,11 +149,11 @@ class Spm99AnalyzeHeader(SpmAnalyzeHeader):
         # Remember that the origin is for matlab (1-based indexing)
         origin = hdr['origin'][:3]
         dims = hdr['dim'][1:4]
-        if (np.any(origin) and
-            np.all(origin > -dims) and np.all(origin < dims*2)):
-            origin = origin-1
+        if (np.any(origin) and np.all(origin > -dims)
+                and np.all(origin < dims * 2)):
+            origin = origin - 1
         else:
-            origin = (dims-1) / 2.0
+            origin = (dims - 1) / 2.0
         aff = np.eye(4)
         aff[:3, :3] = np.diag(zooms)
         aff[:3, -1] = -origin * zooms
@@ -222,15 +218,15 @@ class Spm99AnalyzeHeader(SpmAnalyzeHeader):
     @classmethod
     def _get_checks(klass):
         checks = super(Spm99AnalyzeHeader, klass)._get_checks()
-        return checks + (klass._chk_origin,)
+        return checks + (klass._chk_origin, )
 
     @staticmethod
     def _chk_origin(hdr, fix=False):
         rep = Report(HeaderDataError)
         origin = hdr['origin'][0:3]
         dims = hdr['dim'][1:4]
-        if (not np.any(origin) or
-            (np.all(origin > -dims) and np.all(origin < dims*2))):
+        if (not np.any(origin)
+                or (np.all(origin > -dims) and np.all(origin < dims * 2))):
             return hdr, rep
         rep.problem_level = 20
         rep.problem_msg = 'very large origin values relative to dims'
@@ -241,9 +237,7 @@ class Spm99AnalyzeHeader(SpmAnalyzeHeader):
 
 class Spm99AnalyzeImage(analyze.AnalyzeImage):
     header_class = Spm99AnalyzeHeader
-    files_types = (('image', '.img'),
-                   ('header', '.hdr'),
-                   ('mat','.mat'))
+    files_types = (('image', '.img'), ('header', '.hdr'), ('mat', '.mat'))
 
     @classmethod
     def from_file_map(klass, file_map):
@@ -254,20 +248,20 @@ class Spm99AnalyzeImage(analyze.AnalyzeImage):
             return ret
         # Allow for possibility of empty file -> no update to affine
         contents = matf.read()
-        if file_map['mat'].filename is not None: # was filename
+        if file_map['mat'].filename is not None:  # was filename
             matf.close()
         if len(contents) == 0:
             return ret
         import scipy.io as sio
         mats = sio.loadmat(BytesIO(contents))
-        if 'mat' in mats: # this overrides a 'M', and includes any flip
+        if 'mat' in mats:  # this overrides a 'M', and includes any flip
             mat = mats['mat']
             if mat.ndim > 2:
                 warnings.warn('More than one affine in "mat" matrix, '
                               'using first')
                 mat = mat[:, :, 0]
             ret._affine = mat
-        elif 'M' in mats: # the 'M' matrix does not include flips
+        elif 'M' in mats:  # the 'M' matrix does not include flips
             hdr = ret._header
             if hdr.default_x_flip:
                 ret._affine = np.dot(np.diag([-1, 1, 1, 1]), mats['M'])
@@ -277,7 +271,7 @@ class Spm99AnalyzeImage(analyze.AnalyzeImage):
             raise ValueError('mat file found but no "mat" or "M" in it')
         # Adjust for matlab 1,1,1 voxel origin
         to_111 = np.eye(4)
-        to_111[:3,3] = 1
+        to_111[:3, 3] = 1
         ret._affine = np.dot(ret._affine, to_111)
         return ret
 
@@ -306,13 +300,13 @@ class Spm99AnalyzeImage(analyze.AnalyzeImage):
             M = mat
         # Adjust for matlab 1,1,1 voxel origin
         from_111 = np.eye(4)
-        from_111[:3,3] = -1
+        from_111[:3, 3] = -1
         M = np.dot(M, from_111)
         mat = np.dot(mat, from_111)
         # use matlab 4 format to allow gzipped write without error
         mfobj = file_map['mat'].get_prepare_fileobj(mode='wb')
         sio.savemat(mfobj, {'M': M, 'mat': mat}, format='4')
-        if file_map['mat'].filename is not None: # was filename
+        if file_map['mat'].filename is not None:  # was filename
             mfobj.close()
 
 

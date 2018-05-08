@@ -9,6 +9,7 @@ port, timeout, secret, n_workers.
 
 import sys
 
+
 def main():
     port, timeout, secret, n_workers = sys.argv[1:5]
     port = int(port)
@@ -19,13 +20,12 @@ def main():
         sys.path.append(sys_path)
     import ppserver
     ## initialization code as in ppserver.py
-    server = ppserver._NetworkServer(ncpus=n_workers,
-                                     port=port,
-                                     secret=secret,
-                                     timeout=timeout)
-    print "Server is ready."
+    server = ppserver._NetworkServer(
+        ncpus=n_workers, port=port, secret=secret, timeout=timeout)
+    print("Server is ready.")
     sys.stdout.flush()
     server.listen()
+
 
 if __name__ == "__main__":
     main()

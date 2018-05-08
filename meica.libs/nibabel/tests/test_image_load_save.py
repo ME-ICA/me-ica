@@ -7,7 +7,7 @@
 #
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ##
 ''' Tests for loader function '''
-from __future__ import with_statement
+
 from os.path import join as pjoin
 import shutil
 from tempfile import mkdtemp
@@ -22,7 +22,6 @@ except ImportError:
     have_scipy = False
 else:
     have_scipy = True
-
 
 from .. import analyze as ana
 from .. import spm99analyze as spm99
@@ -54,11 +53,11 @@ def test_conversion():
     affine = np.diag([1, 2, 3, 1])
     for npt in np.float32, np.int16:
         data = np.arange(np.prod(shape), dtype=npt).reshape(shape)
-        for r_class_def in class_map.values():
+        for r_class_def in list(class_map.values()):
             r_class = r_class_def['class']
             img = r_class(data, affine)
             img.set_data_dtype(npt)
-            for w_class_def in class_map.values():
+            for w_class_def in list(class_map.values()):
                 w_class = w_class_def['class']
                 img2 = w_class.from_image(img)
                 assert_array_equal(img2.get_data(), data)
@@ -110,7 +109,7 @@ def test_save_load():
     npt = np.float32
     data = np.arange(np.prod(shape), dtype=npt).reshape(shape)
     affine = np.diag([1, 2, 3, 1])
-    affine[:3,3] = [3,2,1]
+    affine[:3, 3] = [3, 2, 1]
     img = ni1.Nifti1Image(data, affine)
     img.set_data_dtype(npt)
     with InTemporaryDirectory() as pth:
@@ -123,9 +122,9 @@ def test_save_load():
         assert_array_equal(re_img.get_affine(), affine)
         # These and subsequent del statements are to prevent confusing
         # windows errors when trying to open files or delete the
-        # temporary directory. 
+        # temporary directory.
         del re_img
-        if have_scipy: # skip we we cannot read .mat files
+        if have_scipy:  # skip we we cannot read .mat files
             spm2.save(img, sifn)
             re_img2 = nils.load(sifn)
             assert_true(isinstance(re_img2, spm2.Spm2AnalyzeImage))
@@ -134,8 +133,7 @@ def test_save_load():
             del re_img2
             spm99.save(img, sifn)
             re_img3 = nils.load(sifn)
-            assert_true(isinstance(re_img3,
-                                         spm99.Spm99AnalyzeImage))
+            assert_true(isinstance(re_img3, spm99.Spm99AnalyzeImage))
             assert_array_equal(re_img3.get_data(), data)
             assert_array_equal(re_img3.get_affine(), affine)
             ni1.save(re_img3, nifn)
@@ -153,7 +151,7 @@ def test_two_to_one():
     npt = np.float32
     data = np.arange(np.prod(shape), dtype=npt).reshape(shape)
     affine = np.diag([1, 2, 3, 1])
-    affine[:3,3] = [3,2,1]
+    affine[:3, 3] = [3, 2, 1]
     # single file format
     img = ni1.Nifti1Image(data, affine)
     assert_equal(img.get_header()['magic'], asbytes('n+1'))
@@ -200,7 +198,7 @@ def test_two_to_one():
 
 
 def test_negative_load_save():
-    shape = (1,2,5)
+    shape = (1, 2, 5)
     data = np.arange(10).reshape(shape) - 10.0
     affine = np.eye(4)
     hdr = ni1.Nifti1Header()

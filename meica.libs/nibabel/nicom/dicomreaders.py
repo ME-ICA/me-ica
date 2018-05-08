@@ -82,7 +82,7 @@ def read_mosaic_dir(dicom_path, globber='*.dcm', check_is_dwi=False):
         # sorting
         if not dcm_w.is_mosaic:
             raise DicomReadError('data does not appear to be in mosaic format')
-        arrays.append(dcm_w.get_data()[...,None])
+        arrays.append(dcm_w.get_data()[..., None])
         q = dcm_w.q_vector
         if q is None:  # probably not diffusion
             if check_is_dwi:
@@ -93,16 +93,14 @@ def read_mosaic_dir(dicom_path, globber='*.dcm', check_is_dwi=False):
                                      'Could it be a processed dataset '
                                      'like ADC etc?' % fname)
             b = np.nan
-            g = np.ones((3,)) + np.nan
+            g = np.ones((3, )) + np.nan
         else:
-            b = np.sqrt(np.sum(q * q)) # vector norm
+            b = np.sqrt(np.sum(q * q))  # vector norm
             g = q / b
         b_values.append(b)
         gradients.append(g)
     affine = np.dot(DPCS_TO_TAL, dcm_w.get_affine())
-    return (np.concatenate(arrays, -1),
-            affine,
-            np.array(b_values),
+    return (np.concatenate(arrays, -1), affine, np.array(b_values),
             np.array(gradients))
 
 
@@ -129,21 +127,21 @@ def slices_to_series(wrappers):
             if dw.is_same_series(vol_list[0]):
                 vol_list.append(dw)
                 break
-        else: # no match in current volume lists
+        else:  # no match in current volume lists
             volume_lists.append([dw])
-    print 'We appear to have %d Series' % len(volume_lists)
+    print('We appear to have %d Series' % len(volume_lists))
     # second pass
     out_vol_lists = []
     for vol_list in volume_lists:
         if len(vol_list) > 1:
             vol_list.sort(_slice_sorter)
             zs = [s.slice_indicator for s in vol_list]
-            if len(set(zs)) < len(zs): # not unique zs
+            if len(set(zs)) < len(zs):  # not unique zs
                 # third pass
                 out_vol_lists += _third_pass(vol_list)
                 continue
         out_vol_lists.append(vol_list)
-    print 'We have %d volumes after second pass' % len(out_vol_lists)
+    print('We have %d volumes after second pass' % len(out_vol_lists))
     # final pass check
     for vol_list in out_vol_lists:
         zs = [s.slice_indicator for s in vol_list]

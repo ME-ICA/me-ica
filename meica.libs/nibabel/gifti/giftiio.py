@@ -15,6 +15,7 @@ import codecs
 
 from . import parse_gifti_fast as gfp
 
+
 def read(filename):
     """ Load a Gifti image from a file
 

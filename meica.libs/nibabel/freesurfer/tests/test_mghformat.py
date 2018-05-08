@@ -7,7 +7,7 @@
 #
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ##
 '''Tests for mghformat reading writing'''
-from __future__ import with_statement
+
 import os
 import numpy as np
 from .. import load, save, MGHImage
@@ -18,8 +18,9 @@ from numpy.testing import assert_equal, assert_array_equal, \
     assert_array_almost_equal, assert_almost_equal, assert_raises
 
 # sample voxel to ras matrix
-v2r = np.array([[1, 2, 3, -13], [2, 3, 1, -11.5],
-                [3, 1, 2, -11.5], [0, 0, 0, 1]], dtype=np.float32)
+v2r = np.array(
+    [[1, 2, 3, -13], [2, 3, 1, -11.5], [3, 1, 2, -11.5], [0, 0, 0, 1]],
+    dtype=np.float32)
 
 
 def test_read_mgh():
@@ -94,9 +95,7 @@ def test_write_noaffine_mgh():
     assert_array_equal(h['dims'], [7, 13, 3, 22])
     assert_array_almost_equal(h['mrparms'], [0.0, 0.0, 0.0, 0.0])
     # important part -- whether default affine info is stored
-    ex_mdc = np.array([[-1, 0, 0],
-                       [0, 0, -1],
-                       [0, 1, 0]], dtype=np.float32)
+    ex_mdc = np.array([[-1, 0, 0], [0, 0, -1], [0, 1, 0]], dtype=np.float32)
     assert_array_almost_equal(h['Mdc'], ex_mdc)
 
     ex_pxyzc = np.array([0, 0, 0], dtype=np.float32)

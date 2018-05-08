@@ -8,7 +8,6 @@
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ##
 """ Tests for arrayproxy module
 """
-from __future__ import with_statement
 
 from copy import deepcopy
 
@@ -41,7 +40,7 @@ class FunkyHeader(object):
 
 def test_init():
     bio = BytesIO()
-    shape = [2,3,4]
+    shape = [2, 3, 4]
     hdr = FunkyHeader(shape)
     ap = ArrayProxy(bio, hdr)
     assert_true(ap.file_like is bio)
@@ -54,7 +53,7 @@ def test_init():
     hdr.shape[0] = 6
     assert_not_equal(ap.shape, shape)
     # Get the data
-    assert_array_equal(np.asarray(ap), np.arange(24).reshape((2,3,4)))
+    assert_array_equal(np.asarray(ap), np.arange(24).reshape((2, 3, 4)))
 
 
 def write_raw_data(arr, hdr, fileobj):
@@ -66,7 +65,7 @@ def write_raw_data(arr, hdr, fileobj):
 
 def test_nifti1_init():
     bio = BytesIO()
-    shape = (2,3,4)
+    shape = (2, 3, 4)
     hdr = Nifti1Header()
     arr = np.arange(24, dtype=np.int16).reshape(shape)
     write_raw_data(arr, hdr, bio)

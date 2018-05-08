@@ -20,7 +20,7 @@ Process based scheduler for distribution across multiple CPU cores.
 
 import sys
 import os
-import cPickle as pickle
+import pickle as pickle
 import threading
 import subprocess
 import time
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     mdp_path = os.path.realpath(__file__)
     mdp_index = mdp_path.rfind("mdp")
     if mdp_index:
-        mdp_path = mdp_path[:mdp_index-1]
+        mdp_path = mdp_path[:mdp_index - 1]
         # mdp path goes after sys.path
         sys.path.append(mdp_path)
     # shut off warnings of any kinds
@@ -54,8 +54,12 @@ class ProcessScheduler(Scheduler):
     Windows XP and Vista).
     """
 
-    def __init__(self, result_container=None, verbose=False, n_processes=1,
-                 source_paths=None, python_executable=None,
+    def __init__(self,
+                 result_container=None,
+                 verbose=False,
+                 n_processes=1,
+                 source_paths=None,
+                 python_executable=None,
                  cache_callable=True):
         """Initialize the scheduler and start the slave processes.
 
@@ -78,8 +82,7 @@ class ProcessScheduler(Scheduler):
             pickled each time.
         """
         super(ProcessScheduler, self).__init__(
-                                        result_container=result_container,
-                                        verbose=verbose)
+            result_container=result_container, verbose=verbose)
         if n_processes:
             self._n_processes = n_processes
         else:
@@ -102,18 +105,20 @@ class ProcessScheduler(Scheduler):
             source_paths = sys.path
         process_args += source_paths
         # list of processes not in use, start the processes now
-        self._free_processes = [subprocess.Popen(args=process_args,
-                                                 stdout=subprocess.PIPE,
-                                                 stdin=subprocess.PIPE)
-                                for _ in range(self._n_processes)]
+        self._free_processes = [
+            subprocess.Popen(
+                args=process_args,
+                stdout=subprocess.PIPE,
+                stdin=subprocess.PIPE) for _ in range(self._n_processes)
+        ]
         # tag each process with its cached callable task_index,
         # this is compared with _last_callable_index to check if the cached
         # task_callable is still up to date
         for process in self._free_processes:
             process._callable_index = -1
         if self.verbose:
-            print ("scheduler initialized with %d processes" %
-                   self._n_processes)
+            print((
+                "scheduler initialized with %d processes" % self._n_processes))
 
     def _shutdown(self):
         """Shut down the slave processes.
@@ -128,7 +133,7 @@ class ProcessScheduler(Scheduler):
             process.stdin.flush()
         self._lock.release()
         if self.verbose:
-            print "scheduler shutdown"
+            print("scheduler shutdown")
 
     def _process_task(self, data, task_callable, task_index):
         """Add a task, if possible without blocking.
@@ -147,15 +152,15 @@ class ProcessScheduler(Scheduler):
                 try:
                     process = self._free_processes.pop()
                     self._lock.release()
-                    thread = threading.Thread(target=self._task_thread,
-                                              args=(process, data,
-                                                    task_callable, task_index))
+                    thread = threading.Thread(
+                        target=self._task_thread,
+                        args=(process, data, task_callable, task_index))
                     thread.start()
                     task_started = True
                 except thread.error:
                     if self.verbose:
-                        print ("unable to create new task thread,"
-                               " waiting 2 seconds...")
+                        print("unable to create new task thread,"
+                              " waiting 2 seconds...")
                     time.sleep(2)
 
     def _task_thread(self, process, data, task_callable, task_index):
@@ -173,8 +178,8 @@ class ProcessScheduler(Scheduler):
                 else:
                     task_callable = None
             # push the task to the process
-            pickle.dump((data, task_callable, task_index),
-                        process.stdin, protocol=-1)
+            pickle.dump(
+                (data, task_callable, task_index), process.stdin, protocol=-1)
             process.stdin.flush()
             # wait for result to arrive
             result = pickle.load(process.stdout)
@@ -232,16 +237,17 @@ def _process_run(cache_callable=True):
                 del task_callable  # free memory
                 pickle.dump(result, pickle_out, protocol=-1)
                 pickle_out.flush()
-        except Exception, exception:
+        except Exception as exception:
             # return the exception instead of the result
             if task is None:
-                print "unpickling a task caused an exception in a process:"
+                print("unpickling a task caused an exception in a process:")
             else:
-                print "task %d caused exception in process:" % task[2]
-            print exception
+                print("task %d caused exception in process:" % task[2])
+            print(exception)
             traceback.print_exc()
             sys.stdout.flush()
             sys.exit()
+
 
 if __name__ == "__main__":
     # first argument is cache_callable flag
@@ -250,7 +256,8 @@ if __name__ == "__main__":
     if len(sys.argv) > 2:
         # remaining arguments are code paths,
         # put them in front so that they take precedence over PYTHONPATH
-        new_paths = [sys_arg for sys_arg in sys.argv[2:]
-                     if sys_arg not in sys.path]
+        new_paths = [
+            sys_arg for sys_arg in sys.argv[2:] if sys_arg not in sys.path
+        ]
         sys.path = new_paths + sys.path
     _process_run(cache_callable=cache_callable)

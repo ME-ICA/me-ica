@@ -35,22 +35,20 @@ def load(filename):
     try:
         img_type = ext_map[ext]
     except KeyError:
-        raise ImageFileError('Cannot work out file type of "%s"' %
-                             filename)
+        raise ImageFileError('Cannot work out file type of "%s"' % filename)
     if ext in ('.nii', '.mnc', '.mgh', '.mgz'):
         klass = class_map[img_type]['class']
     else:
         # might be nifti pair or analyze of some sort
-        files_types = (('image','.img'), ('header','.hdr'))
+        files_types = (('image', '.img'), ('header', '.hdr'))
         filenames = types_filenames(filename, files_types)
         hdr = nifti1.Nifti1Header.from_fileobj(
-            vu.allopen(filenames['header']),
-            check=False)
+            vu.allopen(filenames['header']), check=False)
         if hdr['magic'] in (asbytes('ni1'), asbytes('n+1')):
             # allow goofy nifti single magic for pair
             klass = nifti1.Nifti1Pair
         else:
-            klass =  spm2.Spm2AnalyzeImage
+            klass = spm2.Spm2AnalyzeImage
     return klass.from_filename(filename)
 
 

@@ -1,8 +1,6 @@
-from __future__ import with_statement
-
 __docformat__ = "restructuredtext en"
 
-import cPickle as _cPickle
+import pickle as _cPickle
 import warnings as _warnings
 import copy as _copy
 import inspect
@@ -10,9 +8,11 @@ import inspect
 import mdp
 from mdp import numx
 
+
 class NodeException(mdp.MDPException):
     """Base class for exceptions in `Node` subclasses."""
     pass
+
 
 class InconsistentDimException(NodeException):
     """Raised when there is a conflict setting the dimensionalities.
@@ -22,19 +22,23 @@ class InconsistentDimException(NodeException):
     """
     pass
 
+
 class TrainingException(NodeException):
     """Base class for exceptions in the training phase."""
     pass
+
 
 class TrainingFinishedException(TrainingException):
     """Raised when the `Node.train` method is called although the
     training phase is closed."""
     pass
 
+
 class IsNotTrainableException(TrainingException):
     """Raised when the `Node.train` method is called although the
     node is not trainable."""
     pass
+
 
 class IsNotInvertibleException(NodeException):
     """Raised when the `Node.inverse` method is called although the
@@ -55,17 +59,18 @@ class NodeMetaclass(type):
     """
 
     # methods that can overwrite docs:
-    DOC_METHODS = ['_train', '_stop_training', '_execute', '_inverse',
-                   '_label', '_prob']
+    DOC_METHODS = [
+        '_train', '_stop_training', '_execute', '_inverse', '_label', '_prob'
+    ]
 
     def __new__(cls, classname, bases, members):
-        new_cls = super(NodeMetaclass, cls).__new__(cls, classname,
-                                                    bases, members)
+        new_cls = super(NodeMetaclass, cls).__new__(cls, classname, bases,
+                                                    members)
 
         priv_infos = cls._select_private_methods_to_wrap(cls, members)
 
         # now add the wrappers
-        for wrapper_name, priv_info in priv_infos.iteritems():
+        for wrapper_name, priv_info in priv_infos.items():
             # Note: super works because we never wrap in the defining class
             orig_pubmethod = getattr(super(new_cls, new_cls), wrapper_name)
 
@@ -78,8 +83,7 @@ class NodeMetaclass(type):
             if recursed:
                 undec_pubmethod = orig_pubmethod._undecorated_
                 priv_info.update(NodeMetaclass._get_infos(undec_pubmethod))
-                wrapper_method = cls._wrap_function(undec_pubmethod,
-                                                    priv_info)
+                wrapper_method = cls._wrap_function(undec_pubmethod, priv_info)
                 wrapper_method._undecorated_ = undec_pubmethod
             else:
                 priv_info.update(NodeMetaclass._get_infos(orig_pubmethod))
@@ -120,7 +124,8 @@ class NodeMetaclass(type):
                 # This is also important because we use super in the wrapper
                 # (so the public method in this class would be missed).
                 if pubname not in members:
-                    priv_infos[pubname] = cls._function_infodict(members[privname])
+                    priv_infos[pubname] = cls._function_infodict(
+                        members[privname])
         return priv_infos
 
     # The next two functions (originally called get_info, wrapper)
@@ -163,21 +168,23 @@ class NodeMetaclass(type):
             argnames.append(varargs)
         if varkwargs:
             argnames.append(varkwargs)
-        signature = inspect.formatargspec(regargs,
-                                          varargs,
-                                          varkwargs,
-                                          defaults,
-                                          formatvalue=lambda value: "")[1:-1]
-        return dict(name=func.__name__,
-                    signature=signature,
-                    argnames=argnames,
-                    kwargs_name=varkwargs,
-                    defaults=func.func_defaults,
-                    doc=func.__doc__,
-                    module=func.__module__,
-                    dict=func.__dict__,
-                    globals=func.func_globals,
-                    closure=func.func_closure)
+        signature = inspect.formatargspec(
+            regargs,
+            varargs,
+            varkwargs,
+            defaults,
+            formatvalue=lambda value: "")[1:-1]
+        return dict(
+            name=func.__name__,
+            signature=signature,
+            argnames=argnames,
+            kwargs_name=varkwargs,
+            defaults=func.__defaults__,
+            doc=func.__doc__,
+            module=func.__module__,
+            dict=func.__dict__,
+            globals=func.__globals__,
+            closure=func.__closure__)
 
     @staticmethod
     def _wrap_function(original_func, wrapper_infodict):
@@ -194,7 +201,7 @@ class NodeMetaclass(type):
         wrapped_func.__doc__ = wrapper_infodict['doc']
         wrapped_func.__module__ = wrapper_infodict['module']
         wrapped_func.__dict__.update(wrapper_infodict['dict'])
-        wrapped_func.func_defaults = wrapper_infodict['defaults']
+        wrapped_func.__defaults__ = wrapper_infodict['defaults']
         return wrapped_func
 
     @staticmethod
@@ -213,11 +220,11 @@ class NodeMetaclass(type):
         wrapped_func.__doc__ = wrapper_infodict['doc']
         wrapped_func.__module__ = wrapper_infodict['module']
         wrapped_func.__dict__.update(wrapper_infodict['dict'])
-        wrapped_func.func_defaults = wrapper_infodict['defaults']
+        wrapped_func.__defaults__ = wrapper_infodict['defaults']
         return wrapped_func
 
 
-class Node(object):
+class Node(object, metaclass=NodeMetaclass):
     """A `Node` is the basic building block of an MDP application.
 
     It represents a data processing element, like for example a learning
@@ -249,8 +256,6 @@ class Node(object):
     node's properties refer to the docstring of `get_input_dim`/`set_input_dim`,
     `get_output_dim`/`set_output_dim`, and `get_dtype`/`set_dtype`.
     """
-
-    __metaclass__ = NodeMetaclass
 
     def __init__(self, input_dim=None, output_dim=None, dtype=None):
         """If the input dimension and the output dimension are
@@ -312,9 +317,7 @@ class Node(object):
     def _set_input_dim(self, n):
         self._input_dim = n
 
-    input_dim = property(get_input_dim,
-                         set_input_dim,
-                         doc="Input dimensions")
+    input_dim = property(get_input_dim, set_input_dim, doc="Input dimensions")
 
     def get_output_dim(self):
         """Return output dimensions."""
@@ -340,9 +343,8 @@ class Node(object):
     def _set_output_dim(self, n):
         self._output_dim = n
 
-    output_dim = property(get_output_dim,
-                          set_output_dim,
-                          doc="Output dimensions")
+    output_dim = property(
+        get_output_dim, set_output_dim, doc="Output dimensions")
 
     def get_dtype(self):
         """Return dtype."""
@@ -364,10 +366,11 @@ class Node(object):
                       "('%s' given)!" % (t, self.dtype.name))
             raise NodeException(errstr)
         elif t not in self.get_supported_dtypes():
-            errstr = ("\ndtype '%s' is not supported.\n"
-                      "Supported dtypes: %s" % (t.name,
-                                                 [numx.dtype(t).name for t in
-                                                  self.get_supported_dtypes()]))
+            errstr = (
+                "\ndtype '%s' is not supported.\n"
+                "Supported dtypes: %s" %
+                (t.name,
+                 [numx.dtype(t).name for t in self.get_supported_dtypes()]))
             raise NodeException(errstr)
         else:
             self._set_dtype(t)
@@ -375,13 +378,11 @@ class Node(object):
     def _set_dtype(self, t):
         t = numx.dtype(t)
         if t not in self.get_supported_dtypes():
-            raise NodeException('dtype %s not among supported dtypes (%s)'
-                                % (str(t), self.get_supported_dtypes()))
+            raise NodeException('dtype %s not among supported dtypes (%s)' %
+                                (str(t), self.get_supported_dtypes()))
         self._dtype = t
 
-    dtype = property(get_dtype,
-                     set_dtype,
-                     doc="dtype")
+    dtype = property(get_dtype, set_dtype, doc="dtype")
 
     def _get_supported_dtypes(self):
         """Return the list of dtypes supported by this node.
@@ -399,11 +400,11 @@ class Node(object):
         when needed."""
         return [numx.dtype(t) for t in self._get_supported_dtypes()]
 
-    supported_dtypes = property(get_supported_dtypes,
-                                doc="Supported dtypes")
+    supported_dtypes = property(get_supported_dtypes, doc="Supported dtypes")
 
-    _train_seq = property(lambda self: self._get_train_seq(),
-                          doc="""\
+    _train_seq = property(
+        lambda self: self._get_train_seq(),
+        doc="""\
         List of tuples::
 
           [(training-phase1, stop-training-phase1),
@@ -506,8 +507,8 @@ class Node(object):
         It can be used when a subclass defines multiple execution methods.
         """
         # if training has not started yet, assume we want to train the node
-        if (self.get_current_train_phase() == 0 and
-            not self._train_phase_started):
+        if (self.get_current_train_phase() == 0
+                and not self._train_phase_started):
             while True:
                 self.train(x)
                 if self.get_remaining_train_phase() > 1:
@@ -604,7 +605,8 @@ class Node(object):
         self._check_train_args(x, *args, **kwargs)
 
         self._train_phase_started = True
-        self._train_seq[self._train_phase][0](self._refcast(x), *args, **kwargs)
+        self._train_seq[self._train_phase][0](self._refcast(x), *args,
+                                              **kwargs)
 
     def stop_training(self, *args, **kwargs):
         """Stop the training phase.
@@ -698,8 +700,10 @@ class Node(object):
 
         :param protocol: the pickle protocol (deprecated)."""
         if protocol is not None:
-            _warnings.warn("protocol parameter to copy() is ignored",
-                           mdp.MDPDeprecationWarning, stacklevel=2)
+            _warnings.warn(
+                "protocol parameter to copy() is ignored",
+                mdp.MDPDeprecationWarning,
+                stacklevel=2)
         return _copy.deepcopy(self)
 
     def save(self, filename, protocol=-1):
@@ -774,6 +778,7 @@ def VariadicCumulator(*fields):
                 setattr(self, field, numx.concatenate(data, 0))
 
     return Cumulator
+
 
 Cumulator = VariadicCumulator('data')
 Cumulator.__doc__ = """A specialized version of `VariadicCumulator` which only

@@ -1,8 +1,13 @@
 import os
-SCRIPT="run_tests.py"
+SCRIPT = "run_tests.py"
 from mdp.configuration import _version_too_old
 
-def test(filename=None, keyword=None, seed=None, options='', mod_loc=None,
+
+def test(filename=None,
+         keyword=None,
+         seed=None,
+         options='',
+         mod_loc=None,
          script_loc=None):
     """Run tests.
 
@@ -39,23 +44,25 @@ def test(filename=None, keyword=None, seed=None, options='', mod_loc=None,
     # add --assert=reiterp option to work around permissions problem
     # with __pycache__ directory when MDP is installed on a normal
     # user non-writable directory
-    options = "--assert=reinterp "+options
+    options = "--assert=reinterp " + options
     args.extend(options.split())
-        
+
     args.append(loc)
     _worker = get_worker(script_loc)
     return _worker(args)
+
 
 def subtest(script, args):
     # run the auto-generated script in a subprocess"
     import subprocess
     import sys
-    subtest = subprocess.Popen([sys.executable,script]+args, stdout = sys.stdout,
-                               stderr = sys.stderr)
+    subtest = subprocess.Popen(
+        [sys.executable, script] + args, stdout=sys.stdout, stderr=sys.stderr)
     # wait for the subprocess to finish before returning the prompt
     subtest.wait()
     # ??? do we want to catch KeyboardInterrupt and send it to the
     # ??? subprocess?
+
 
 def get_worker(loc):
     try:
@@ -66,7 +73,7 @@ def get_worker(loc):
             py.test.__version__
         except AttributeError:
             raise ImportError
-        if _version_too_old(py.test.__version__, (2,1,2)):
+        if _version_too_old(py.test.__version__, (2, 1, 2)):
             raise ImportError
         else:
             return py.test.cmdline.main
@@ -77,4 +84,4 @@ def get_worker(loc):
             return lambda args: subtest(script, args)
         else:
             raise Exception('Could not find self-contained py.test script in'
-                            '"%s"'%script)
+                            '"%s"' % script)

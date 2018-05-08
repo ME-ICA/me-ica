@@ -49,7 +49,7 @@ def io_orientation(affine, tol=None):
        happen when p > q, then this row should be considered dropped.
     '''
     affine = np.asarray(affine)
-    q, p = affine.shape[0]-1, affine.shape[1]-1
+    q, p = affine.shape[0] - 1, affine.shape[1] - 1
     # extract the underlying rotation, zoom, shear matrix
     RZS = affine[:q, :p]
     zooms = np.sqrt(np.sum(RZS * RZS, axis=0))
@@ -256,7 +256,7 @@ def ornt2axcodes(ornt, labels=None):
     ('F', 'L', 'U')
     """
     if labels is None:
-        labels = zip('LPI', 'RAS')
+        labels = list(zip('LPI', 'RAS'))
     axcodes = []
     for axno, direction in np.asarray(ornt):
         if np.isnan(axno):

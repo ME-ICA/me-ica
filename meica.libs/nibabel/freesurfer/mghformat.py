@@ -16,7 +16,7 @@ import numpy as np
 from nibabel.volumeutils import allopen, array_to_file, array_from_file,  \
      Recoder
 from nibabel.spatialimages import HeaderDataError, ImageFileError, SpatialImage
-from nibabel.fileholders import FileHolder,  copy_file_map
+from nibabel.fileholders import FileHolder, copy_file_map
 from nibabel.filename_parser import types_filenames, TypesFilenamesError
 from nibabel.arrayproxy import ArrayProxy
 
@@ -24,20 +24,11 @@ from nibabel.arrayproxy import ArrayProxy
 # See http://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/MghFormat
 DATA_OFFSET = 284
 # Note that mgh data is strictly big endian ( hence the > sign )
-header_dtd = [
-    ('version', '>i4'),
-    ('dims', '>i4', (4,)),
-    ('type', '>i4'),
-    ('dof', '>i4'),
-    ('goodRASFlag', '>i2'),
-    ('delta', '>f4', (3,)),
-    ('Mdc', '>f4', (3, 3)),
-    ('Pxyz_c', '>f4', (3,))
-    ]
+header_dtd = [('version', '>i4'), ('dims', '>i4', (4, )), ('type', '>i4'),
+              ('dof', '>i4'), ('goodRASFlag', '>i2'), ('delta', '>f4', (3, )),
+              ('Mdc', '>f4', (3, 3)), ('Pxyz_c', '>f4', (3, ))]
 # Optional footer. Also has more stuff after this, optionally
-footer_dtd = [
-    ('mrparms', '>f4', (4,))
-    ]
+footer_dtd = [('mrparms', '>f4', (4, ))]
 
 header_dtype = np.dtype(header_dtd)
 footer_dtype = np.dtype(footer_dtd)
@@ -47,19 +38,19 @@ hf_dtype = np.dtype(header_dtd + footer_dtd)
 # caveat 2: Note that the bytespervox you get is in str ( not an int)
 _dtdefs = (  # code, conversion function, dtype, bytes per voxel
     (0, 'uint8', '>u1', '1', 'MRI_UCHAR', np.uint8, np.dtype(np.uint8),
-                         np.dtype(np.uint8).newbyteorder('>')),
+     np.dtype(np.uint8).newbyteorder('>')),
     (4, 'int16', '>i2', '2', 'MRI_SHORT', np.int16, np.dtype(np.int16),
-                         np.dtype(np.int16).newbyteorder('>')),
+     np.dtype(np.int16).newbyteorder('>')),
     (1, 'int32', '>i4', '4', 'MRI_INT', np.int32, np.dtype(np.int32),
-                         np.dtype(np.int32).newbyteorder('>')),
+     np.dtype(np.int32).newbyteorder('>')),
     (3, 'float', '>f4', '4', 'MRI_FLOAT', np.float32, np.dtype(np.float32),
-                         np.dtype(np.float32).newbyteorder('>')))
+     np.dtype(np.float32).newbyteorder('>')))
 
 # make full code alias bank, including dtype column
-data_type_codes = Recoder(_dtdefs, fields=('code', 'label', 'dtype',
-                                           'bytespervox', 'mritype',
-                                           'np_dtype1', 'np_dtype2',
-                                           'numpy_dtype'))
+data_type_codes = Recoder(
+    _dtdefs,
+    fields=('code', 'label', 'dtype', 'bytespervox', 'mritype', 'np_dtype1',
+            'np_dtype2', 'numpy_dtype'))
 
 
 class MGHError(Exception):
@@ -82,9 +73,7 @@ class MGHHeader(object):
     _ftrdtype = footer_dtype
     _data_type_codes = data_type_codes
 
-    def __init__(self,
-                 binaryblock=None,
-                 check=True):
+    def __init__(self, binaryblock=None, check=True):
         ''' Initialize header from binary data block
 
         Parameters
@@ -102,9 +91,8 @@ class MGHHeader(object):
         # check size
         if len(binaryblock) != self.template_dtype.itemsize:
             raise HeaderDataError('Binary block is wrong size')
-        hdr = np.ndarray(shape=(),
-                         dtype=self.template_dtype,
-                         buffer=binaryblock)
+        hdr = np.ndarray(
+            shape=(), dtype=self.template_dtype, buffer=binaryblock)
         #if goodRASFlag, discard delta, Mdc and c_ras stuff
         if int(hdr['goodRASFlag']) < 0:
             hdr = self._set_affine_default(hdr)
@@ -140,7 +128,7 @@ class MGHHeader(object):
         self._header_data[item] = value
 
     def __iter__(self):
-        return iter(self.keys())
+        return iter(list(self.keys()))
 
     def keys(self):
         ''' Return keys from header data'''
@@ -153,7 +141,7 @@ class MGHHeader(object):
 
     def items(self):
         ''' Return items from header data'''
-        return zip(self.keys(), self.values())
+        return list(zip(list(self.keys()), list(self.values())))
 
     @classmethod
     def from_header(klass, header=None, check=True):
@@ -179,9 +167,8 @@ class MGHHeader(object):
         # dimensions from the header, skip over and then read the footer
         # information
         hdr_str = fileobj.read(klass._hdrdtype.itemsize)
-        hdr_str_to_np = np.ndarray(shape=(),
-                         dtype=klass._hdrdtype,
-                         buffer=hdr_str)
+        hdr_str_to_np = np.ndarray(
+            shape=(), dtype=klass._hdrdtype, buffer=hdr_str)
         if not np.all(hdr_str_to_np['dims']):
             raise MGHError('Dimensions of the data should be non-zero')
         tp = int(hdr_str_to_np['type'])
@@ -277,13 +264,12 @@ class MGHHeader(object):
         hdr = self._header_data
         zooms = np.asarray(zooms)
         if len(zooms) != len(hdr['delta']):
-            raise HeaderDataError('Expecting %d zoom values for ndim'
-                                  % hdr['delta'])
+            raise HeaderDataError(
+                'Expecting %d zoom values for ndim' % hdr['delta'])
         if np.any(zooms < 0):
             raise HeaderDataError('zooms must be positive')
         delta = hdr['delta']
         delta[:] = zooms[:]
-
 
     def get_data_shape(self):
         ''' Get shape of data
@@ -365,7 +351,7 @@ class MGHHeader(object):
         hdr_data['delta'][:] = np.array([1, 1, 1])
         hdr_data['Mdc'][0][:] = np.array([-1, 0, 0])  # x_ras
         hdr_data['Mdc'][1][:] = np.array([0, 0, -1])  # y_ras
-        hdr_data['Mdc'][2][:] = np.array([0, 1, 0])   # z_ras
+        hdr_data['Mdc'][2][:] = np.array([0, 1, 0])  # z_ras
         hdr_data['Pxyz_c'] = np.array([0, 0, 0])  # c_ras
         hdr_data['mrparms'] = np.array([0, 0, 0, 0])
         return hdr_data
@@ -380,8 +366,8 @@ class MGHHeader(object):
         hdr['delta'][:] = np.array([1, 1, 1])
         hdr['Mdc'][0][:] = np.array([-1, 0, 0])  # x_ras
         hdr['Mdc'][1][:] = np.array([0, 0, -1])  # y_ras
-        hdr['Mdc'][2][:] = np.array([0, 1, 0])   # z_ras
-        hdr['Pxyz_c'][:] = np.array([0, 0, 0])   # c_ras
+        hdr['Mdc'][2][:] = np.array([0, 1, 0])  # z_ras
+        hdr['Pxyz_c'][:] = np.array([0, 0, 0])  # c_ras
         return hdr
 
     def writehdr_to(self, fileobj):
@@ -398,8 +384,8 @@ class MGHHeader(object):
         -------
         None
         '''
-        hdr_nofooter = np.ndarray((), dtype=self._hdrdtype,
-                                  buffer=self.binaryblock)
+        hdr_nofooter = np.ndarray(
+            (), dtype=self._hdrdtype, buffer=self.binaryblock)
         # goto the very beginning of the file-like obj
         fileobj.seek(0)
         fileobj.write(hdr_nofooter.tostring())
@@ -419,16 +405,19 @@ class MGHHeader(object):
         None
         '''
         ftr_loc_in_hdr = len(self.binaryblock) - self._ftrdtype.itemsize
-        ftr_nd = np.ndarray((), dtype=self._ftrdtype,
-                            buffer=self.binaryblock, offset=ftr_loc_in_hdr)
+        ftr_nd = np.ndarray(
+            (),
+            dtype=self._ftrdtype,
+            buffer=self.binaryblock,
+            offset=ftr_loc_in_hdr)
         fileobj.seek(self.get_footer_offset())
         fileobj.write(ftr_nd.tostring())
 
 
 class MGHImage(SpatialImage):
     header_class = MGHHeader
-    files_types = (('image', '.mgh'),)
-    _compressed_exts = (('.gz',))
+    files_types = (('image', '.mgh'), )
+    _compressed_exts = (('.gz', ))
 
     ImageArrayProxy = ArrayProxy
 
@@ -459,9 +448,11 @@ class MGHImage(SpatialImage):
         hdr_copy = header.copy()
         data = klass.ImageArrayProxy(mghf, hdr_copy)
         img = klass(data, affine, header, file_map=file_map)
-        img._load_cache = {'header': hdr_copy,
-                           'affine': affine.copy(),
-                           'file_map': copy_file_map(file_map)}
+        img._load_cache = {
+            'header': hdr_copy,
+            'affine': affine.copy(),
+            'file_map': copy_file_map(file_map)
+        }
         return img
 
     def to_file_map(self, file_map=None):
@@ -514,8 +505,8 @@ class MGHImage(SpatialImage):
         '''
         shape = header.get_data_shape()
         if data.shape != shape:
-            raise HeaderDataError('Data should be shape (%s)' %
-                                  ', '.join(str(s) for s in shape))
+            raise HeaderDataError('Data should be shape (%s)' % ', '.join(
+                str(s) for s in shape))
         offset = header.get_data_offset()
         out_dtype = header.get_data_dtype()
         array_to_file(data, mghfile, out_dtype, offset)
@@ -549,13 +540,18 @@ class MGHImage(SpatialImage):
             delta = np.sqrt(np.sum(MdcD * MdcD, axis=0))
             Mdc = MdcD / np.tile(delta, (3, 1))
             Pcrs_c = np.array([0, 0, 0, 1], dtype=np.float)
-            Pcrs_c[:3] = np.array([self._data.shape[0], self._data.shape[1],
-                                   self._data.shape[2]], dtype=np.float) / 2.0
+            Pcrs_c[:3] = np.array(
+                [
+                    self._data.shape[0], self._data.shape[1],
+                    self._data.shape[2]
+                ],
+                dtype=np.float) / 2.0
             Pxyz_c = np.dot(self._affine, Pcrs_c)
 
             hdr['delta'][:] = delta
             hdr['Mdc'][:, :] = Mdc.T
             hdr['Pxyz_c'][:] = Pxyz_c[:3]
+
 
 load = MGHImage.load
 save = MGHImage.instance_to_filename

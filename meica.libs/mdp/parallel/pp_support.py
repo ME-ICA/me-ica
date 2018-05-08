@@ -7,8 +7,6 @@ LocalPPScheduler includes the creation of a local pp scheduler.
 NetworkPPScheduler includes the management of the remote slaves via SSH.
 """
 
-from __future__ import with_statement
-
 import sys
 import os
 
@@ -18,11 +16,12 @@ import signal
 import traceback
 import tempfile
 
-import scheduling
+from . import scheduling
 import pp
 import mdp
 
-TEMPDIR_PREFIX='pp4mdp-monkeypatch.'
+TEMPDIR_PREFIX = 'pp4mdp-monkeypatch.'
+
 
 def _monkeypatch_pp(container_dir):
     """Apply a hack for http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=620551.
@@ -44,11 +43,12 @@ def _monkeypatch_pp(container_dir):
     import os.path, shutil
 
     # this part copied from pp.py, should give the same result hopefully
-    ppworker = os.path.join(os.path.dirname(os.path.abspath(pp.__file__)),
-                            'ppworker.py')
+    ppworker = os.path.join(
+        os.path.dirname(os.path.abspath(pp.__file__)), 'ppworker.py')
 
     global _ppworker_dir
-    _ppworker_dir = mdp.utils.TemporaryDirectory(prefix=TEMPDIR_PREFIX, dir=container_dir)
+    _ppworker_dir = mdp.utils.TemporaryDirectory(
+        prefix=TEMPDIR_PREFIX, dir=container_dir)
     ppworker3 = os.path.join(_ppworker_dir.name, 'ppworker.py')
     shutil.copy(ppworker, ppworker3)
 
@@ -59,8 +59,10 @@ def _monkeypatch_pp(container_dir):
         # pp 1.6.0 compatibility
         pp._Worker.command = pp._Worker.command.replace(ppworker, ppworker3)
 
+
 if hasattr(mdp.config, 'pp_monkeypatch_dirname'):
     _monkeypatch_pp(mdp.config.pp_monkeypatch_dirname)
+
 
 class PPScheduler(scheduling.Scheduler):
     """Adaptor scheduler for the parallel python scheduler.
@@ -69,8 +71,11 @@ class PPScheduler(scheduling.Scheduler):
     has to be provided.
     """
 
-    def __init__(self, ppserver, max_queue_length=1,
-                 result_container=None, verbose=False):
+    def __init__(self,
+                 ppserver,
+                 max_queue_length=1,
+                 result_container=None,
+                 verbose=False):
         """Initialize the scheduler.
 
         ppserver -- Parallel Python Server instance.
@@ -81,8 +86,8 @@ class PPScheduler(scheduling.Scheduler):
         """
         if result_container is None:
             result_container = scheduling.ListResultContainer()
-        super(PPScheduler, self).__init__(result_container=result_container,
-                                          verbose=verbose)
+        super(PPScheduler, self).__init__(
+            result_container=result_container, verbose=verbose)
         self.ppserver = ppserver
         self.max_queue_length = max_queue_length
 
@@ -93,11 +98,13 @@ class PPScheduler(scheduling.Scheduler):
         blocking. One reason for blocking can be a full task-queue.
         """
         task = (data, task_callable.fork(), task_index)
+
         def execute_task(task):
             """Call the first args entry and return the return value."""
             data, task_callable, task_index = task
             task_callable.setup_environment()
             return task_callable(data), task_index
+
         while True:
             if len(self.ppserver._Server__queue) > self.max_queue_length:
                 # release lock for other threads and wait
@@ -109,8 +116,10 @@ class PPScheduler(scheduling.Scheduler):
                 self._lock.release()
                 # the inner tuple is a trick to prevent introspection by pp
                 # this forces pp to simply pickle the object
-                self.ppserver.submit(execute_task, args=(task,),
-                                     callback=self._pp_result_callback)
+                self.ppserver.submit(
+                    execute_task,
+                    args=(task, ),
+                    callback=self._pp_result_callback)
                 break
 
     def _pp_result_callback(self, result):
@@ -134,8 +143,11 @@ class LocalPPScheduler(PPScheduler):
     user (in contrast to PPScheduler).
     """
 
-    def __init__(self, ncpus="autodetect", max_queue_length=1,
-                 result_container=None, verbose=False):
+    def __init__(self,
+                 ncpus="autodetect",
+                 max_queue_length=1,
+                 result_container=None,
+                 verbose=False):
         """Create an internal pp server and initialize the scheduler.
 
         ncpus -- Integer or 'autodetect', specifies the number of processes
@@ -146,14 +158,16 @@ class LocalPPScheduler(PPScheduler):
         verbose -- If True to get progress reports from the scheduler.
         """
         ppserver = pp.Server(ncpus=ncpus)
-        super(LocalPPScheduler, self).__init__(ppserver=ppserver,
-                                          max_queue_length=max_queue_length,
-                                          result_container=result_container,
-                                          verbose=verbose)
+        super(LocalPPScheduler, self).__init__(
+            ppserver=ppserver,
+            max_queue_length=max_queue_length,
+            result_container=result_container,
+            verbose=verbose)
 
 
 # default secret
 SECRET = "rosebud"
+
 
 class NetworkPPScheduler(PPScheduler):
     """Scheduler which can manage pp remote servers (requires SSH).
@@ -165,7 +179,8 @@ class NetworkPPScheduler(PPScheduler):
     manually and then use the standard PPScheduler.
     """
 
-    def __init__(self, max_queue_length=1,
+    def __init__(self,
+                 max_queue_length=1,
                  result_container=None,
                  verbose=False,
                  remote_slaves=None,
@@ -220,15 +235,17 @@ class NetworkPPScheduler(PPScheduler):
         self.verbose = verbose
         # start ppserver
         self._start_slaves()
-        ppslaves = tuple(["%s:%d" % (address, self._port)
-                          for address in self._running_remote_slaves])
-        ppserver = pp.Server(ppservers=ppslaves,
-                             ncpus=n_local_workers,
-                             secret=self._secret)
-        super(NetworkPPScheduler, self).__init__(ppserver=ppserver,
-                                          max_queue_length=max_queue_length,
-                                          result_container=result_container,
-                                          verbose=verbose)
+        ppslaves = tuple([
+            "%s:%d" % (address, self._port)
+            for address in self._running_remote_slaves
+        ])
+        ppserver = pp.Server(
+            ppservers=ppslaves, ncpus=n_local_workers, secret=self._secret)
+        super(NetworkPPScheduler, self).__init__(
+            ppserver=ppserver,
+            max_queue_length=max_queue_length,
+            result_container=result_container,
+            verbose=verbose)
 
     def _shutdown(self):
         """Shutdown all slaves."""
@@ -236,7 +253,7 @@ class NetworkPPScheduler(PPScheduler):
             os.kill(ssh_proc.pid, signal.SIGQUIT)
         super(NetworkPPScheduler, self)._shutdown()
         if self.verbose:
-            print "All slaves shut down."
+            print("All slaves shut down.")
 
     def start_slave(self, address, ncpus="autodetect"):
         """Start a single remote slave.
@@ -245,11 +262,12 @@ class NetworkPPScheduler(PPScheduler):
         the remote pid.
         """
         try:
-            print "starting slave " + address + " ..."
-            proc = subprocess.Popen(["ssh","-T", "%s" % address],
-                                    stdin=subprocess.PIPE,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT)
+            print("starting slave " + address + " ...")
+            proc = subprocess.Popen(
+                ["ssh", "-T", "%s" % address],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT)
             proc.stdin.write("cd %s\n" % self._script_path)
             cmd = (self._python_executable +
                    " pp_slave_script.py  %d %d %d %s %d" %
@@ -266,21 +284,21 @@ class NetworkPPScheduler(PPScheduler):
             # get PID for remote slave process
             pid = None
             if self.verbose:
-                print "*** output from slave %s ***" % address
+                print("*** output from slave %s ***" % address)
             while pid is None:
                 # the slave process might first output some hello message
                 try:
                     value = proc.stdout.readline()
                     if self.verbose:
-                        print value
+                        print(value)
                     pid = int(value)
                 except ValueError:
                     pass
             if self.verbose:
-                print "*** output end ***"
+                print("*** output end ***")
             return (proc, pid)
         except:
-            print "Initialization of slave %s has failed." % address
+            print("Initialization of slave %s has failed." % address)
             traceback.print_exc()
             return None
 
@@ -297,11 +315,12 @@ class NetworkPPScheduler(PPScheduler):
             for (address, ncpus) in self._remote_slaves:
                 ssh_proc, pid = self.start_slave(address, ncpus=ncpus)
                 if pid is not None:
-                    slave_kill_file.write("%s:%d:%d\n" %
-                                          (address, pid, ssh_proc.pid))
+                    slave_kill_file.write("%s:%d:%d\n" % (address, pid,
+                                                          ssh_proc.pid))
                 self._running_remote_slaves.append(address)
                 self._remote_pids.append(pid)
                 self._ssh_procs.append(ssh_proc)
+
 
 def kill_slaves(slave_kill_filename):
     """Kill all remote slaves which are stored in the given file.
@@ -315,10 +334,11 @@ def kill_slaves(slave_kill_filename):
             pid = int(pid)
             ssh_pid = int(ssh_pid)
             # open ssh connection to to kill remote slave
-            proc = subprocess.Popen(["ssh","-T", address],
-                                    stdin=subprocess.PIPE,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT)
+            proc = subprocess.Popen(
+                ["ssh", "-T", address],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT)
             proc.stdin.write("kill %d\n" % pid)
             proc.stdin.flush()
             # kill old ssh connection
@@ -328,8 +348,8 @@ def kill_slaves(slave_kill_filename):
                 pass
             # a kill might prevent the kill command transmission
             # os.kill(proc.pid, signal.SIGQUIT)
-            print "killed slave " + address + " (pid %d)" % pid
-        print "all slaves killed."
+            print("killed slave " + address + " (pid %d)" % pid)
+        print("all slaves killed.")
 
 
 if __name__ == "__main__":

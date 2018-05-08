@@ -7,38 +7,44 @@ try:
 except ImportError:
     pass
 
+
 class GraphException(Exception):
     """Base class for exception in the graph package."""
     pass
+
 
 class GraphTopologicalException(GraphException):
     """Exception thrown during a topological sort if the graph is cyclical."""
     pass
 
 
-
 def is_sequence(x):
     return isinstance(x, (list, tuple))
 
+
 def recursive_map(func, seq):
     """Apply a function recursively on a sequence and all subsequences."""
+
     def _func(x):
         if is_sequence(x):
             return recursive_map(func, x)
         else:
             return func(x)
-    return map(_func, seq)
+
+    return list(map(_func, seq))
+
 
 def recursive_reduce(func, seq, *argv):
     """Apply reduce(func, seq) recursively to a sequence and all its
     subsequences."""
+
     def _func(x, y):
         if is_sequence(y):
             return func(x, recursive_reduce(func, y))
         else:
             return func(x, y)
-    return reduce(_func, seq, *argv)
 
+    return reduce(_func, seq, *argv)
 
 
 class GraphNode(object):
@@ -63,7 +69,7 @@ class GraphNode(object):
     def remove_edge_out(self, edge):
         self.eout.remove(edge)
 
-    def get_edges_in(self, from_ = None):
+    def get_edges_in(self, from_=None):
         """Return a copy of the list of the entering edges. If from_
         is specified, return only the nodes coming from that node."""
         inedges = self.ein[:]
@@ -71,7 +77,7 @@ class GraphNode(object):
             inedges = [edge for edge in inedges if edge.head == from_]
         return inedges
 
-    def get_edges_out(self, to_ = None):
+    def get_edges_out(self, to_=None):
         """Return a copy of the list of the outgoing edges. If to_
         is specified, return only the nodes going to that node."""
         outedges = self.eout[:]
@@ -79,11 +85,11 @@ class GraphNode(object):
             outedges = [edge for edge in outedges if edge.tail == to_]
         return outedges
 
-    def get_edges(self, neighbor = None):
+    def get_edges(self, neighbor=None):
         """Return a copy of all edges. If neighbor is specified, return
         only the edges connected to that node."""
-        return ( self.get_edges_in(from_=neighbor) +
-                 self.get_edges_out(to_=neighbor) )
+        return (self.get_edges_in(from_=neighbor) +
+                self.get_edges_out(to_=neighbor))
 
     def in_degree(self):
         """Return the number of entering edges."""
@@ -95,18 +101,19 @@ class GraphNode(object):
 
     def degree(self):
         """Return the number of edges."""
-        return self.in_degree()+self.out_degree()
+        return self.in_degree() + self.out_degree()
 
     def in_neighbors(self):
         """Return the neighbors down in-edges (i.e. the parents nodes)."""
-        return map(lambda x: x.get_head(), self.ein)
+        return [x.get_head() for x in self.ein]
 
     def out_neighbors(self):
         """Return the neighbors down in-edges (i.e. the parents nodes)."""
-        return map(lambda x: x.get_tail(), self.eout)
+        return [x.get_tail() for x in self.eout]
 
     def neighbors(self):
         return self.in_neighbors() + self.out_neighbors()
+
 
 class GraphEdge(object):
     """Represent a graph edge and all information attached to it."""
@@ -128,6 +135,7 @@ class GraphEdge(object):
 
     def get_head(self):
         return self.head
+
 
 class Graph(object):
     """Represent a directed graph."""
@@ -188,8 +196,8 @@ class Graph(object):
         data -- number of nodes to add or sequence of data values, one for
                 each new node"""
         if not is_sequence(data):
-            data = [None]*data
-        return map(self.add_node, data)
+            data = [None] * data
+        return list(map(self.add_node, data))
 
     def add_tree(self, tree):
         """Add a tree to the graph.
@@ -232,7 +240,7 @@ class Graph(object):
         """
         edges = []
         for from_ in from_nodes:
-            edges.append(map(lambda x: self.add_edge(from_, x), to_nodes))
+            edges.append([self.add_edge(from_, x) for x in to_nodes])
         return edges
 
     ###### graph algorithms
@@ -269,7 +277,7 @@ class Graph(object):
 
         # if not all nodes were covered, the graph must have a cycle
         # raise a GraphTopographicalException
-        if len(topological_list)!=len(self.nodes):
+        if len(topological_list) != len(self.nodes):
             raise GraphTopologicalException(topological_list)
 
         return topological_list
@@ -285,7 +293,7 @@ class Graph(object):
         # result list containing the nodes in Depth-First order
         dfs_list = []
         # keep track of all already visited nodes
-        visited_nodes = { root: None }
+        visited_nodes = {root: None}
 
         # stack (lifo) list
         dfs_stack = []
@@ -332,6 +340,7 @@ class Graph(object):
         components of the graph."""
 
         visited = {}
+
         def visit_fct(node, visited=visited):
             visited[node] = None
 
@@ -345,7 +354,7 @@ class Graph(object):
 
     def is_weakly_connected(self):
         """Return True if the graph is weakly connected."""
-        return len(self.undirected_dfs(self.nodes[0]))==len(self.nodes)
+        return len(self.undirected_dfs(self.nodes[0])) == len(self.nodes)
 
     ### Breadth-First Sort
     # BFS and DFS could be generalized to one function. I leave them
@@ -360,7 +369,7 @@ class Graph(object):
         # result list containing the nodes in Breadth-First order
         bfs_list = []
         # keep track of all already visited nodes
-        visited_nodes = { root: None }
+        visited_nodes = {root: None}
 
         # queue (fifo) list
         bfs_queue = []

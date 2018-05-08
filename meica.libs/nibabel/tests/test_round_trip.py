@@ -17,6 +17,7 @@ from numpy.testing import assert_array_equal, assert_almost_equal
 
 DEBUG = True
 
+
 def round_trip(arr, out_dtype):
     img = Nifti1Image(arr, np.eye(4))
     img.file_map['image'].fileobj = BytesIO()
@@ -24,7 +25,7 @@ def round_trip(arr, out_dtype):
     img.to_file_map()
     back = Nifti1Image.from_file_map(img.file_map)
     hdr = back.get_header()
-    return (back.get_data(),) + hdr.get_slope_inter()
+    return (back.get_data(), ) + hdr.get_slope_inter()
 
 
 def check_params(in_arr, in_type, out_type):
@@ -79,21 +80,24 @@ def test_big_bad_ulp():
     for ftype in (np.float32, np.float64):
         ti = type_info(ftype)
         fi = np.finfo(ftype)
-        min_ulp = 2 ** (ti['minexp'] - ti['nmant'])
-        in_arr = np.zeros((10,), dtype=ftype)
+        min_ulp = 2**(ti['minexp'] - ti['nmant'])
+        in_arr = np.zeros((10, ), dtype=ftype)
         in_arr = np.array([0, 0, 1, 2, 4, 5, -5, -np.inf, np.inf], dtype=ftype)
-        out_arr = [min_ulp, min_ulp, fi.eps, fi.eps * 2, fi.eps * 4,
-                   fi.eps * 4, fi.eps * 4, np.inf, np.inf]
+        out_arr = [
+            min_ulp, min_ulp, fi.eps, fi.eps * 2, fi.eps * 4, fi.eps * 4,
+            fi.eps * 4, np.inf, np.inf
+        ]
         assert_array_equal(big_bad_ulp(in_arr).astype(ftype), out_arr)
 
 
 BIG_FLOAT = np.float64
 
+
 def test_round_trip():
     scaling_type = np.float32
     rng = np.random.RandomState(20111121)
     N = 10000
-    sd_10s = range(-20, 51, 5)
+    sd_10s = list(range(-20, 51, 5))
     iuint_types = np.sctypes['int'] + np.sctypes['uint']
     # Remove intp types, which cannot be set into nifti header datatype
     iuint_types.remove(np.intp)
@@ -102,7 +106,7 @@ def test_round_trip():
     # Expanding standard deviations
     for i, sd_10 in enumerate(sd_10s):
         sd = 10.0**sd_10
-        V_in = rng.normal(0, sd, size=(N,1))
+        V_in = rng.normal(0, sd, size=(N, 1))
         for j, in_type in enumerate(f_types):
             for k, out_type in enumerate(iuint_types):
                 check_arr(sd_10, V_in, in_type, out_type, scaling_type)
@@ -115,7 +119,7 @@ def test_round_trip():
             center = type_range / 2.0 + mn
             # float(sd) because type_range can be type 'long'
             width = type_range * float(sd)
-            V_in = rng.normal(center, width, size=(N,1))
+            V_in = rng.normal(center, width, size=(N, 1))
             for k, out_type in enumerate(iuint_types):
                 check_arr(sd, V_in, in_type, out_type, scaling_type)
 
@@ -124,7 +128,7 @@ def check_arr(test_id, V_in, in_type, out_type, scaling_type):
     arr, arr_dash, slope, inter = check_params(V_in, in_type, out_type)
     if arr_dash is None:
         return
-    nzs = arr != 0 # avoid divide by zero error
+    nzs = arr != 0  # avoid divide by zero error
     if not np.any(nzs):
         if DEBUG:
             raise ValueError('Array all zero')
@@ -136,15 +140,15 @@ def check_arr(test_id, V_in, in_type, out_type, scaling_type):
         return
     rel_err = np.abs(top / arr)
     abs_err = np.abs(top)
-    if slope == 1: # integers output, offset only scaling
-        if (set((in_type, out_type)) == set((np.int64, np.uint64)) and
-            type_info(BFT)['nmant'] < 63):
+    if slope == 1:  # integers output, offset only scaling
+        if (set((in_type, out_type)) == set((np.int64, np.uint64))
+                and type_info(BFT)['nmant'] < 63):
             # We'll need to go through lower precision floats
             A = arr.astype(BFT)
             Ai = A - inter
             ulps = [big_bad_ulp(A), big_bad_ulp(Ai)]
             exp_abs_err = np.max(ulps, axis=0)
-        else: # we don't have to go through floats - no error !
+        else:  # we don't have to go through floats - no error !
             exp_abs_err = np.zeros_like(abs_err)
         rel_thresh = 0
     else:
@@ -178,14 +182,8 @@ def check_arr(test_id, V_in, in_type, out_type, scaling_type):
             rel_mx_e = rel_err[abs_fails].max()
         else:
             rel_mx_e = None
-        print (test_id,
-               np.dtype(in_type).str,
-               np.dtype(out_type).str,
-               exp_abs_mx_e,
-               abs_mx_e,
-               rel_thresh,
-               rel_mx_e,
-               slope, inter)
+        print((test_id, np.dtype(in_type).str, np.dtype(out_type).str,
+               exp_abs_mx_e, abs_mx_e, rel_thresh, rel_mx_e, slope, inter))
         # To help debugging failures with --pdb-failure
         fail_i = np.nonzero(all_fails)
     assert_true(this_test)

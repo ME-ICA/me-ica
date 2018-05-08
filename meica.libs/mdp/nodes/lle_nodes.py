@@ -13,6 +13,7 @@ sqrt = numx.sqrt
 #  Locally Linear Embedding
 #########################################################
 
+
 class LLENode(Cumulator):
     """Perform a Locally Linear Embedding analysis on the data.
 
@@ -37,8 +38,14 @@ class LLENode(Cumulator):
     Original code contributed by: Jake VanderPlas, University of Washington,
     """
 
-    def __init__(self, k, r=0.001, svd=False, verbose=False,
-                 input_dim=None, output_dim=None, dtype=None):
+    def __init__(self,
+                 k,
+                 r=0.001,
+                 svd=False,
+                 verbose=False,
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None):
         """
         :Arguments:
            k
@@ -86,7 +93,7 @@ class LLENode(Cumulator):
             msg = ('training LLE on %i points'
                    ' in %i dimensions...' % (self.data.shape[0],
                                              self.data.shape[1]))
-            print msg
+            print(msg)
 
         # some useful quantities
         M = self.data
@@ -126,7 +133,7 @@ class LLENode(Cumulator):
         W = numx.zeros((N, N), dtype=self.dtype)
 
         if self.verbose:
-            print ' - constructing [%i x %i] weight matrix...' % W.shape
+            print(' - constructing [%i x %i] weight matrix...' % W.shape)
 
         for row in range(N):
             if learn_outdim:
@@ -136,8 +143,8 @@ class LLENode(Cumulator):
                 # -----------------------------------------------
                 #  find k nearest neighbors
                 # -----------------------------------------------
-                M_Mi = M-M[row]
-                nbrs = numx.argsort((M_Mi**2).sum(1))[1:k+1]
+                M_Mi = M - M[row]
+                nbrs = numx.argsort((M_Mi**2).sum(1))[1:k + 1]
                 M_Mi = M_Mi[nbrs]
                 # compute covariance matrix of distances
                 Q = mult(M_Mi, M_Mi.T)
@@ -163,7 +170,7 @@ class LLENode(Cumulator):
                 #   is small compared to the trace" e.g.:
                 # r = 0.001 * float(Q.trace())
                 # this is equivalent to assuming 0.1% of the variance is unused
-                Q[Q_diag_idx, Q_diag_idx] += r*Q.trace()
+                Q[Q_diag_idx, Q_diag_idx] += r * Q.trace()
 
             #solve for weight
             # weight is w such that sum(Q_ij * w_j) = 1 for all i
@@ -177,7 +184,7 @@ class LLENode(Cumulator):
         if self.verbose:
             msg = (' - finding [%i x %i] null space of weight matrix\n'
                    '     (may take a while)...' % (self.output_dim, N))
-            print msg
+            print(msg)
 
         self.W = W.copy()
         #to find the null space, we need the bottom d+1
@@ -190,7 +197,7 @@ class LLENode(Cumulator):
         #XXX   of a sparse matrix will significantly increase the speed
         #XXX   of the next step
         if self.svd:
-            sig, U = nongeneral_svd(W.T, range=(2, self.output_dim+1))
+            sig, U = nongeneral_svd(W.T, range=(2, self.output_dim + 1))
         else:
             # the following code does the same computation, but uses
             # symeig, which computes only the required eigenvectors, and
@@ -198,7 +205,7 @@ class LLENode(Cumulator):
             WW = mult(W, W.T)
             # regularizes the eigenvalues, does not change the eigenvectors:
             WW[W_diag_idx, W_diag_idx] += 0.1
-            sig, U = symeig(WW, range=(2, self.output_dim+1), overwrite=True)
+            sig, U = symeig(WW, range=(2, self.output_dim + 1), overwrite=True)
 
         self.training_projection = U
 
@@ -208,7 +215,7 @@ class LLENode(Cumulator):
         # useful later are pre-calculated to spare precious time
 
         if self.verbose:
-            print ' - adjusting output dim:'
+            print(' - adjusting output dim:')
 
         #otherwise, we need to compute output_dim
         #                  from desired_variance
@@ -225,8 +232,8 @@ class LLENode(Cumulator):
             #-----------------------------------------------
             #  find k nearest neighbors
             #-----------------------------------------------
-            M_Mi = M-M[row]
-            nbrs = numx.argsort((M_Mi**2).sum(1))[1:k+1]
+            M_Mi = M - M[row]
+            nbrs = numx.argsort((M_Mi**2).sum(1))[1:k + 1]
             M_Mi = M_Mi[nbrs]
             # compute covariance matrix of distances
             Qs[row, :, :] = mult(M_Mi, M_Mi.T)
@@ -250,18 +257,18 @@ class LLENode(Cumulator):
             S = sig2.cumsum()
             m_est = S.searchsorted(self.desired_variance)
             if m_est > 0:
-                m_est += (self.desired_variance-S[m_est-1])/sig2[m_est]
+                m_est += (self.desired_variance - S[m_est - 1]) / sig2[m_est]
             else:
-                m_est = self.desired_variance/sig2[m_est]
+                m_est = self.desired_variance / sig2[m_est]
             m_est_array.append(m_est)
 
         m_est_array = numx.asarray(m_est_array)
-        self.output_dim = int( numx.ceil( numx.median(m_est_array) ) )
+        self.output_dim = int(numx.ceil(numx.median(m_est_array)))
         if self.verbose:
             msg = ('      output_dim = %i'
                    ' for variance of %.2f' % (self.output_dim,
                                               self.desired_variance))
-            print msg
+            print(msg)
 
         return Qs, sig2s, nbrss
 
@@ -280,8 +287,8 @@ class LLENode(Cumulator):
 
         for row in range(Nx):
             #find nearest neighbors of x in M
-            M_xi = self.data-x[row]
-            nbrs = numx.argsort( (M_xi**2).sum(1) )[:k]
+            M_xi = self.data - x[row]
+            nbrs = numx.argsort((M_xi**2).sum(1))[:k]
             M_xi = M_xi[nbrs]
 
             #find corrected covariance matrix Q
@@ -294,7 +301,7 @@ class LLENode(Cumulator):
                 Q[Q_diag_idx, Q_diag_idx] += r
 
             #solve for weights
-            w = self._refcast(numx_linalg.solve(Q , numx.ones(k)))
+            w = self._refcast(numx_linalg.solve(Q, numx.ones(k)))
             w /= w.sum()
             W[row, nbrs] = w
 
@@ -322,12 +329,13 @@ def _mgs(a):
     r = numx.zeros((n, n))
     for i in range(n):
         r[i, i] = numx_linalg.norm(v[:, i])
-        v[:, i] = v[:, i]/r[i, i]
-        for j in range(i+1, n):
+        v[:, i] = v[:, i] / r[i, i]
+        for j in range(i + 1, n):
             r[i, j] = mult(v[:, i], v[:, j])
-            v[:, j] = v[:, j] - r[i, j]*v[:, i]
+            v[:, j] = v[:, j] - r[i, j] * v[:, i]
     # q is v
     return v, r
+
 
 class HLLENode(LLENode):
     """Perform a Hessian Locally Linear Embedding analysis on the data.
@@ -359,8 +367,14 @@ class HLLENode(LLENode):
     #  projections for new points using the LLE framework.
     #----------------------------------------------------
 
-    def __init__(self, k, r=0.001, svd=False, verbose=False,
-                 input_dim=None, output_dim=None, dtype=None):
+    def __init__(self,
+                 k,
+                 r=0.001,
+                 svd=False,
+                 verbose=False,
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None):
         """
         :Keyword arguments:
            k
@@ -388,8 +402,8 @@ class HLLENode(LLENode):
               keep as many dimensions as necessary in order to explain
               95% of the input variance)
         """
-        LLENode.__init__(self, k, r, svd, verbose,
-                         input_dim, output_dim, dtype)
+        LLENode.__init__(self, k, r, svd, verbose, input_dim, output_dim,
+                         dtype)
 
     def _stop_training(self):
         Cumulator._stop_training(self)
@@ -404,7 +418,7 @@ class HLLENode(LLENode):
             raise TrainingException(err)
 
         if self.verbose:
-            print 'performing HLLE on %i points in %i dimensions...' % M.shape
+            print('performing HLLE on %i points in %i dimensions...' % M.shape)
 
         # determines number of output dimensions: if desired_variance
         # is specified, we need to learn it from the data. Otherwise,
@@ -423,26 +437,26 @@ class HLLENode(LLENode):
         d_out = self.output_dim
 
         #dp = d_out + (d_out-1) + (d_out-2) + ...
-        dp = d_out*(d_out+1)/2
+        dp = d_out * (d_out + 1) / 2
 
         if min(k, N) <= d_out:
             err = ('k=%i and n=%i (number of input data points) must be'
                    ' larger than output_dim=%i' % (k, N, d_out))
             raise TrainingException(err)
 
-        if k < 1+d_out+dp:
+        if k < 1 + d_out + dp:
             wrn = ('The number of neighbours, k=%i, is smaller than'
                    ' 1 + output_dim + output_dim*(output_dim+1)/2 = %i,'
-                   ' which might result in unstable results.'
-                   % (k, 1+d_out+dp))
+                   ' which might result in unstable results.' %
+                   (k, 1 + d_out + dp))
             _warnings.warn(wrn, MDPWarning)
 
         #build the weight matrix
         #XXX   for faster implementation, W should be a sparse matrix
-        W = numx.zeros((N, dp*N), dtype=self.dtype)
+        W = numx.zeros((N, dp * N), dtype=self.dtype)
 
         if self.verbose:
-            print ' - constructing [%i x %i] weight matrix...' % W.shape
+            print(' - constructing [%i x %i] weight matrix...' % W.shape)
 
         for row in range(N):
             if learn_outdim:
@@ -451,13 +465,13 @@ class HLLENode(LLENode):
                 # -----------------------------------------------
                 #  find k nearest neighbors
                 # -----------------------------------------------
-                M_Mi = M-M[row]
-                nbrs = numx.argsort((M_Mi**2).sum(1))[1:k+1]
+                M_Mi = M - M[row]
+                nbrs = numx.argsort((M_Mi**2).sum(1))[1:k + 1]
 
             #-----------------------------------------------
             #  center the neighborhood using the mean
             #-----------------------------------------------
-            nbrhd = M[nbrs] # this makes a copy
+            nbrhd = M[nbrs]  # this makes a copy
             nbrhd -= nbrhd.mean(0)
 
             #-----------------------------------------------
@@ -474,30 +488,30 @@ class HLLENode(LLENode):
             Yi = numx.zeros((dp, k), dtype=self.dtype)
             ct = 0
             for i in range(d_out):
-                Yi[ct:ct+d_out-i, :] = nbrhd[i] * nbrhd[i:, :]
-                ct += d_out-i
-            Yi = numx.concatenate([numx.ones((1, k), dtype=self.dtype),
-                                   nbrhd, Yi], 0)
+                Yi[ct:ct + d_out - i, :] = nbrhd[i] * nbrhd[i:, :]
+                ct += d_out - i
+            Yi = numx.concatenate(
+                [numx.ones((1, k), dtype=self.dtype), nbrhd, Yi], 0)
 
             #-----------------------------------------------
             #  orthogonalize linear and quadratic forms
             #   with QR factorization
             #  and make the weights sum to 1
             #-----------------------------------------------
-            if k >= 1+d_out+dp:
+            if k >= 1 + d_out + dp:
                 Q, R = numx_linalg.qr(Yi.T)
-                w = Q[:, d_out+1:d_out+1+dp]
+                w = Q[:, d_out + 1:d_out + 1 + dp]
             else:
                 q, r = _mgs(Yi.T)
                 w = q[:, -dp:]
 
-            S = w.sum(0) #sum along columns
+            S = w.sum(0)  #sum along columns
             #if S[i] is too small, set it equal to 1.0
             # this prevents weights from blowing up
-            S[numx.where(numx.absolute(S)<1E-4)] = 1.0
+            S[numx.where(numx.absolute(S) < 1E-4)] = 1.0
             #print w.shape, S.shape, (w/S).shape
             #print W[nbrs, row*dp:(row+1)*dp].shape
-            W[nbrs, row*dp:(row+1)*dp] = w / S
+            W[nbrs, row * dp:(row + 1) * dp] = w / S
 
         #-----------------------------------------------
         # To find the null space, we want the
@@ -508,7 +522,7 @@ class HLLENode(LLENode):
         if self.verbose:
             msg = (' - finding [%i x %i] '
                    'null space of weight matrix...' % (d_out, N))
-            print msg
+            print(msg)
 
         #XXX future work:
         #XXX  use of upcoming ARPACK interface for bottom few eigenvectors
@@ -516,15 +530,15 @@ class HLLENode(LLENode):
         #XXX   of the next step
 
         if self.svd:
-            sig, U = nongeneral_svd(W.T, range=(2, d_out+1))
-            Y = U*numx.sqrt(N)
+            sig, U = nongeneral_svd(W.T, range=(2, d_out + 1))
+            Y = U * numx.sqrt(N)
         else:
             WW = mult(W, W.T)
             # regularizes the eigenvalues, does not change the eigenvectors:
             W_diag_idx = numx.arange(N)
             WW[W_diag_idx, W_diag_idx] += 0.01
-            sig, U = symeig(WW, range=(2, self.output_dim+1), overwrite=True)
-            Y = U*numx.sqrt(N)
+            sig, U = symeig(WW, range=(2, self.output_dim + 1), overwrite=True)
+            Y = U * numx.sqrt(N)
             del WW
         del W
 
@@ -548,7 +562,7 @@ class HLLENode(LLENode):
         #    self.training_projection = mult(Y, mult(VT.T, mult(S, VT)))
         #-----------------------------------------------
         if self.verbose:
-            print ' - normalizing null space...'
+            print(' - normalizing null space...')
 
         C = sqrtm(mult(Y.T, Y))
         self.training_projection = mult(Y, C)

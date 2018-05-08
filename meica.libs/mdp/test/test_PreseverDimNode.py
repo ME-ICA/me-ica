@@ -1,13 +1,13 @@
 import py.test
-from _tools import *
+from ._tools import *
 
 
 class DummyPreserveDimNode(mdp.PreserveDimNode):
     """Non-abstract dummy version of PreserveDimNode."""
-    
+
     def is_trainable(self):
         return False
-    
+
 
 def testPreserveDimNode():
     """Test the different dimension setting options."""
@@ -25,6 +25,8 @@ def testPreserveDimNode():
     node.input_dim = dim
     assert node.output_dim == dim
     assert node.input_dim == dim
+
     def get_node():
-        DummyPreserveDimNode(input_dim=dim, output_dim=dim+1)
+        DummyPreserveDimNode(input_dim=dim, output_dim=dim + 1)
+
     py.test.raises(mdp.InconsistentDimException, get_node)

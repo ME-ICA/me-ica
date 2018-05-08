@@ -6,7 +6,6 @@
 #   copyright and license terms.
 #
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ##
-from __future__ import with_statement
 
 import os
 import gzip
@@ -25,16 +24,14 @@ from ..tmpdirs import InTemporaryDirectory
 from ..testing import data_path
 
 MINC_EXAMPLE = dict(
-    fname = os.path.join(data_path, 'tiny.mnc'),
-    shape = (10,20,20),
-    affine = np.array([[0, 0, 2.0, -20],
-                       [0, 2.0, 0, -20],
-                       [2.0, 0, 0, -10],
-                       [0, 0, 0, 1]]),
+    fname=os.path.join(data_path, 'tiny.mnc'),
+    shape=(10, 20, 20),
+    affine=np.array([[0, 0, 2.0, -20], [0, 2.0, 0, -20], [2.0, 0, 0, -10],
+                     [0, 0, 0, 1]]),
     # These values from SPM2
-    min = 0.20784314,
-    max = 0.74901961,
-    mean = 0.60602819)
+    min=0.20784314,
+    max=0.74901961,
+    mean=0.60602819)
 
 
 def test_mincfile():

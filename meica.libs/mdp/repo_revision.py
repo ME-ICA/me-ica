@@ -2,6 +2,7 @@ import mdp
 import os
 from subprocess import Popen, PIPE, STDOUT
 
+
 def get_git_revision():
     """When mdp is run from inside a git repository, this function
     returns the current revision that git-describe gives us.
@@ -18,8 +19,12 @@ def get_git_revision():
         # annotated tags
         # --dirty=+ appends a plus if the working copy is modified
         command = ["git", "describe", "--tags", "--dirty=+"]
-        proc = Popen(command, stdout=PIPE, stderr=STDOUT, cwd=mdp_dir,
-                     universal_newlines=True)
+        proc = Popen(
+            command,
+            stdout=PIPE,
+            stderr=STDOUT,
+            cwd=mdp_dir,
+            universal_newlines=True)
         exit_status = proc.wait()
         # only get the revision if command succeded
         if exit_status == 0:

@@ -1,59 +1,64 @@
 import mdp.parallel as parallel
-from _tools import *
+from ._tools import *
+
 
 def test_PCANode():
     """Test Parallel PCANode"""
     precision = 6
-    x = numx_rand.random([100,10])
-    x_test = numx_rand.random([20,10])
+    x = numx_rand.random([100, 10])
+    x_test = numx_rand.random([20, 10])
     # set different variances (avoid numerical errors)
-    x *= numx.arange(1,11)
-    x_test *= numx.arange(1,11)
+    x *= numx.arange(1, 11)
+    x_test *= numx.arange(1, 11)
     pca_node = mdp.nodes.PCANode()
     parallel_pca_node = parallel.ParallelPCANode()
     chunksize = 25
-    chunks = [x[i*chunksize : (i+1)*chunksize]
-                for i in xrange(len(x)//chunksize)]
+    chunks = [
+        x[i * chunksize:(i + 1) * chunksize]
+        for i in range(len(x) // chunksize)
+    ]
     for chunk in chunks:
         pca_node.train(chunk)
         forked_node = parallel_pca_node.fork()
         forked_node.train(chunk)
         parallel_pca_node.join(forked_node)
     assert_array_almost_equal(pca_node._cov_mtx._cov_mtx,
-                              parallel_pca_node._cov_mtx._cov_mtx,
-                              precision)
+                              parallel_pca_node._cov_mtx._cov_mtx, precision)
     pca_node.stop_training()
     y1 = pca_node.execute(x_test)
     parallel_pca_node.stop_training()
     y2 = parallel_pca_node.execute(x_test)
     assert_array_almost_equal(abs(y1), abs(y2), precision)
 
+
 def test_SFANode():
     """Test Parallel SFANode"""
     precision = 6
-    x = numx_rand.random([100,10])
-    x_test = numx_rand.random([20,10])
+    x = numx_rand.random([100, 10])
+    x_test = numx_rand.random([20, 10])
     # set different variances (avoid numerical errors)
-    x *= numx.arange(1,11)
-    x_test *= numx.arange(1,11)
+    x *= numx.arange(1, 11)
+    x_test *= numx.arange(1, 11)
     sfa_node = mdp.nodes.SFANode()
     parallel_sfa_node = parallel.ParallelSFANode()
     chunksize = 25
-    chunks = [x[i*chunksize : (i+1)*chunksize]
-                for i in xrange(len(x)//chunksize)]
+    chunks = [
+        x[i * chunksize:(i + 1) * chunksize]
+        for i in range(len(x) // chunksize)
+    ]
     for chunk in chunks:
         sfa_node.train(chunk)
         forked_node = parallel_sfa_node.fork()
         forked_node.train(chunk)
         parallel_sfa_node.join(forked_node)
     assert_array_almost_equal(sfa_node._cov_mtx._cov_mtx,
-                              parallel_sfa_node._cov_mtx._cov_mtx,
-                              precision)
+                              parallel_sfa_node._cov_mtx._cov_mtx, precision)
     sfa_node.stop_training()
     y1 = sfa_node.execute(x_test)
     parallel_sfa_node.stop_training()
     y2 = parallel_sfa_node.execute(x_test)
     assert_array_almost_equal(abs(y1), abs(y2), precision)
+
 
 def test_FDANode():
     """Test Parallel FDANode."""
@@ -64,16 +69,18 @@ def test_FDANode():
     std_ = numx.array([1., 0.2])
     npoints = 50000
     rot = 45
+
     # input data: two distinct gaussians rotated by 45 deg
     def distr(size):
         return numx_rand.normal(0, 1., size=(size)) * std_
-    x1 = distr((npoints,2)) + mean1
+
+    x1 = distr((npoints, 2)) + mean1
     utils.rotate(x1, rot, units='degrees')
-    x2 = distr((npoints,2)) + mean2
+    x2 = distr((npoints, 2)) + mean2
     utils.rotate(x2, rot, units='degrees')
     # labels
-    cl1 = numx.ones((x1.shape[0],), dtype='d')
-    cl2 = 2.*numx.ones((x2.shape[0],), dtype='d')
+    cl1 = numx.ones((x1.shape[0], ), dtype='d')
+    cl2 = 2. * numx.ones((x2.shape[0], ), dtype='d')
     flow = parallel.ParallelFlow([parallel.ParallelFDANode()])
     flow.train([[(x1, cl1), (x2, cl2)]], scheduler=parallel.Scheduler())
     fda_node = flow[0]
@@ -88,11 +95,12 @@ def test_FDANode():
     y = flow.execute([x1, x2], scheduler=parallel.Scheduler())
     assert_array_almost_equal(numx.mean(y, axis=0), [0., 0.], precision)
     assert_array_almost_equal(numx.std(y, axis=0), [1., 1.], precision)
-    assert_almost_equal(utils.mult(y[:,0], y[:,1].T), 0., precision)
-    v1 = fda_node.v[:,0]/fda_node.v[0,0]
+    assert_almost_equal(utils.mult(y[:, 0], y[:, 1].T), 0., precision)
+    v1 = fda_node.v[:, 0] / fda_node.v[0, 0]
     assert_array_almost_equal(v1, [1., -1.], 2)
-    v1 = fda_node.v[:,1]/fda_node.v[0,1]
+    v1 = fda_node.v[:, 1] / fda_node.v[0, 1]
     assert_array_almost_equal(v1, [1., 1.], 2)
+
 
 def test_ParallelHistogramNode_nofraction():
     """Test HistogramNode with fraction set to 1.0."""
@@ -107,6 +115,7 @@ def test_ParallelHistogramNode_nofraction():
         node.join(forked_node)
     assert numx.all(x == node.data_hist)
     node.stop_training()
+
 
 def test_ParallelHistogramNode_fraction():
     """Test HistogramNode with fraction set to 0.5."""
@@ -137,15 +146,17 @@ class TestDerivedParallelMDPNodes(object):
 
     def test_WhiteningNode(self):
         """Test Parallel WhiteningNode"""
-        x = numx_rand.random([100,10])
-        x_test = numx_rand.random([20,10])
+        x = numx_rand.random([100, 10])
+        x_test = numx_rand.random([20, 10])
         # set different variances (avoid numerical errors)
-        x *= numx.arange(1,11)
-        x_test *= numx.arange(1,11)
+        x *= numx.arange(1, 11)
+        x_test *= numx.arange(1, 11)
         node = mdp.nodes.WhiteningNode()
         chunksize = 25
-        chunks = [x[i*chunksize : (i+1)*chunksize]
-                    for i in xrange(len(x)//chunksize)]
+        chunks = [
+            x[i * chunksize:(i + 1) * chunksize]
+            for i in range(len(x) // chunksize)
+        ]
         for chunk in chunks:
             forked_node = node.fork()
             forked_node.train(chunk)
@@ -155,19 +166,20 @@ class TestDerivedParallelMDPNodes(object):
 
     def test_SFA2Node(self):
         """Test Parallel SFA2Node"""
-        x = numx_rand.random([100,10])
-        x_test = numx_rand.random([20,10])
+        x = numx_rand.random([100, 10])
+        x_test = numx_rand.random([20, 10])
         # set different variances (avoid numerical errors)
-        x *= numx.arange(1,11)
-        x_test *= numx.arange(1,11)
+        x *= numx.arange(1, 11)
+        x_test *= numx.arange(1, 11)
         node = mdp.nodes.SFA2Node()
         chunksize = 25
-        chunks = [x[i*chunksize : (i+1)*chunksize]
-                    for i in xrange(len(x)//chunksize)]
+        chunks = [
+            x[i * chunksize:(i + 1) * chunksize]
+            for i in range(len(x) // chunksize)
+        ]
         for chunk in chunks:
             forked_node = node.fork()
             forked_node.train(chunk)
             node.join(forked_node)
         node.stop_training()
         node.execute(x_test)
-

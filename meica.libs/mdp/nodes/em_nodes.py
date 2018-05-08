@@ -13,6 +13,7 @@ _LHOOD_WARNING = ('Likelihood decreased in FANode. This is probably due '
                   'to some numerical errors.')
 warnings.filterwarnings('always', _LHOOD_WARNING, mdp.MDPWarning)
 
+
 class FANode(mdp.Node):
     """Perform Factor Analysis.
 
@@ -45,9 +46,14 @@ class FANode(mdp.Node):
     http://www.ics.uci.edu/~welling/classnotes/classnotes.html ,
     in the chapter 'Linear Models'.
     """
-    def __init__(self, tol=1e-4, max_cycles=100, verbose=False,
-                 input_dim=None, output_dim=None, dtype=None):
 
+    def __init__(self,
+                 tol=1e-4,
+                 max_cycles=100,
+                 verbose=False,
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None):
         """
         :Parameters:
           tol
@@ -81,10 +87,10 @@ class FANode(mdp.Node):
             self.output_dim = d
         k = self.output_dim
         # indices of the diagonal elements of a dxd or kxk matrix
-        idx_diag_d = [i*(d+1) for i in range(d)]
-        idx_diag_k = [i*(k+1) for i in range(k)]
+        idx_diag_d = [i * (d + 1) for i in range(d)]
+        idx_diag_k = [i * (k + 1) for i in range(k)]
         # constant term in front of the log-likelihood
-        const = -d/2. * numx.log(2.*numx.pi)
+        const = -d / 2. * numx.log(2. * numx.pi)
 
         ##### request the covariance matrix and clean up
         cov_mtx, mu, tlen = self._cov_mtx.fix()
@@ -98,26 +104,26 @@ class FANode(mdp.Node):
         # Zoubin uses the determinant of cov_mtx^1/d as scale but it's
         # too slow for large matrices. Is the product of the diagonal a good
         # approximation?
-        if d<=300:
-            scale = det(cov_mtx)**(1./d)
+        if d <= 300:
+            scale = det(cov_mtx)**(1. / d)
         else:
-            scale = numx.product(sigma)**(1./d)
+            scale = numx.product(sigma)**(1. / d)
         if scale <= 0.:
             err = ("The covariance matrix of the data is singular. "
                    "Redundant dimensions need to be removed.")
             raise NodeException(err)
 
-        A = normal(0., sqrt(scale/k), size=(d, k)).astype(typ)
+        A = normal(0., sqrt(scale / k), size=(d, k)).astype(typ)
 
         ##### EM-cycle
         lhood_curve = []
         base_lhood = None
         old_lhood = -numx.inf
-        for t in xrange(self.max_cycles):
+        for t in range(self.max_cycles):
             ## compute B = (A A^T + Sigma)^-1
             B = mult(A, A.T)
             # B += diag(sigma), avoid computing diag(sigma) which is dxd
-            B.ravel().put(idx_diag_d, B.ravel().take(idx_diag_d)+sigma)
+            B.ravel().put(idx_diag_d, B.ravel().take(idx_diag_d) + sigma)
             # this quantity is used later for the log-likelihood
             # abs is there to avoid numerical errors when det < 0
             log_det_B = numx.log(abs(det(B)))
@@ -130,27 +136,28 @@ class FANode(mdp.Node):
 
             ##### E-step
             ## E_yyT = E(y_n y_n^T | x_n)
-            E_yyT = - mult(trA_B, A) + mult(trA_B_cov_mtx, trA_B.T)
+            E_yyT = -mult(trA_B, A) + mult(trA_B_cov_mtx, trA_B.T)
             # E_yyT += numx.eye(k)
-            E_yyT.ravel().put(idx_diag_k, E_yyT.ravel().take(idx_diag_k)+1.)
+            E_yyT.ravel().put(idx_diag_k, E_yyT.ravel().take(idx_diag_k) + 1.)
 
             ##### M-step
             A = mult(trA_B_cov_mtx.T, inv(E_yyT))
             sigma = cov_diag - (mult(A, trA_B_cov_mtx)).diagonal()
 
             ##### log-likelihood
-            trace_B_cov = (B*cov_mtx.T).sum()
+            trace_B_cov = (B * cov_mtx.T).sum()
             # this is actually likelihood/tlen.
-            lhood = const - 0.5*log_det_B - 0.5*trace_B_cov
+            lhood = const - 0.5 * log_det_B - 0.5 * trace_B_cov
             if verbose:
-                print 'cycle', t, 'log-lhood:', lhood
+                print('cycle', t, 'log-lhood:', lhood)
 
             ##### convergence criterion
             if base_lhood is None:
                 base_lhood = lhood
             else:
                 # convergence criterion
-                if (lhood-base_lhood)<(1.+tol)*(old_lhood-base_lhood):
+                if (lhood - base_lhood) < (1. + tol) * (
+                        old_lhood - base_lhood):
                     break
                 if lhood < old_lhood:
                     # this should never happen
@@ -168,14 +175,14 @@ class FANode(mdp.Node):
         ## MAP matrix
         # compute B = (A A^T + Sigma)^-1
         B = mult(A, A.T).copy()
-        B.ravel().put(idx_diag_d, B.ravel().take(idx_diag_d)+sigma)
+        B.ravel().put(idx_diag_d, B.ravel().take(idx_diag_d) + sigma)
         B = inv(B)
         self.E_y_mtx = mult(B.T, A)
 
         self.lhood = lhood_curve
 
     def _execute(self, x):
-        return mult(x-self.mu, self.E_y_mtx)
+        return mult(x - self.mu, self.E_y_mtx)
 
     @staticmethod
     def is_invertible():
@@ -214,7 +221,7 @@ class FANode(mdp.Node):
             y = self._refcast(len_or_y)
             self._check_output(y)
 
-        res = mult(y, self.A.T)+self.mu
+        res = mult(y, self.A.T) + self.mu
         if noise:
             ns = mdp.numx_rand.normal(size=(y.shape[0], self.input_dim))
             ns *= numx.sqrt(self.sigma)

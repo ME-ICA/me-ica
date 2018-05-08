@@ -1,12 +1,11 @@
-from __future__ import with_statement
-
 __docformat__ = "restructuredtext en"
 
 import mdp
 from mdp import numx, utils, Node, NodeException, PreserveDimNode
 
-import cPickle as pickle
+import pickle as pickle
 import pickle as real_pickle
+
 
 class IdentityNode(PreserveDimNode):
     """Execute returns the input data and the node is not trainable.
@@ -25,12 +24,13 @@ class IdentityNode(PreserveDimNode):
     def is_trainable():
         return False
 
+
 class OneDimensionalHitParade(object):
     """
     Class to produce hit-parades (i.e., a list of the largest
     and smallest values) out of a one-dimensional time-series.
     """
-    
+
     def __init__(self, n, d, real_dtype="d", integer_dtype="l"):
         """
         Input arguments:
@@ -45,7 +45,7 @@ class OneDimensionalHitParade(object):
         self.d = int(d)
         self.iM = numx.zeros((n, ), dtype=integer_dtype)
         self.im = numx.zeros((n, ), dtype=integer_dtype)
-        
+
         real_dtype = numx.dtype(real_dtype)
         if real_dtype in mdp.utils.get_dtypes('AllInteger'):
             max_num = numx.iinfo(real_dtype).max
@@ -53,9 +53,9 @@ class OneDimensionalHitParade(object):
         else:
             max_num = numx.finfo(real_dtype).max
             min_num = numx.finfo(real_dtype).min
-        self.M = numx.array([min_num]*n, dtype=real_dtype)
-        self.m = numx.array([max_num]*n, dtype=real_dtype)
-        
+        self.M = numx.array([min_num] * n, dtype=real_dtype)
+        self.m = numx.array([max_num] * n, dtype=real_dtype)
+
         self.lM = 0
         self.lm = 0
 
@@ -73,22 +73,22 @@ class OneDimensionalHitParade(object):
         im = self.im
         lM = self.lM
         lm = self.lm
-        for i in xrange(rows):
+        for i in range(rows):
             k1 = M.argmin()
             k2 = m.argmax()
             if x[i] > M[k1]:
-                if ix[i]-iM[lM] <= d and x[i] > M[lM]:
+                if ix[i] - iM[lM] <= d and x[i] > M[lM]:
                     M[lM] = x[i]
                     iM[lM] = ix[i]
-                elif ix[i]-iM[lM] > d:
+                elif ix[i] - iM[lM] > d:
                     M[k1] = x[i]
                     iM[k1] = ix[i]
                     lM = k1
             if x[i] < m[k2]:
-                if ix[i]-im[lm] <= d and x[i] < m[lm]:
+                if ix[i] - im[lm] <= d and x[i] < m[lm]:
                     m[lm] = x[i]
                     im[lm] = ix[i]
-                elif ix[i]-im[lm] > d:
+                elif ix[i] - im[lm] > d:
                     m[k2] = x[i]
                     im[k2] = ix[i]
                     lm = k2
@@ -135,9 +135,8 @@ class HitParadeNode(PreserveDimNode):
         n -- Number of maxima and minima to store
         d -- Minimum gap between two maxima or two minima
         """
-        super(HitParadeNode, self).__init__(input_dim=input_dim,
-                                            output_dim=output_dim,
-                                            dtype=dtype)
+        super(HitParadeNode, self).__init__(
+            input_dim=input_dim, output_dim=output_dim, dtype=dtype)
         self.n = int(n)
         self.d = int(d)
         self.itype = 'int64'
@@ -150,16 +149,17 @@ class HitParadeNode(PreserveDimNode):
 
     def _get_supported_dtypes(self):
         """Return the list of dtypes supported by this node."""
-        return (mdp.utils.get_dtypes('Float') +
-                mdp.utils.get_dtypes('AllInteger'))
+        return (
+            mdp.utils.get_dtypes('Float') + mdp.utils.get_dtypes('AllInteger'))
 
     def _train(self, x):
         hit = self.hit
         old_tlen = self.tlen
         if hit is None:
-            hit = [OneDimensionalHitParade(self.n, self.d, self.dtype,
-                                           self.itype)
-                   for c in range(self.input_dim)]
+            hit = [
+                OneDimensionalHitParade(self.n, self.d, self.dtype, self.itype)
+                for c in range(self.input_dim)
+            ]
         tlen = old_tlen + x.shape[0]
         indices = numx.arange(old_tlen, tlen)
         for c in range(self.input_dim):
@@ -203,6 +203,7 @@ class HitParadeNode(PreserveDimNode):
             m[:, c], im[:, c] = hit[c].get_minima()
         return m, im
 
+
 class TimeFramesNode(Node):
     """Copy delayed version of the input signal on the space dimensions.
 
@@ -223,17 +224,15 @@ class TimeFramesNode(Node):
     method does the correct thing when it is indeed possible.
     """
 
-    def __init__(self, time_frames, gap=1,
-                 input_dim=None, dtype=None):
+    def __init__(self, time_frames, gap=1, input_dim=None, dtype=None):
         """
         Input arguments:
         time_frames -- Number of delayed copies
         gap -- Time delay between the copies
         """
         self.time_frames = time_frames
-        super(TimeFramesNode, self).__init__(input_dim=input_dim,
-                                             output_dim=None,
-                                             dtype=dtype)
+        super(TimeFramesNode, self).__init__(
+            input_dim=input_dim, output_dim=None, dtype=dtype)
         self.gap = gap
 
     def _get_supported_dtypes(self):
@@ -252,7 +251,7 @@ class TimeFramesNode(Node):
 
     def _set_input_dim(self, n):
         self._input_dim = n
-        self._output_dim = n*self.time_frames
+        self._output_dim = n * self.time_frames
 
     def _set_output_dim(self, n):
         msg = 'Output dim can not be explicitly set!'
@@ -260,12 +259,13 @@ class TimeFramesNode(Node):
 
     def _execute(self, x):
         gap = self.gap
-        tf = x.shape[0] - (self.time_frames-1)*gap
+        tf = x.shape[0] - (self.time_frames - 1) * gap
         rows = self.input_dim
         cols = self.output_dim
         y = numx.zeros((tf, cols), dtype=self.dtype)
         for frame in range(self.time_frames):
-            y[:, frame*rows:(frame+1)*rows] = x[gap*frame:gap*frame+tf, :]
+            y[:, frame * rows:(
+                frame + 1) * rows] = x[gap * frame:gap * frame + tf, :]
         return y
 
     def pseudo_inverse(self, y):
@@ -294,7 +294,7 @@ class TimeFramesNode(Node):
         gap = self.gap
         exp_length = y.shape[0]
         cols = self.input_dim
-        rest = (self.time_frames-1)*gap
+        rest = (self.time_frames - 1) * gap
         rows = exp_length + rest
         x = numx.zeros((rows, cols), dtype=self.dtype)
         x[:exp_length, :] = y[:, :cols]
@@ -302,9 +302,11 @@ class TimeFramesNode(Node):
         # Note that if gap > 1 some of the last rows will be filled with zeros!
         block_sz = min(gap, exp_length)
         for row in range(max(exp_length, gap), rows, gap):
-            x[row:row+block_sz, :] = y[-block_sz:, count*cols:(count+1)*cols]
+            x[row:row + block_sz, :] = y[-block_sz:, count * cols:(
+                count + 1) * cols]
             count += 1
         return x
+
 
 class TimeDelayNode(TimeFramesNode):
     """
@@ -338,8 +340,7 @@ class TimeDelayNode(TimeFramesNode):
         time_frames -- Number of delayed copies
         gap -- Time delay between the copies
         """
-        super(TimeDelayNode, self).__init__(time_frames, gap,
-                                            input_dim, dtype)
+        super(TimeDelayNode, self).__init__(time_frames, gap, input_dim, dtype)
 
     def _execute(self, x):
         gap = self.gap
@@ -350,12 +351,14 @@ class TimeDelayNode(TimeFramesNode):
         y = numx.zeros((rows, cols), dtype=self.dtype)
 
         for frame in range(self.time_frames):
-            y[gap*frame:, frame*n:(frame+1)*n] = x[:rows-gap*frame, :]
+            y[gap * frame:, frame * n:(
+                frame + 1) * n] = x[:rows - gap * frame, :]
 
         return y
 
     def pseudo_inverse(self, y):
         raise NotImplementedError
+
 
 class TimeDelaySlidingWindowNode(TimeDelayNode):
     """
@@ -371,6 +374,7 @@ class TimeDelaySlidingWindowNode(TimeDelayNode):
     Original code contributed by Sebastian Hoefer.
     Dec 31, 2010
     """
+
     def __init__(self, time_frames, gap=1, input_dim=None, dtype=None):
         """
         Input arguments:
@@ -380,15 +384,15 @@ class TimeDelaySlidingWindowNode(TimeDelayNode):
 
         self.time_frames = time_frames
         self.gap = gap
-        super(TimeDelaySlidingWindowNode, self).__init__(time_frames, gap,
-                                                         input_dim, dtype)
+        super(TimeDelaySlidingWindowNode, self).__init__(
+            time_frames, gap, input_dim, dtype)
         self.sliding_wnd = None
         self.cur_idx = 0
         self.slide = False
 
     def _init_sliding_window(self):
-        rows = self.gap+1
-        cols = self.input_dim*self.time_frames
+        rows = self.gap + 1
+        cols = self.input_dim * self.time_frames
         self.sliding_wnd = numx.zeros((rows, cols), dtype=self.dtype)
 
     def _execute(self, x):
@@ -410,18 +414,19 @@ class TimeDelaySlidingWindowNode(TimeDelayNode):
             self.sliding_wnd[:-1, :] = self.sliding_wnd[1:, :]
 
         # Delay
-        if self.cur_idx-gap >= 0:
-            new_row[n:] = self.sliding_wnd[self.cur_idx-gap, :-n]
+        if self.cur_idx - gap >= 0:
+            new_row[n:] = self.sliding_wnd[self.cur_idx - gap, :-n]
 
         # Add new row to matrix
         self.sliding_wnd[self.cur_idx, :] = new_row
 
-        if self.cur_idx < rows-1:
-            self.cur_idx = self.cur_idx+1 
+        if self.cur_idx < rows - 1:
+            self.cur_idx = self.cur_idx + 1
         else:
             self.slide = True
 
-        return new_row[numx.newaxis,:]
+        return new_row[numx.newaxis, :]
+
 
 class EtaComputerNode(Node):
     """Compute the eta values of the normalized training data.
@@ -469,10 +474,10 @@ class EtaComputerNode(Node):
 
     def _init_internals(self):
         input_dim = self.input_dim
-        self._mean = numx.zeros((input_dim,), dtype='d')
-        self._var = numx.zeros((input_dim,), dtype='d')
+        self._mean = numx.zeros((input_dim, ), dtype='d')
+        self._var = numx.zeros((input_dim, ), dtype='d')
         self._tlen = 0
-        self._diff2 = numx.zeros((input_dim,), dtype='d')
+        self._diff2 = numx.zeros((input_dim, ), dtype='d')
         self._initialized = 1
 
     def _train(self, data):
@@ -482,15 +487,15 @@ class EtaComputerNode(Node):
 
         rdata = data[:-1]
         self._mean += rdata.sum(axis=0)
-        self._var += (rdata*rdata).sum(axis=0)
+        self._var += (rdata * rdata).sum(axis=0)
         self._tlen += rdata.shape[0]
         td_data = utils.timediff(data)
-        self._diff2 += (td_data*td_data).sum(axis=0)
+        self._diff2 += (td_data * td_data).sum(axis=0)
 
     def _stop_training(self):
-        var_tlen = self._tlen-1
+        var_tlen = self._tlen - 1
         # unbiased
-        var = (self._var - self._mean*self._mean/self._tlen)/var_tlen
+        var = (self._var - self._mean * self._mean / self._tlen) / var_tlen
 
         # biased
         #var = (self._var - self._mean*self._mean/self._tlen)/self._tlen
@@ -499,9 +504,9 @@ class EtaComputerNode(Node):
         #var = (self._var/var_tlen) - (self._mean/self._tlen)**2
 
         self._var = var
-        delta = (self._diff2/self._tlen)/var
+        delta = (self._diff2 / self._tlen) / var
         self._delta = delta
-        self._eta = numx.sqrt(delta)/(2*numx.pi)
+        self._eta = numx.sqrt(delta) / (2 * numx.pi)
 
     def get_eta(self, t=1):
         """Return the eta values of the data received during the training
@@ -518,7 +523,7 @@ class EtaComputerNode(Node):
              (Berkes and Wiskott, 2005).
         """
         self._if_training_stop_training()
-        return self._refcast(self._eta*t)
+        return self._refcast(self._eta * t)
 
 
 class NoiseNode(PreserveDimNode):
@@ -527,9 +532,13 @@ class NoiseNode(PreserveDimNode):
     Original code contributed by Mathias Franzius.
     """
 
-    def __init__(self, noise_func=mdp.numx_rand.normal, noise_args=(0, 1),
+    def __init__(self,
+                 noise_func=mdp.numx_rand.normal,
+                 noise_args=(0, 1),
                  noise_type='additive',
-                 input_dim=None, output_dim=None, dtype=None):
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None):
         """
         Add noise to input signals.
 
@@ -554,9 +563,8 @@ class NoiseNode(PreserveDimNode):
 
             Default is ``'additive'``.
         """
-        super(NoiseNode, self).__init__(input_dim=input_dim,
-                                        output_dim=output_dim,
-                                        dtype=dtype)
+        super(NoiseNode, self).__init__(
+            input_dim=input_dim, output_dim=output_dim, dtype=dtype)
         self.noise_func = noise_func
         self.noise_args = noise_args
         valid_noise_types = ['additive', 'multiplicative']
@@ -568,8 +576,8 @@ class NoiseNode(PreserveDimNode):
 
     def _get_supported_dtypes(self):
         """Return the list of dtypes supported by this node."""
-        return (mdp.utils.get_dtypes('Float') +
-                mdp.utils.get_dtypes('AllInteger'))
+        return (
+            mdp.utils.get_dtypes('Float') + mdp.utils.get_dtypes('AllInteger'))
 
     @staticmethod
     def is_trainable():
@@ -580,14 +588,14 @@ class NoiseNode(PreserveDimNode):
         return False
 
     def _execute(self, x):
-        noise_mat = self._refcast(self.noise_func(*self.noise_args,
-                                                  **{'size': x.shape}))
+        noise_mat = self._refcast(
+            self.noise_func(*self.noise_args, **{'size': x.shape}))
         if self.noise_type == 'additive':
-            return x+noise_mat
+            return x + noise_mat
         elif self.noise_type == 'multiplicative':
-            return x*(1.+noise_mat)
+            return x * (1. + noise_mat)
 
-    def save(self, filename, protocol = -1):
+    def save(self, filename, protocol=-1):
         """Save a pickled serialization of the node to 'filename'.
         If 'filename' is None, return a string.
 
@@ -611,16 +619,18 @@ class NormalNoiseNode(PreserveDimNode):
     uses ``numx_rand.normal``.
     """
 
-    def __init__(self, noise_args=(0, 1),
-                 input_dim=None, output_dim=None, dtype=None):
+    def __init__(self,
+                 noise_args=(0, 1),
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None):
         """Set the noise parameters.
 
         noise_args -- Tuple of (mean, standard deviation) for the normal
             distribution, default is (0,1).
         """
-        super(NormalNoiseNode, self).__init__(input_dim=input_dim,
-                                              output_dim=output_dim,
-                                              dtype=dtype)
+        super(NormalNoiseNode, self).__init__(
+            input_dim=input_dim, output_dim=output_dim, dtype=dtype)
         self.noise_args = noise_args
 
     @staticmethod
@@ -632,9 +642,9 @@ class NormalNoiseNode(PreserveDimNode):
         return False
 
     def _execute(self, x):
-        noise = self._refcast(mdp.numx_rand.normal(size=x.shape) *
-                                    self.noise_args[1]
-                              + self.noise_args[0])
+        noise = self._refcast(
+            mdp.numx_rand.normal(
+                size=x.shape) * self.noise_args[1] + self.noise_args[0])
         return x + noise
 
 
@@ -645,8 +655,12 @@ class CutoffNode(PreserveDimNode):
     bound is specified.
     """
 
-    def __init__(self, lower_bound=None, upper_bound=None,
-                 input_dim=None, output_dim=None, dtype=None):
+    def __init__(self,
+                 lower_bound=None,
+                 upper_bound=None,
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None):
         """Initialize node.
 
         :Parameters:
@@ -656,9 +670,8 @@ class CutoffNode(PreserveDimNode):
           upper_bound
             Works like ``lower_bound``.
         """
-        super(CutoffNode, self).__init__(input_dim=input_dim,
-                                         output_dim=output_dim,
-                                         dtype=dtype)
+        super(CutoffNode, self).__init__(
+            input_dim=input_dim, output_dim=output_dim, dtype=dtype)
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
 
@@ -671,8 +684,8 @@ class CutoffNode(PreserveDimNode):
         return False
 
     def _get_supported_dtypes(self):
-        return (mdp.utils.get_dtypes('Float') +
-                mdp.utils.get_dtypes('AllInteger'))
+        return (
+            mdp.utils.get_dtypes('Float') + mdp.utils.get_dtypes('AllInteger'))
 
     def _execute(self, x):
         """Return the clipped data."""
@@ -693,8 +706,12 @@ class HistogramNode(PreserveDimNode):
     Note that data is only stored during training.
     """
 
-    def __init__(self, hist_fraction=1.0, hist_filename=None,
-                 input_dim=None, output_dim=None, dtype=None):
+    def __init__(self,
+                 hist_fraction=1.0,
+                 hist_filename=None,
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None):
         """Initialize the node.
 
         hist_fraction -- Defines the fraction of the data that is stored
@@ -705,9 +722,8 @@ class HistogramNode(PreserveDimNode):
             If filename is None (default value) then data_hist is not cleared
             and can be directly used after training.
         """
-        super(HistogramNode, self).__init__(input_dim=input_dim,
-                                            output_dim=output_dim,
-                                            dtype=dtype)
+        super(HistogramNode, self).__init__(
+            input_dim=input_dim, output_dim=output_dim, dtype=dtype)
         self._hist_filename = hist_filename
         self.hist_fraction = hist_fraction
         self.data_hist = None  # stores the data history
@@ -734,8 +750,9 @@ class HistogramNode(PreserveDimNode):
             try:
                 pickle.dump(self.data_hist, pickle_file, protocol=-1)
             finally:
-                pickle_file.close( )
+                pickle_file.close()
             self.data_hist = None
+
 
 class AdaptiveCutoffNode(HistogramNode):
     """Node which uses the data history during training to learn cutoff values.
@@ -751,9 +768,14 @@ class AdaptiveCutoffNode(HistogramNode):
     calculated based on the collected histogram data.
     """
 
-    def __init__(self, lower_cutoff_fraction=None, upper_cutoff_fraction=None,
-                 hist_fraction=1.0, hist_filename=None,
-                 input_dim=None, output_dim=None, dtype=None):
+    def __init__(self,
+                 lower_cutoff_fraction=None,
+                 upper_cutoff_fraction=None,
+                 hist_fraction=1.0,
+                 hist_filename=None,
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None):
         """Initialize the node.
 
         :Parameters:
@@ -774,19 +796,20 @@ class AdaptiveCutoffNode(HistogramNode):
             (default value) then ``data_hist`` is not cleared and can
             be directly used after training.
         """
-        super(AdaptiveCutoffNode, self).__init__(hist_fraction=hist_fraction,
-                                                 hist_filename=hist_filename,
-                                                 input_dim=input_dim,
-                                                 output_dim=output_dim,
-                                                 dtype=dtype)
+        super(AdaptiveCutoffNode, self).__init__(
+            hist_fraction=hist_fraction,
+            hist_filename=hist_filename,
+            input_dim=input_dim,
+            output_dim=output_dim,
+            dtype=dtype)
         self.lower_cutoff_fraction = lower_cutoff_fraction
         self.upper_cutoff_fraction = upper_cutoff_fraction
         self.lower_bounds = None
         self.upper_bounds = None
-        
+
     def _get_supported_dtypes(self):
-        return (mdp.utils.get_dtypes('Float') +
-                mdp.utils.get_dtypes('AllInteger'))
+        return (
+            mdp.utils.get_dtypes('Float') + mdp.utils.get_dtypes('AllInteger'))
 
     def _stop_training(self):
         """Calculate the cutoff bounds based on collected histogram data."""

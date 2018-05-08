@@ -13,6 +13,7 @@ from mdp import numx
 # TODO: Find a better way to deal with additional args for train/execute?
 #    Maybe split them by default, but can be disabled via switch?
 
+
 class Layer(mdp.Node):
     """Layers are nodes which consist of multiple horizontally parallel nodes.
 
@@ -49,9 +50,8 @@ class Layer(mdp.Node):
             input_dim += node.input_dim
             self.node_input_dims[index] = node.input_dim
         output_dim = self._get_output_dim_from_nodes()
-        super(Layer, self).__init__(input_dim=input_dim,
-                                    output_dim=output_dim,
-                                    dtype=dtype)
+        super(Layer, self).__init__(
+            input_dim=input_dim, output_dim=output_dim, dtype=dtype)
 
     def _get_output_dim_from_nodes(self):
         """Calculate the output_dim from the nodes and return it.
@@ -95,9 +95,9 @@ class Layer(mdp.Node):
         # check that the nodes dtype matches the specified dtype
         if nodes_dtype and dtype:
             if not numx.dtype(nodes_dtype) == numx.dtype(dtype):
-                err = ("Cannot set dtype to %s: " %
-                       numx.dtype(nodes_dtype).name +
-                       "an internal node requires %s" % numx.dtype(dtype).name)
+                err = (
+                    "Cannot set dtype to %s: " % numx.dtype(nodes_dtype).name +
+                    "an internal node requires %s" % numx.dtype(dtype).name)
                 raise mdp.NodeException(err)
         elif nodes_dtype and not dtype:
             dtype = nodes_dtype
@@ -141,7 +141,7 @@ class Layer(mdp.Node):
             start_index = stop_index
             stop_index += node.input_dim
             if node.is_training():
-                node.train(x[:, start_index : stop_index], *args, **kwargs)
+                node.train(x[:, start_index:stop_index], *args, **kwargs)
 
     def _stop_training(self, *args, **kwargs):
         """Stop training of the internal nodes."""
@@ -160,7 +160,7 @@ class Layer(mdp.Node):
             for node in self.nodes:
                 in_start = in_stop
                 in_stop += node.input_dim
-                node._pre_execution_checks(x[:,in_start:in_stop])
+                node._pre_execution_checks(x[:, in_start:in_stop])
             self.output_dim = self._get_output_dim_from_nodes()
             if self.output_dim is None:
                 err = "output_dim must be set at this point for all nodes"
@@ -180,13 +180,13 @@ class Layer(mdp.Node):
             in_start = in_stop
             in_stop += node.input_dim
             if y is None:
-                node_y = node.execute(x[:,in_start:in_stop], *args, **kwargs)
-                y = numx.zeros([node_y.shape[0], self.output_dim],
-                               dtype=node_y.dtype)
-                y[:,out_start:out_stop] = node_y
+                node_y = node.execute(x[:, in_start:in_stop], *args, **kwargs)
+                y = numx.zeros(
+                    [node_y.shape[0], self.output_dim], dtype=node_y.dtype)
+                y[:, out_start:out_stop] = node_y
             else:
-                y[:,out_start:out_stop] = node.execute(x[:,in_start:in_stop],
-                                                        *args, **kwargs)
+                y[:, out_start:out_stop] = node.execute(
+                    x[:, in_start:in_stop], *args, **kwargs)
         return y
 
     def _inverse(self, x, *args, **kwargs):
@@ -203,13 +203,13 @@ class Layer(mdp.Node):
             in_start = in_stop
             in_stop += node.output_dim
             if y is None:
-                node_y = node.inverse(x[:,in_start:in_stop], *args, **kwargs)
-                y = numx.zeros([node_y.shape[0], self.input_dim],
-                               dtype=node_y.dtype)
-                y[:,out_start:out_stop] = node_y
+                node_y = node.inverse(x[:, in_start:in_stop], *args, **kwargs)
+                y = numx.zeros(
+                    [node_y.shape[0], self.input_dim], dtype=node_y.dtype)
+                y[:, out_start:out_stop] = node_y
             else:
-                y[:,out_start:out_stop] = node.inverse(x[:,in_start:in_stop],
-                                                        *args, **kwargs)
+                y[:, out_start:out_stop] = node.inverse(
+                    x[:, in_start:in_stop], *args, **kwargs)
         return y
 
     ## container methods ##
@@ -247,7 +247,7 @@ class CloneLayer(Layer):
         node -- Node to be cloned.
         n_nodes -- Number of repetitions/clones of the given node.
         """
-        super(CloneLayer, self).__init__((node,) * n_nodes, dtype=dtype)
+        super(CloneLayer, self).__init__((node, ) * n_nodes, dtype=dtype)
         self.node = node  # attribute for convenience
 
     def _stop_training(self, *args, **kwargs):
@@ -256,6 +256,7 @@ class CloneLayer(Layer):
             self.node.stop_training(*args, **kwargs)
         if self.output_dim is None:
             self.output_dim = self._get_output_dim_from_nodes()
+
 
 class SameInputLayer(Layer):
     """SameInputLayer is a layer were all nodes receive the full input.
@@ -284,9 +285,8 @@ class SameInputLayer(Layer):
                 raise mdp.NodeException(err)
         output_dim = self._get_output_dim_from_nodes()
         # intentionally use MRO above Layer, not SameInputLayer
-        super(Layer, self).__init__(input_dim=input_dim,
-                                    output_dim=output_dim,
-                                    dtype=dtype)
+        super(Layer, self).__init__(
+            input_dim=input_dim, output_dim=output_dim, dtype=dtype)
 
     @staticmethod
     def is_invertible():
@@ -321,9 +321,9 @@ class SameInputLayer(Layer):
             out_stop += node.output_dim
             if y is None:
                 node_y = node.execute(x, *args, **kwargs)
-                y = numx.zeros([node_y.shape[0], self.output_dim],
-                               dtype=node_y.dtype)
-                y[:,out_start:out_stop] = node_y
+                y = numx.zeros(
+                    [node_y.shape[0], self.output_dim], dtype=node_y.dtype)
+                y[:, out_start:out_stop] = node_y
             else:
-                y[:,out_start:out_stop] = node.execute(x, *args, **kwargs)
+                y[:, out_start:out_stop] = node.execute(x, *args, **kwargs)
         return y

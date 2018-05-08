@@ -10,6 +10,7 @@ import scipy.signal as signal
 
 # TODO look into Theano, define TheanoConvolutionNode
 
+
 class Convolution2DNode(mdp.Node):
     """Convolve input data with filter banks.
 
@@ -25,11 +26,16 @@ class Convolution2DNode(mdp.Node):
     This node depends on ``scipy``.
     """
 
-    def __init__(self, filters, input_shape = None,
-                 approach = 'fft',
-                 mode = 'full', boundary = 'fill', fillvalue = 0,
-                 output_2d = True,
-                 input_dim = None, dtype = None):
+    def __init__(self,
+                 filters,
+                 input_shape=None,
+                 approach='fft',
+                 mode='full',
+                 boundary='fill',
+                 fillvalue=0,
+                 output_2d=True,
+                 input_dim=None,
+                 dtype=None):
         """
         Input arguments:
 
@@ -67,19 +73,21 @@ class Convolution2DNode(mdp.Node):
                      idx: data point index
                      x, y: 2D coordinates
         """
-        super(Convolution2DNode, self).__init__(input_dim=input_dim,
-                                              dtype=dtype)
+        super(Convolution2DNode, self).__init__(
+            input_dim=input_dim, dtype=dtype)
 
         self.filters = filters
 
         self._input_shape = input_shape
 
         if approach not in ['linear', 'fft']:
-            raise NodeException("'approach' argument must be one of ['linear', 'fft']")
+            raise NodeException(
+                "'approach' argument must be one of ['linear', 'fft']")
         self._approach = approach
 
         if mode not in ['valid', 'same', 'full']:
-            raise NodeException("'mode' argument must be one of ['valid', 'same', 'full']")
+            raise NodeException(
+                "'mode' argument must be one of ['valid', 'same', 'full']")
         self._mode = mode
 
         self.boundary = boundary
@@ -95,8 +103,9 @@ class Convolution2DNode(mdp.Node):
         if not isinstance(filters, numx.ndarray):
             raise NodeException("'filters' argument must be a numpy array")
         if filters.ndim != 3:
-            raise NodeException('Filters must be specified in a 3-dim array, with each '+
-                                'filter on a different row')
+            raise NodeException(
+                'Filters must be specified in a 3-dim array, with each ' +
+                'filter on a different row')
         self._filters = filters
 
     filters = property(get_filters, set_filters)
@@ -127,6 +136,7 @@ class Convolution2DNode(mdp.Node):
     @property
     def output_shape(self):
         return self._output_shape
+
     # ------- /class properties
 
     def is_trainable(self):
@@ -142,7 +152,7 @@ class Convolution2DNode(mdp.Node):
         This is because fftpack does not support floating point types larger
         than that.
         """
-        return [t for t in utils.get_dtypes('Float') if t.itemsize<=8]
+        return [t for t in utils.get_dtypes('Float') if t.itemsize <= 8]
 
     def _pre_execution_checks(self, x):
         """This method contains all pre-execution checks.
@@ -154,7 +164,7 @@ class Convolution2DNode(mdp.Node):
         """
 
         # check input rank
-        if not x.ndim in [2,3]:
+        if not x.ndim in [2, 3]:
             error_str = "x has rank %d, should be 2 or 3" % (x.ndim)
             raise NodeException(error_str)
 
@@ -188,37 +198,42 @@ class Convolution2DNode(mdp.Node):
             if self.mode == 'same':
                 self._output_shape = input_shape
             elif self.mode == 'full':
-                self._output_shape = (input_shape[0]+filters_shape[1]-1,
-                                      input_shape[1]+filters_shape[2]-1)
-            else: # mode == 'valid'
-                self._output_shape = (input_shape[0]-filters_shape[1]+1,
-                                      input_shape[1]-filters_shape[2]+1)
-            self.output_dim = self.filters.shape[0]*numx.prod(self._output_shape)
+                self._output_shape = (input_shape[0] + filters_shape[1] - 1,
+                                      input_shape[1] + filters_shape[2] - 1)
+            else:  # mode == 'valid'
+                self._output_shape = (input_shape[0] - filters_shape[1] + 1,
+                                      input_shape[1] - filters_shape[2] + 1)
+            self.output_dim = self.filters.shape[0] * numx.prod(
+                self._output_shape)
 
         if x.shape[0] == 0:
             error_str = "x must have at least one observation (zero given)"
             raise NodeException(error_str)
 
     def _execute(self, x):
-        is_2d = x.ndim==2
+        is_2d = x.ndim == 2
         output_shape, input_shape = self._output_shape, self._input_shape
         filters = self.filters
         nfilters = filters.shape[0]
 
         # XXX depends on convolution
-        y = numx.empty((x.shape[0], nfilters,
-                        output_shape[0], output_shape[1]), dtype=self.dtype)
+        y = numx.empty(
+            (x.shape[0], nfilters, output_shape[0], output_shape[1]),
+            dtype=self.dtype)
         for n_im, im in enumerate(x):
             if is_2d:
                 im = im.reshape(input_shape)
             for n_flt, flt in enumerate(filters):
                 if self.approach == 'fft':
-                    y[n_im,n_flt,:,:] = signal.fftconvolve(im, flt, mode=self.mode)
+                    y[n_im, n_flt, :, :] = signal.fftconvolve(
+                        im, flt, mode=self.mode)
                 elif self.approach == 'linear':
-                    y[n_im,n_flt,:,:] = signal.convolve2d(im, flt,
-                                                          mode=self.mode,
-                                                          boundary=self.boundary,
-                                                          fillvalue=self.fillvalue)
+                    y[n_im, n_flt, :, :] = signal.convolve2d(
+                        im,
+                        flt,
+                        mode=self.mode,
+                        boundary=self.boundary,
+                        fillvalue=self.fillvalue)
 
         # reshape if necessary
         if self.output_2d:

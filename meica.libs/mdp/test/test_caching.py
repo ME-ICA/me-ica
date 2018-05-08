@@ -1,14 +1,14 @@
 """Test caching extension."""
-from __future__ import with_statement
+
 import tempfile
-from _tools import *
+from ._tools import *
 
-requires_joblib = skip_on_condition(
-    "not mdp.config.has_joblib",
-    "This test requires the 'joblib' module.")
-
+requires_joblib = skip_on_condition("not mdp.config.has_joblib",
+                                    "This test requires the 'joblib' module.")
 
 _counter = 0
+
+
 class _CounterNode(mdp.Node):
     def __init__(self):
         super(_CounterNode, self).__init__()
@@ -22,6 +22,7 @@ class _CounterNode(mdp.Node):
         global _counter
         _counter += 1
         return x
+
 
 @requires_joblib
 def test_caching_extension():
@@ -43,8 +44,8 @@ def test_caching_extension():
     # reset counter
     _counter = 0
     # activate the extension
-    cachedir = tempfile.mkdtemp(prefix='mdp-tmp-joblib-cache.',
-                                dir=py.test.mdp_tempdirname)
+    cachedir = tempfile.mkdtemp(
+        prefix='mdp-tmp-joblib-cache.', dir=py.test.mdp_tempdirname)
     mdp.caching.activate_caching(cachedir=cachedir)
     assert mdp.get_active_extensions() == ['cache_execute']
 
@@ -69,13 +70,14 @@ def test_caching_extension():
             assert mdp.numx.all(node.execute(x) == x)
             assert _counter == k
 
+
 @requires_joblib
 def test_different_instances_same_content():
     global _counter
     x = mdp.numx.array([[100.]], dtype='d')
 
-    cachedir = tempfile.mkdtemp(prefix='mdp-tmp-joblib-cache.',
-                                dir=py.test.mdp_tempdirname)
+    cachedir = tempfile.mkdtemp(
+        prefix='mdp-tmp-joblib-cache.', dir=py.test.mdp_tempdirname)
     mdp.caching.activate_caching(cachedir=cachedir)
     node = _CounterNode()
     _counter = 0
@@ -100,6 +102,7 @@ def test_different_instances_same_content():
 
     mdp.caching.deactivate_caching()
 
+
 @requires_joblib
 def test_caching_context_manager():
     global _counter
@@ -107,8 +110,8 @@ def test_caching_context_manager():
     _counter = 0
 
     assert mdp.get_active_extensions() == []
-    cachedir = tempfile.mkdtemp(prefix='mdp-tmp-joblib-cache.',
-                                dir=py.test.mdp_tempdirname)
+    cachedir = tempfile.mkdtemp(
+        prefix='mdp-tmp-joblib-cache.', dir=py.test.mdp_tempdirname)
     with mdp.caching.cache(cachedir=cachedir):
         assert mdp.get_active_extensions() == ['cache_execute']
 
@@ -119,6 +122,7 @@ def test_caching_context_manager():
                 assert _counter == i + 1
     assert mdp.get_active_extensions() == []
 
+
 @requires_joblib
 def test_class_caching():
     """Test that we can cache individual classes."""
@@ -127,6 +131,7 @@ def test_class_caching():
     with mdp.caching.cache(cache_classes=[mdp.nodes.PCANode]):
         assert cached.is_cached()
         assert not notcached.is_cached()
+
 
 @requires_joblib
 def test_class_caching_functionality():
@@ -152,6 +157,7 @@ def test_class_caching_functionality():
         node.execute(x)
         assert _counter == 1
 
+
 @requires_joblib
 def test_instance_caching():
     """Test that we can cache individual instances."""
@@ -160,6 +166,7 @@ def test_instance_caching():
     with mdp.caching.cache(cache_instances=[cached]):
         assert cached.is_cached()
         assert not notcached.is_cached()
+
 
 @requires_joblib
 def test_instance_caching_functionality():
@@ -186,6 +193,7 @@ def test_instance_caching_functionality():
         node.execute(x)
         assert _counter == 1
 
+
 @requires_joblib
 def test_preexecution_problem():
     """Test that automatic setting of e.g. input_dim does not stop
@@ -205,15 +213,16 @@ def test_preexecution_problem():
         node.execute(x)
         assert _counter == 1
 
+
 @requires_joblib
 def test_switch_cache():
     """Test changing cache directory while extension is active."""
     global _counter
 
-    dir1 = tempfile.mkdtemp(prefix='mdp-tmp-joblib-cache.',
-                            dir=py.test.mdp_tempdirname)
-    dir2 = tempfile.mkdtemp(prefix='mdp-tmp-joblib-cache.',
-                            dir=py.test.mdp_tempdirname)
+    dir1 = tempfile.mkdtemp(
+        prefix='mdp-tmp-joblib-cache.', dir=py.test.mdp_tempdirname)
+    dir2 = tempfile.mkdtemp(
+        prefix='mdp-tmp-joblib-cache.', dir=py.test.mdp_tempdirname)
     x = mdp.numx.array([[10]], dtype='d')
 
     mdp.caching.activate_caching(cachedir=dir1)

@@ -8,7 +8,7 @@
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ##
 
 import sys
-from StringIO import StringIO
+from io import StringIO
 if sys.version_info[0] >= 3:
     from io import BytesIO
 else:
@@ -20,10 +20,12 @@ from ..nifti1 import data_type_codes, xform_codes, intent_codes
 from .util import (array_index_order_codes, gifti_encoding_codes,
                    gifti_endian_codes, KIND2FMT)
 
+
 class GiftiMetaData(object):
     """ A list of GiftiNVPairs in stored in
     the list self.data """
-    def __init__(self, nvpair = None):
+
+    def __init__(self, nvpair=None):
         self.data = []
         if not nvpair is None:
             self.data.append(nvpair)
@@ -31,7 +33,7 @@ class GiftiMetaData(object):
     @classmethod
     def from_dict(klass, data_dict):
         meda = klass()
-        for k,v in data_dict.items():
+        for k, v in list(data_dict.items()):
             nv = GiftiNVPairs(k, v)
             meda.data.append(nv)
         return meda
@@ -53,11 +55,11 @@ class GiftiMetaData(object):
 \t<Value><![CDATA[%s]]></Value>
 </MD>\n""" % (ele.name, ele.value)
             res = res + nvpair
-        res = res + "</MetaData>\n" 
+        res = res + "</MetaData>\n"
         return res
 
     def print_summary(self):
-        print self.get_metadata()
+        print(self.get_metadata())
 
 
 class GiftiNVPairs(object):
@@ -65,12 +67,12 @@ class GiftiNVPairs(object):
     name = str
     value = str
 
-    def __init__(self, name = '', value = ''):
+    def __init__(self, name='', value=''):
         self.name = name
         self.value = value
 
-class GiftiLabelTable(object):
 
+class GiftiLabelTable(object):
     def __init__(self):
         self.labels = []
 
@@ -97,11 +99,11 @@ class GiftiLabelTable(object):
             lab = """\t<Label Key="%s"%s><![CDATA[%s]]></Label>\n""" % \
                 (str(ele.key), col, ele.label)
             res = res + lab
-        res = res + "</LabelTable>\n" 
+        res = res + "</LabelTable>\n"
         return res
 
     def print_summary(self):
-        print self.get_labels_as_dict()
+        print(self.get_labels_as_dict())
 
 
 class GiftiLabel(object):
@@ -133,9 +135,9 @@ class GiftiLabel(object):
 class GiftiCoordSystem(object):
     dataspace = int
     xformspace = int
-    xform = np.ndarray # 4x4 numpy array
+    xform = np.ndarray  # 4x4 numpy array
 
-    def __init__(self, dataspace = 0, xformspace = 0, xform = None):
+    def __init__(self, dataspace=0, xformspace=0, xform=None):
         self.dataspace = dataspace
         self.xformspace = xformspace
         if xform is None:
@@ -149,9 +151,9 @@ class GiftiCoordSystem(object):
             return "<CoordinateSystemTransformMatrix/>\n"
         res = ("""<CoordinateSystemTransformMatrix>
 \t<DataSpace><![CDATA[%s]]></DataSpace>
-\t<TransformedSpace><![CDATA[%s]]></TransformedSpace>\n"""
-               % (xform_codes.niistring[self.dataspace],
-                  xform_codes.niistring[self.xformspace]))
+\t<TransformedSpace><![CDATA[%s]]></TransformedSpace>\n""" %
+               (xform_codes.niistring[self.dataspace],
+                xform_codes.niistring[self.xformspace]))
         e = BytesIO()
         np.savetxt(e, self.xform, '%10.6f')
         e.seek(0)
@@ -159,13 +161,13 @@ class GiftiCoordSystem(object):
         res = res + e.read().decode()
         e.close()
         res = res + "</MatrixData>\n"
-        res = res + "</CoordinateSystemTransformMatrix>\n" 
+        res = res + "</CoordinateSystemTransformMatrix>\n"
         return res
 
     def print_summary(self):
-        print 'Dataspace: ', xform_codes.niistring[self.dataspace]
-        print 'XFormSpace: ', xform_codes.niistring[self.xformspace]
-        print 'Affine Transformation Matrix: \n', self.xform
+        print('Dataspace: ', xform_codes.niistring[self.dataspace])
+        print('XFormSpace: ', xform_codes.niistring[self.xformspace])
+        print('Affine Transformation Matrix: \n', self.xform)
 
 
 def data_tag(dataarray, encoding, datatype, ordering):
@@ -191,7 +193,7 @@ def data_tag(dataarray, encoding, datatype, ordering):
         raise NotImplementedError("In what format are the external files?")
     else:
         da = ''
-    return "<Data>"+da+"</Data>\n"
+    return "<Data>" + da + "</Data>\n"
 
 
 class GiftiDataArray(object):
@@ -222,12 +224,12 @@ class GiftiDataArray(object):
     def from_array(klass,
                    darray,
                    intent,
-                   datatype = None,
-                   encoding = "GIFTI_ENCODING_B64GZ",
-                   endian = sys.byteorder,
-                   coordsys = None,
-                   ordering = "C",
-                   meta = None):
+                   datatype=None,
+                   encoding="GIFTI_ENCODING_B64GZ",
+                   endian=sys.byteorder,
+                   coordsys=None,
+                   ordering="C",
+                   meta=None):
         """ Creates a new Gifti data array
 
         Parameters
@@ -290,8 +292,7 @@ class GiftiDataArray(object):
         dt_kind = data_type_codes.dtype[self.datatype].kind
         result += data_tag(self.data,
                            gifti_encoding_codes.specs[self.encoding],
-                           KIND2FMT[dt_kind],
-                           self.ind_ord)
+                           KIND2FMT[dt_kind], self.ind_ord)
         result = result + self.to_xml_close()
         return result
 
@@ -322,19 +323,20 @@ class GiftiDataArray(object):
         return "</DataArray>\n"
 
     def print_summary(self):
-        print 'Intent: ', intent_codes.niistring[self.intent]
-        print 'DataType: ', data_type_codes.niistring[self.datatype]
-        print 'ArrayIndexingOrder: ', array_index_order_codes.label[self.ind_ord]
-        print 'Dimensionality: ', self.num_dim
-        print 'Dimensions: ', self.dims
-        print 'Encoding: ', gifti_encoding_codes.specs[self.encoding]
-        print 'Endian: ', gifti_endian_codes.giistring[self.endian]
-        print 'ExternalFileName: ', self.ext_fname
-        print 'ExternalFileOffset: ', self.ext_offset
+        print('Intent: ', intent_codes.niistring[self.intent])
+        print('DataType: ', data_type_codes.niistring[self.datatype])
+        print('ArrayIndexingOrder: ',
+              array_index_order_codes.label[self.ind_ord])
+        print('Dimensionality: ', self.num_dim)
+        print('Dimensions: ', self.dims)
+        print('Encoding: ', gifti_encoding_codes.specs[self.encoding])
+        print('Endian: ', gifti_endian_codes.giistring[self.endian])
+        print('ExternalFileName: ', self.ext_fname)
+        print('ExternalFileOffset: ', self.ext_offset)
         if not self.coordsys == None:
-            print '----'
-            print 'Coordinate System:'
-            print self.coordsys.print_summary()
+            print('----')
+            print('Coordinate System:')
+            print(self.coordsys.print_summary())
 
     def get_metadata(self):
         """ Returns metadata as dictionary """
@@ -347,8 +349,8 @@ class GiftiImage(object):
     version = str
     filename = str
 
-    def __init__(self, meta = None, labeltable = None, darrays = None,
-                 version = "1.0"):
+    def __init__(self, meta=None, labeltable=None, darrays=None,
+                 version="1.0"):
         if darrays is None:
             darrays = []
         self.darrays = darrays
@@ -363,13 +365,13 @@ class GiftiImage(object):
         self.numDA = len(self.darrays)
         self.version = version
 
+
 #    @classmethod
 #    def from_array(cls):
 #        pass
 #def GiftiImage_fromarray(data, intent = GiftiIntentCode.NIFTI_INTENT_NONE, encoding=GiftiEncoding.GIFTI_ENCODING_B64GZ, endian = GiftiEndian.GIFTI_ENDIAN_LITTLE):
 #    """ Returns a GiftiImage from a Numpy array with a given intent code and
 #    encoding """
-
 
 #    @classmethod
 #    def from_vertices_and_triangles(cls):
@@ -380,10 +382,9 @@ class GiftiImage(object):
 #    """ Returns a GiftiImage from two numpy arrays representing the vertices
 #    and the triangles. Additionally defining the coordinate system and encoding """
 
-
     def get_labeltable(self):
         return self.labeltable
-    
+
     def set_labeltable(self, labeltable):
         """ Set the labeltable for this GiftiImage
         
@@ -395,7 +396,7 @@ class GiftiImage(object):
         if isinstance(labeltable, GiftiLabelTable):
             self.labeltable = labeltable
         else:
-            print "Not a valid GiftiLabelTable instance"
+            print("Not a valid GiftiLabelTable instance")
 
     def get_metadata(self):
         return self.meta
@@ -413,9 +414,11 @@ class GiftiImage(object):
         """
         if isinstance(meta, GiftiMetaData):
             self.meta = meta
-            print "New Metadata set. Be aware of changing coordinate transformation!"
+            print(
+                "New Metadata set. Be aware of changing coordinate transformation!"
+            )
         else:
-            print "Not a valid GiftiMetaData instance"
+            print("Not a valid GiftiMetaData instance")
 
     def add_gifti_data_array(self, dataarr):
         """ Adds a data array to the GiftiImage
@@ -429,7 +432,7 @@ class GiftiImage(object):
             self.darrays.append(dataarr)
             self.numDA += 1
         else:
-            print "dataarr paramater must be of tzpe GiftiDataArray"
+            print("dataarr paramater must be of tzpe GiftiDataArray")
 
     def remove_gifti_data_array(self, ith):
         """ Removes the ith data array element from the GiftiImage """
@@ -439,7 +442,7 @@ class GiftiImage(object):
     def remove_gifti_data_array_by_intent(self, intent):
         """ Removes all the data arrays with the given intent type """
         intent2remove = intent_codes.code[intent]
-        
+
         for dele in self.darrays:
             if dele.intent == intent2remove:
                 self.darrays.remove(dele)
@@ -453,32 +456,32 @@ class GiftiImage(object):
 
         return [x for x in self.darrays if x.intent == it]
 
-
     def print_summary(self):
 
-        print '----start----'
-        print 'Source filename: ', self.filename
-        print 'Number of data arrays: ', self.numDA
-        print 'Version: ', self.version
+        print('----start----')
+        print('Source filename: ', self.filename)
+        print('Number of data arrays: ', self.numDA)
+        print('Version: ', self.version)
         if not self.meta == None:
-            print '----'
-            print 'Metadata:'
-            print self.meta.print_summary()
+            print('----')
+            print('Metadata:')
+            print(self.meta.print_summary())
         if not self.labeltable == None:
-            print '----'
-            print 'Labeltable:'
-            print self.labeltable.print_summary()
+            print('----')
+            print('Labeltable:')
+            print(self.labeltable.print_summary())
         for i, da in enumerate(self.darrays):
-            print '----'
-            print 'DataArray %s:' % i
-            print da.print_summary()
-        print '----end----'
+            print('----')
+            print('DataArray %s:' % i)
+            print(da.print_summary())
+        print('----end----')
 
     def to_xml(self):
         """ Return XML corresponding to image content """
         res = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE GIFTI SYSTEM "http://www.nitrc.org/frs/download.php/115/gifti.dtd">
-<GIFTI Version="%s"  NumberOfDataArrays="%s">\n""" % (self.version, str(self.numDA))
+<GIFTI Version="%s"  NumberOfDataArrays="%s">\n""" % (self.version,
+                                                      str(self.numDA))
         if not self.meta is None:
             res += self.meta.to_xml()
         if not self.labeltable is None:
@@ -487,4 +490,3 @@ class GiftiImage(object):
             res += dar.to_xml()
         res += "</GIFTI>"
         return res
-

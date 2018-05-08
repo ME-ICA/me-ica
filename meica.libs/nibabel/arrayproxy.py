@@ -39,6 +39,7 @@ class ArrayProxy(object):
     Other image types might need to implement their own implementation of this
     API.  See :mod:`minc` for an example.
     """
+
     def __init__(self, file_like, header):
         self.file_like = file_like
         self.header = header.copy()
@@ -58,8 +59,6 @@ class ArrayProxy(object):
     def _read_data(self):
         fileobj = allopen(self.file_like)
         data = self.header.data_from_fileobj(fileobj)
-        if isinstance(self.file_like, basestring):  # filename
+        if isinstance(self.file_like, str):  # filename
             fileobj.close()
         return data
-
-

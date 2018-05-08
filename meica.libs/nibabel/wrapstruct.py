@@ -120,10 +120,7 @@ class WrapStruct(object):
     # placeholder datatype
     template_dtype = np.dtype([('integer', 'i2')])
 
-    def __init__(self,
-                 binaryblock=None,
-                 endianness=None,
-                 check=True):
+    def __init__(self, binaryblock=None, endianness=None, check=True):
         ''' Initialize WrapStruct from binary data block
 
         Parameters
@@ -155,18 +152,15 @@ class WrapStruct(object):
         # check size
         if len(binaryblock) != self.template_dtype.itemsize:
             raise WrapStructError('Binary block is wrong size')
-        wstr = np.ndarray(shape=(),
-                         dtype=self.template_dtype,
-                         buffer=binaryblock)
+        wstr = np.ndarray(
+            shape=(), dtype=self.template_dtype, buffer=binaryblock)
         if endianness is None:
             endianness = self.__class__.guessed_endian(wstr)
         else:
             endianness = endian_codes[endianness]
         if endianness != native_code:
             dt = self.template_dtype.newbyteorder(endianness)
-            wstr = np.ndarray(shape=(),
-                             dtype=dt,
-                             buffer=binaryblock)
+            wstr = np.ndarray(shape=(), dtype=dt, buffer=binaryblock)
         self._structarr = wstr.copy()
         if check:
             self.check_fix()
@@ -270,9 +264,7 @@ class WrapStruct(object):
         >>> wstr2['integer']
         array(3, dtype=int16)
         '''
-        return self.__class__(
-                self.binaryblock,
-                self.endianness, check=False)
+        return self.__class__(self.binaryblock, self.endianness, check=False)
 
     def __eq__(self, other):
         ''' equality between two structures defined by binaryblock
@@ -326,7 +318,7 @@ class WrapStruct(object):
         self._structarr[item] = value
 
     def __iter__(self):
-        return iter(self.keys())
+        return iter(list(self.keys()))
 
     def keys(self):
         ''' Return keys from structured data'''
@@ -339,11 +331,11 @@ class WrapStruct(object):
 
     def items(self):
         ''' Return items from structured data'''
-        return zip(self.keys(), self.values())
+        return list(zip(list(self.keys()), list(self.values())))
 
     def get(self, k, d=None):
         ''' Return value for the key k if present or d otherwise'''
-        return (k in self.keys()) and self._structarr[k] or d
+        return (k in list(self.keys())) and self._structarr[k] or d
 
     def check_fix(self, logger=None, error_level=None):
         ''' Check structured data with checks '''
@@ -362,8 +354,8 @@ class WrapStruct(object):
         wstr = klass(binaryblock, endianness=endianness, check=False)
         battrun = BatteryRunner(klass._get_checks())
         reports = battrun.check_only(wstr)
-        return '\n'.join([report.message
-                          for report in reports if report.message])
+        return '\n'.join(
+            [report.message for report in reports if report.message])
 
     @classmethod
     def guessed_endian(self, mapping):
@@ -409,17 +401,15 @@ class WrapStruct(object):
 
     def __str__(self):
         ''' Return string representation for printing '''
-        summary = "%s object, endian='%s'" % (self.__class__,
-                                              self.endianness)
+        summary = "%s object, endian='%s'" % (self.__class__, self.endianness)
+
         def _getter(obj, key):
             try:
                 return obj.get_value_label(key)
             except ValueError:
                 return obj[key]
 
-        return '\n'.join(
-            [summary,
-             pretty_mapping(self, _getter)])
+        return '\n'.join([summary, pretty_mapping(self, _getter)])
 
     def get_value_label(self, fieldname):
         ''' Returns label for coded field
@@ -502,9 +492,7 @@ class WrapStruct(object):
         if endianness == current:
             return self.copy()
         wstr_data = self._structarr.byteswap()
-        return self.__class__(wstr_data.tostring(),
-                              endianness,
-                              check=False)
+        return self.__class__(wstr_data.tostring(), endianness, check=False)
 
     @classmethod
     def _get_checks(klass):

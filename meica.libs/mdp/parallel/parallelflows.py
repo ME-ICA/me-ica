@@ -8,14 +8,13 @@ as well.
 import mdp
 from mdp import numx as n
 
-from parallelnodes import NotForkableParallelException
-from scheduling import (
-    TaskCallable, ResultContainer, OrderedResultContainer, Scheduler
-)
+from .parallelnodes import NotForkableParallelException
+from .scheduling import (TaskCallable, ResultContainer, OrderedResultContainer,
+                         Scheduler)
 from mdp.hinet import FlowNode
 
-
 ### Helper code for node purging before transport. ###
+
 
 class _DummyNode(mdp.Node):
     """Dummy node class for empty nodes."""
@@ -23,13 +22,14 @@ class _DummyNode(mdp.Node):
     @staticmethod
     def is_trainable():
         return False
-    
+
     def _execute(self, x):
         err = "This is only a dummy created by 'parallel._purge_flownode'."
         raise mdp.NodeException(err)
 
 
 _DUMMY_NODE = _DummyNode()
+
 
 def _purge_flownode(flownode):
     """Replace nodes that are """
@@ -39,6 +39,7 @@ def _purge_flownode(flownode):
 
 
 ### Train task classes ###
+
 
 class FlowTaskCallable(TaskCallable):
     """Base class for all flow callables.
@@ -96,8 +97,8 @@ class FlowTrainCallable(FlowTaskCallable):
         return self._flownode
 
     def fork(self):
-        return self.__class__(self._flownode.fork(),
-                              purge_nodes=self._purge_nodes)
+        return self.__class__(
+            self._flownode.fork(), purge_nodes=self._purge_nodes)
 
 
 class TrainResultContainer(ResultContainer):
@@ -121,10 +122,13 @@ class TrainResultContainer(ResultContainer):
     def get_results(self):
         flownode = self._flownode
         self._flownode = None
-        return [flownode,]
-    
+        return [
+            flownode,
+        ]
+
 
 ### Execute task classes ###
+
 
 class FlowExecuteCallable(FlowTaskCallable):
     """Implements data execution through a Flow.
@@ -163,9 +167,11 @@ class FlowExecuteCallable(FlowTaskCallable):
             return (y, None)
 
     def fork(self):
-        return self.__class__(self._flownode.fork(), nodenr=self._nodenr,
-                              purge_nodes=self._purge_nodes)
-    
+        return self.__class__(
+            self._flownode.fork(),
+            nodenr=self._nodenr,
+            purge_nodes=self._purge_nodes)
+
 
 class ExecuteResultContainer(OrderedResultContainer):
     """Default result container with automatic restoring of the result order.
@@ -200,11 +206,14 @@ class ExecuteResultContainer(OrderedResultContainer):
         ParallelBiFlow.
         """
         excecute_results = super(ExecuteResultContainer, self).get_results()
-        flownode_results = ([self._flownode,]
-                              + ([None] * (len(excecute_results)-1)))
-        return zip(excecute_results, flownode_results)
+        flownode_results = ([
+            self._flownode,
+        ] + ([None] * (len(excecute_results) - 1)))
+        return list(zip(excecute_results, flownode_results))
+
 
 ### ParallelFlow Class ###
+
 
 class ParallelFlowException(mdp.FlowException):
     """Standard exception for problems with ParallelFlow."""
@@ -243,8 +252,7 @@ class ParallelFlow(mdp.Flow):
         disabled.
         """
         kwargs["crash_recovery"] = False
-        super(ParallelFlow, self).__init__(flow, verbose=verbose,
-                                           **kwargs)
+        super(ParallelFlow, self).__init__(flow, verbose=verbose, **kwargs)
         self._train_data_iterables = None  # all training data
         self._train_data_iterator = None  # iterator for current training
         # index of currently trained node, also used as flag for training
@@ -259,7 +267,9 @@ class ParallelFlow(mdp.Flow):
         self._execute_callable_class = None
 
     @mdp.with_extension("parallel")
-    def train(self, data_iterables, scheduler=None,
+    def train(self,
+              data_iterables,
+              scheduler=None,
               train_callable_class=None,
               overwrite_result_container=True,
               **kwargs):
@@ -310,36 +320,35 @@ class ParallelFlow(mdp.Flow):
             # do parallel training
             try:
                 self.setup_parallel_training(
-                                    data_iterables,
-                                    train_callable_class=train_callable_class,
-                                    **kwargs)
+                    data_iterables,
+                    train_callable_class=train_callable_class,
+                    **kwargs)
                 # prepare scheduler
                 if not isinstance(scheduler, Scheduler):
                     # scheduler contains an iterable with the schedulers
                     # self._i_train_node was set in setup_parallel_training
                     schedulers = iter(scheduler)
-                    scheduler = schedulers.next()
+                    scheduler = next(schedulers)
                     if self._i_train_node > 0:
                         # dispose schedulers for pretrained nodes
                         for _ in range(self._i_train_node):
                             if scheduler is not None:
                                 scheduler.shutdown()
-                            scheduler = schedulers.next()
+                            scheduler = next(schedulers)
                     elif self._i_train_node is None:
                         # all nodes are already trained, dispose schedulers
                         for _ in range(len(self.flow) - 1):
                             if scheduler is not None:
                                 scheduler.shutdown()
                             # the last scheduler will be shutdown in finally
-                            scheduler = schedulers.next()
+                            scheduler = next(schedulers)
                     last_trained_node = self._i_train_node
                 else:
                     schedulers = None
                 # check that the scheduler is compatible
-                if ((scheduler is not None) and
-                    overwrite_result_container and
-                    (not isinstance(scheduler.result_container,
-                                    TrainResultContainer))):
+                if ((scheduler is not None) and overwrite_result_container
+                        and (not isinstance(scheduler.result_container,
+                                            TrainResultContainer))):
                     scheduler.result_container = TrainResultContainer()
                 ## train all nodes
                 while self.is_parallel_training:
@@ -354,20 +363,20 @@ class ParallelFlow(mdp.Flow):
                     else:
                         self.use_results(results)
                     # check if we have to switch to next scheduler
-                    if ((schedulers is not None) and
-                        (self._i_train_node is not None) and
-                        (self._i_train_node > last_trained_node)):
+                    if ((schedulers is not None)
+                            and (self._i_train_node is not None)
+                            and (self._i_train_node > last_trained_node)):
                         # dispose unused schedulers
                         for _ in range(self._i_train_node - last_trained_node):
                             if scheduler is not None:
                                 scheduler.shutdown()
-                            scheduler = schedulers.next()
+                            scheduler = next(schedulers)
                         last_trained_node = self._i_train_node
                         # check that the scheduler is compatible
-                        if ((scheduler is not None) and
-                            overwrite_result_container and
-                            (not isinstance(scheduler.result_container,
-                                            TrainResultContainer))):
+                        if ((scheduler is not None)
+                                and overwrite_result_container
+                                and (not isinstance(scheduler.result_container,
+                                                    TrainResultContainer))):
                             scheduler.result_container = TrainResultContainer()
             finally:
                 # reset iterable references, which cannot be pickled
@@ -376,7 +385,8 @@ class ParallelFlow(mdp.Flow):
                 if (schedulers is not None) and (scheduler is not None):
                     scheduler.shutdown()
 
-    def setup_parallel_training(self, data_iterables,
+    def setup_parallel_training(self,
+                                data_iterables,
                                 train_callable_class=FlowTrainCallable):
         """Prepare the flow for handing out tasks to do the training.
 
@@ -401,7 +411,8 @@ class ParallelFlow(mdp.Flow):
             err = "Parallel training is already underway."
             raise ParallelFlowException(err)
         self._train_callable_class = train_callable_class
-        self._train_data_iterables = self._train_check_iterables(data_iterables)
+        self._train_data_iterables = self._train_check_iterables(
+            data_iterables)
         self._i_train_node = 0
         self._flownode = FlowNode(mdp.Flow(self.flow))
         self._next_train_phase()
@@ -426,9 +437,9 @@ class ParallelFlow(mdp.Flow):
                 self._flownode.fork()
                 # fork successful, prepare parallel training
                 if self.verbose:
-                    print ("start parallel training phase of " +
+                    print(("start parallel training phase of " +
                            "node no. %d in parallel flow" %
-                           (self._i_train_node+1))
+                           (self._i_train_node + 1)))
                 self._train_data_iterator = iter(data_iterable)
                 first_task = self._create_train_task()
                 # make sure that the iterator is not empty
@@ -438,11 +449,12 @@ class ParallelFlow(mdp.Flow):
                                    "no. %d could not be repeated for the "
                                    "second training phase, you probably "
                                    "provided an iterator instead of an "
-                                   "iterable." % (self._i_train_node+1))
+                                   "iterable." % (self._i_train_node + 1))
                         raise mdp.FlowException(err_str)
                     else:
                         err_str = ("The training data iterator for node "
-                                   "no. %d is empty." % (self._i_train_node+1))
+                                   "no. %d is empty." %
+                                   (self._i_train_node + 1))
                         raise mdp.FlowException(err_str)
                 task_data_chunk = first_task[0]
                 # Only first task contains the new callable (enable caching).
@@ -451,18 +463,18 @@ class ParallelFlow(mdp.Flow):
                 self._next_task = (task_data_chunk,
                                    self._train_callable_class(self._flownode))
                 break
-            except NotForkableParallelException, exception:
+            except NotForkableParallelException as exception:
                 if self.verbose:
-                    print ("could not fork node no. %d: %s" %
-                           (self._i_train_node+1, str(exception)))
-                    print ("start nonparallel training phase of " +
+                    print(("could not fork node no. %d: %s" %
+                           (self._i_train_node + 1, str(exception))))
+                    print(("start nonparallel training phase of " +
                            "node no. %d in parallel flow" %
-                           (self._i_train_node+1))
+                           (self._i_train_node + 1)))
                 self._local_train_phase(data_iterable)
                 if self.verbose:
-                    print ("finished nonparallel training phase of " +
+                    print(("finished nonparallel training phase of " +
                            "node no. %d in parallel flow" %
-                           (self._i_train_node+1))
+                           (self._i_train_node + 1)))
                 self._stop_training_hook()
                 self._flownode.stop_training()
                 self._post_stop_training_hook()
@@ -478,8 +490,8 @@ class ParallelFlow(mdp.Flow):
         The internal _train_callable_class is used for the training.
         """
         current_node = self.flow[self._i_train_node]
-        task_callable = self._train_callable_class(self._flownode,
-                                                   purge_nodes=False)
+        task_callable = self._train_callable_class(
+            self._flownode, purge_nodes=False)
         empty_iterator = True
         for i_task, data in enumerate(data_iterable):
             empty_iterator = False
@@ -487,18 +499,18 @@ class ParallelFlow(mdp.Flow):
             # callable can handle this
             task_callable(data)
             if self.verbose:
-                print ("    finished nonparallel task no. %d" % (i_task+1))
+                print(("    finished nonparallel task no. %d" % (i_task + 1)))
         if empty_iterator:
             if current_node.get_current_train_phase() == 1:
                 err_str = ("The training data iteration for node "
                            "no. %d could not be repeated for the "
                            "second training phase, you probably "
                            "provided an iterator instead of an "
-                           "iterable." % (self._i_train_node+1))
+                           "iterable." % (self._i_train_node + 1))
                 raise mdp.FlowException(err_str)
             else:
                 err_str = ("The training data iterator for node "
-                           "no. %d is empty." % (self._i_train_node+1))
+                           "no. %d is empty." % (self._i_train_node + 1))
                 raise mdp.FlowException(err_str)
 
     def _post_stop_training_hook(self):
@@ -511,12 +523,15 @@ class ParallelFlow(mdp.Flow):
         Returns None if data iterator end is reached.
         """
         try:
-            return (self._train_data_iterator.next(), None)
+            return (next(self._train_data_iterator), None)
         except StopIteration:
             return None
 
     @mdp.with_extension("parallel")
-    def execute(self, iterable, nodenr=None, scheduler=None,
+    def execute(self,
+                iterable,
+                nodenr=None,
+                scheduler=None,
                 execute_callable_class=None,
                 overwrite_result_container=True):
         """Train all trainable nodes in the flow.
@@ -568,9 +583,9 @@ class ParallelFlow(mdp.Flow):
         self._flownode = FlowNode(mdp.Flow(self.flow))
         try:
             self.setup_parallel_execution(
-                                iterable,
-                                nodenr=nodenr,
-                                execute_callable_class=execute_callable_class)
+                iterable,
+                nodenr=nodenr,
+                execute_callable_class=execute_callable_class)
             while self.task_available:
                 task = self.get_task()
                 scheduler.add_task(*task)
@@ -580,7 +595,9 @@ class ParallelFlow(mdp.Flow):
             self._exec_data_iterator = None
         return result
 
-    def setup_parallel_execution(self, iterable, nodenr=None,
+    def setup_parallel_execution(self,
+                                 iterable,
+                                 nodenr=None,
                                  execute_callable_class=FlowExecuteCallable):
         """Prepare the flow for handing out tasks to do the execution.
 
@@ -616,8 +633,8 @@ class ParallelFlow(mdp.Flow):
         # A fork is not required here, since the callable is always
         # forked in the scheduler.
         self._next_task = (task_data_chunk,
-                           self._execute_callable_class(self._flownode,
-                                                        purge_nodes=True))
+                           self._execute_callable_class(
+                               self._flownode, purge_nodes=True))
 
     def _create_execute_task(self):
         """Create and return a single execution task.
@@ -626,7 +643,7 @@ class ParallelFlow(mdp.Flow):
         """
         try:
             # TODO: check if forked task is forkable before enforcing caching
-            return (self._exec_data_iterator.next(), None)
+            return (next(self._exec_data_iterator), None)
         except StopIteration:
             return None
 
@@ -685,8 +702,8 @@ class ParallelFlow(mdp.Flow):
                 # the flownode contains the original nodes
                 self._flownode.join(result)
             if self.verbose:
-                print ("finished parallel training phase of node no. " +
-                       "%d in parallel flow" % (self._i_train_node+1))
+                print(("finished parallel training phase of node no. " +
+                       "%d in parallel flow" % (self._i_train_node + 1)))
             self._stop_training_hook()
             self._flownode.stop_training()
             self._post_stop_training_hook()
@@ -715,11 +732,13 @@ class ParallelCheckpointFlow(ParallelFlow, mdp.CheckpointFlow):
     def __init__(self, flow, verbose=False, **kwargs):
         """Initialize the internal variables."""
         self._checkpoints = None
-        super(ParallelCheckpointFlow, self).__init__(flow=flow,
-                                                     verbose=verbose,
-                                                     **kwargs)
+        super(ParallelCheckpointFlow, self).__init__(
+            flow=flow, verbose=verbose, **kwargs)
 
-    def train(self, data_iterables, checkpoints, scheduler=None,
+    def train(self,
+              data_iterables,
+              checkpoints,
+              scheduler=None,
               train_callable_class=FlowTrainCallable,
               overwrite_result_container=True,
               **kwargs):
@@ -729,22 +748,24 @@ class ParallelCheckpointFlow(ParallelFlow, mdp.CheckpointFlow):
         of checkpoint functions as in CheckpointFlow.
         """
         super(ParallelCheckpointFlow, self).train(
-                        data_iterables=data_iterables,
-                        scheduler=scheduler,
-                        train_callable_class=train_callable_class,
-                        overwrite_result_container=overwrite_result_container,
-                        checkpoints=checkpoints,
-                        **kwargs)
+            data_iterables=data_iterables,
+            scheduler=scheduler,
+            train_callable_class=train_callable_class,
+            overwrite_result_container=overwrite_result_container,
+            checkpoints=checkpoints,
+            **kwargs)
 
-    def setup_parallel_training(self, data_iterables, checkpoints,
+    def setup_parallel_training(self,
+                                data_iterables,
+                                checkpoints,
                                 train_callable_class=FlowTrainCallable,
                                 **kwargs):
         """Checkpoint version of parallel training."""
         self._checkpoints = self._train_check_checkpoints(checkpoints)
         super(ParallelCheckpointFlow, self).setup_parallel_training(
-                                    data_iterables,
-                                    train_callable_class=train_callable_class,
-                                    **kwargs)
+            data_iterables,
+            train_callable_class=train_callable_class,
+            **kwargs)
 
     def _post_stop_training_hook(self):
         """Check if we reached a checkpoint."""
@@ -752,7 +773,7 @@ class ParallelCheckpointFlow(ParallelFlow, mdp.CheckpointFlow):
         i_node = self._i_train_node
         if self.flow[i_node].get_remaining_train_phase() == 0:
             if ((i_node <= len(self._checkpoints))
-                and self._checkpoints[i_node]):
+                    and self._checkpoints[i_node]):
                 dict = self._checkpoints[i_node](self.flow[i_node])
                 # store result, just like in the original CheckpointFlow
                 if dict:

@@ -9,9 +9,12 @@ class ClassifierNode(PreserveDimNode):
     labels used for classification do not form a vector space, and so they don't
     make much sense in a flow.
     """
-    
-    def __init__(self, execute_method=None,
-                 input_dim=None, output_dim=None, dtype=None):
+
+    def __init__(self,
+                 execute_method=None,
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None):
         """Initialize classifier.
         
         execute_method -- Set to string value 'label', 'rank', or 'prob' to
@@ -22,9 +25,8 @@ class ClassifierNode(PreserveDimNode):
             will then consist of the classification results.
         """
         self.execute_method = execute_method
-        super(ClassifierNode, self).__init__(input_dim=input_dim,
-                                             output_dim=output_dim,
-                                             dtype=dtype)
+        super(ClassifierNode, self).__init__(
+            input_dim=input_dim, output_dim=output_dim, dtype=dtype)
 
     ### Methods to be implemented by the subclasses
 
@@ -69,14 +71,16 @@ class ClassifierNode(PreserveDimNode):
         prob = self.prob(x)
         for p in prob:
             if threshold is None:
-                ranking = p.items()
+                ranking = list(p.items())
             else:
-                ranking = ((k, v) for k, v in p.items() if v > threshold)
-            result = [k for k, v in
-                      sorted(ranking, key=operator.itemgetter(1), reverse=True)]
+                ranking = ((k, v) for k, v in list(p.items()) if v > threshold)
+            result = [
+                k for k, v in sorted(
+                    ranking, key=operator.itemgetter(1), reverse=True)
+            ]
             all_ranking.append(result)
         return all_ranking
-    
+
     def _execute(self, x):
         if not self.execute_method:
             return x
@@ -86,6 +90,7 @@ class ClassifierNode(PreserveDimNode):
             return self.rank(x)
         elif self.execute_method == "prob":
             return self.prob(x)
+
 
 # XXX are the _train and _stop_training functions necessary anymore?
 class ClassifierCumulator(VariadicCumulator('data', 'labels'), ClassifierNode):
@@ -100,14 +105,13 @@ class ClassifierCumulator(VariadicCumulator('data', 'labels'), ClassifierNode):
     """
 
     def __init__(self, input_dim=None, output_dim=None, dtype=None):
-        super(ClassifierCumulator, self).__init__(input_dim=input_dim,
-                                                  output_dim=output_dim,
-                                                  dtype=dtype)
+        super(ClassifierCumulator, self).__init__(
+            input_dim=input_dim, output_dim=output_dim, dtype=dtype)
 
     def _check_train_args(self, x, labels):
         super(ClassifierCumulator, self)._check_train_args(x, labels)
-        if (isinstance(labels, (list, tuple, numx.ndarray)) and
-            len(labels) != x.shape[0]):
+        if (isinstance(labels, (list, tuple, numx.ndarray))
+                and len(labels) != x.shape[0]):
             msg = ("The number of labels must be equal to the number of "
                    "datapoints (%d != %d)" % (len(labels), x.shape[0]))
             raise mdp.TrainingException(msg)
@@ -131,4 +135,3 @@ class ClassifierCumulator(VariadicCumulator('data', 'labels'), ClassifierNode):
         self.data.shape = (self.tlen, self.input_dim)
         self.labels = numx.array(self.labels)
         self.labels.shape = (self.tlen)
-

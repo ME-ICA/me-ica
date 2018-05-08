@@ -4,6 +4,7 @@ import mdp
 
 numx = mdp.numx
 
+
 class FDANode(mdp.Node):
     """Perform a (generalized) Fisher Discriminant Analysis of its
     input. It is a supervised node that implements FDA using a
@@ -39,8 +40,8 @@ class FDANode(mdp.Node):
     """
 
     def _get_train_seq(self):
-        return [(self._train_means, self._stop_means),
-                (self._train_fda, self._stop_fda)]
+        return [(self._train_means, self._stop_means), (self._train_fda,
+                                                        self._stop_fda)]
 
     def __init__(self, input_dim=None, output_dim=None, dtype=None):
         super(FDANode, self).__init__(input_dim, output_dim, dtype)
@@ -55,8 +56,8 @@ class FDANode(mdp.Node):
         self.avg = None  # mean of the input data
 
     def _check_train_args(self, x, labels):
-        if (isinstance(labels, (list, tuple, numx.ndarray)) and
-            len(labels) != x.shape[0]):
+        if (isinstance(labels, (list, tuple, numx.ndarray))
+                and len(labels) != x.shape[0]):
             msg = ("The number of labels should be equal to the number of "
                    "datapoints (%d != %d)" % (len(labels), x.shape[0]))
             raise mdp.TrainingException(msg)
@@ -69,7 +70,7 @@ class FDANode(mdp.Node):
             labels_ = numx.asarray(labels)
             for label in set(labels_):
                 # group for class
-                x_label = numx.compress(labels_==label, x, axis=0)
+                x_label = numx.compress(labels_ == label, x, axis=0)
                 self._update_means(x_label, label)
         else:
             self._update_means(x, labels)
@@ -86,7 +87,8 @@ class FDANode(mdp.Node):
         label -- The label for that class.
         """
         if label not in self.means:
-            self.means[label] = numx.zeros((1, self.input_dim), dtype=self.dtype)
+            self.means[label] = numx.zeros(
+                (1, self.input_dim), dtype=self.dtype)
             self.tlens[label] = 0
         self.means[label] += x.sum(axis=0)
         self.tlens[label] += x.shape[0]
@@ -97,8 +99,8 @@ class FDANode(mdp.Node):
     def _train_fda(self, x, labels):
         """Gather data for the overall and within-class covariance"""
         if self._S_W is None:
-            self._S_W = numx.zeros((self.input_dim, self.input_dim),
-                                   dtype=self.dtype)
+            self._S_W = numx.zeros(
+                (self.input_dim, self.input_dim), dtype=self.dtype)
         # update the covariance matrix of all classes
         self._allcov.update(x)
         # if labels is a number, all x's belong to the same class
@@ -107,7 +109,7 @@ class FDANode(mdp.Node):
             # get all classes from labels
             for label in set(labels_):
                 # group for class
-                x_label = numx.compress(labels_==label, x, axis=0)
+                x_label = numx.compress(labels_ == label, x, axis=0)
                 self._update_SW(x_label, label)
         else:
             self._update_SW(x, labels)
@@ -125,7 +127,7 @@ class FDANode(mdp.Node):
             self.output_dim = self.input_dim
         else:
             rng = (1, self.output_dim)
-        self.v = mdp.utils.symeig(S_W, S_T, range=rng, overwrite = 1)[1]
+        self.v = mdp.utils.symeig(S_W, S_T, range=rng, overwrite=1)[1]
 
     def _update_SW(self, x, label):
         """Update the covariance matrix of the class means.
@@ -135,9 +137,9 @@ class FDANode(mdp.Node):
         """
         x = x - self.means[label]
         self._S_W += mdp.utils.mult(x.T, x)
-    
+
     # Overwrite the standard methods
-    
+
     # dummy method used to overwrite the train docstring
     def _train(self, x, label):
         """Update the internal structures according to the input data 'x'.
@@ -159,7 +161,7 @@ class FDANode(mdp.Node):
             v = self.v[:, 0:n]
         else:
             v = self.v
-        return mdp.utils.mult(x-self.avg, v)
+        return mdp.utils.mult(x - self.avg, v)
 
     def _inverse(self, y):
-        return mdp.utils.mult(y, mdp.utils.pinv(self.v))+self.avg
+        return mdp.utils.mult(y, mdp.utils.pinv(self.v)) + self.avg

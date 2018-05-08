@@ -70,9 +70,9 @@ def apply_affine(aff, pts):
     shape = pts.shape
     pts = pts.reshape((-1, shape[-1]))
     # rzs == rotations, zooms, shears
-    rzs = aff[:-1,:-1]
-    trans = aff[:-1,-1]
-    res = np.dot(pts, rzs.T) + trans[None,:]
+    rzs = aff[:-1, :-1]
+    trans = aff[:-1, -1]
+    res = np.dot(pts, rzs.T) + trans[None, :]
     return res.reshape(shape)
 
 
@@ -161,7 +161,7 @@ def from_matvec(matrix, vector=None):
     """
     matrix = np.asarray(matrix)
     nin, nout = matrix.shape
-    t = np.zeros((nin+1,nout+1), matrix.dtype)
+    t = np.zeros((nin + 1, nout + 1), matrix.dtype)
     t[0:nin, 0:nout] = matrix
     t[nin, nout] = 1.
     if not vector is None:
@@ -212,16 +212,16 @@ def append_diag(aff, steps, starts=()):
         starts = np.zeros(n_steps, dtype=steps.dtype)
     elif len(starts) != n_steps:
         raise ValueError('Steps should have same length as starts')
-    old_n_out, old_n_in = aff.shape[0]-1, aff.shape[1]-1
+    old_n_out, old_n_in = aff.shape[0] - 1, aff.shape[1] - 1
     # make new affine
-    aff_plus = np.zeros((old_n_out + n_steps + 1,
-                         old_n_in + n_steps + 1), dtype=aff.dtype)
+    aff_plus = np.zeros(
+        (old_n_out + n_steps + 1, old_n_in + n_steps + 1), dtype=aff.dtype)
     # Get stuff from old affine
-    aff_plus[:old_n_out,:old_n_in] = aff[:old_n_out, :old_n_in]
-    aff_plus[:old_n_out,-1] = aff[:old_n_out,-1]
+    aff_plus[:old_n_out, :old_n_in] = aff[:old_n_out, :old_n_in]
+    aff_plus[:old_n_out, -1] = aff[:old_n_out, -1]
     # Add new diagonal elements
     for i, el in enumerate(steps):
-        aff_plus[old_n_out+i, old_n_in+i] = el
+        aff_plus[old_n_out + i, old_n_in + i] = el
     # Add translations for new affine, plus last 1
-    aff_plus[old_n_out:,-1] = list(starts) + [1]
+    aff_plus[old_n_out:, -1] = list(starts) + [1]
     return aff_plus

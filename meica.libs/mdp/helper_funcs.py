@@ -1,5 +1,6 @@
 import mdp
 
+
 def pca(x, **kwargs):
     """Filters multidimensioanl input data through its principal components.
 
@@ -12,6 +13,7 @@ def pca(x, **kwargs):
     This is equivalent to ``mdp.nodes.PCANode(**kwargs)(x)``
     """
     return mdp.nodes.PCANode(**kwargs)(x)
+
 
 def fastica(x, **kwargs):
     """Perform Independent Component Analysis on input data using the FastICA

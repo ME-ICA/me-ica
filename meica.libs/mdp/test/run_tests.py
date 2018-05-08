@@ -2336,6 +2336,7 @@ import base64
 import zlib
 import imp
 
+
 class DictImporter(object):
     def __init__(self, sources):
         self.sources = sources
@@ -2373,14 +2374,15 @@ class DictImporter(object):
             res = self.sources.get(name + '.__init__')
         return res
 
+
 if __name__ == "__main__":
     if sys.version_info >= (3, 0):
         exec("def do_exec(co, loc): exec(co, loc)\n")
         import pickle
-        sources = sources.encode("ascii") # ensure bytes
+        sources = sources.encode("ascii")  # ensure bytes
         sources = pickle.loads(zlib.decompress(base64.decodebytes(sources)))
     else:
-        import cPickle as pickle
+        import pickle as pickle
         exec("def do_exec(co, loc): exec co in loc\n")
         sources = pickle.loads(zlib.decompress(base64.decodestring(sources)))
 

@@ -1,15 +1,17 @@
 import mdp
 
 # import numeric module (scipy, Numeric or numarray)
-numx, numx_rand, numx_linalg  = mdp.numx, mdp.numx_rand, mdp.numx_linalg
+numx, numx_rand, numx_linalg = mdp.numx, mdp.numx_rand, mdp.numx_linalg
 numx_description = mdp.numx_description
 import random
 import itertools
 
+
 def timediff(data):
     """Returns the array of the time differences of data."""
     # this is the fastest way we found so far
-    return data[1:]-data[:-1]
+    return data[1:] - data[:-1]
+
 
 def refcast(array, dtype):
     """
@@ -20,9 +22,11 @@ def refcast(array, dtype):
         return array
     return array.astype(dtype)
 
+
 def scast(scalar, dtype):
     """Convert a scalar in a 0D array of the given dtype."""
     return numx.array(scalar, dtype=dtype)
+
 
 def rotate(mat, angle, columns=(0, 1), units='radians'):
     """
@@ -37,14 +41,15 @@ def rotate(mat, angle, columns=(0, 1), units='radians'):
     If M=2, columns=[0,1].
     """
     if units is 'degrees':
-        angle = angle/180.*numx.pi
+        angle = angle / 180. * numx.pi
     cos_ = numx.cos(angle)
     sin_ = numx.sin(angle)
     [i, j] = columns
     col_i = mat[:, i] + 0.
     col_j = mat[:, j]
-    mat[:, i] = cos_*col_i - sin_*col_j
-    mat[:, j] = sin_*col_i + cos_*col_j
+    mat[:, i] = cos_ * col_i - sin_ * col_j
+    mat[:, j] = sin_ * col_i + cos_ * col_j
+
 
 def permute(x, indices=(0, 0), rows=0, cols=1):
     """Swap two columns and (or) two rows of 'x', whose indices are specified
@@ -67,9 +72,11 @@ def permute(x, indices=(0, 0), rows=0, cols=1):
     if cols:
         x[:, i], x[:, j] = x[:, j], x[:, i] + 0
 
+
 def hermitian(x):
     """Compute the Hermitian, i.e. conjugate transpose, of x."""
     return x.T.conj()
+
 
 def symrand(dim_or_eigv, dtype="d"):
     """Return a random symmetric (Hermitian) matrix.
@@ -82,9 +89,8 @@ def symrand(dim_or_eigv, dtype="d"):
     """
     if isinstance(dim_or_eigv, int):
         dim = dim_or_eigv
-        d = (numx_rand.random(dim)*2) - 1
-    elif isinstance(dim_or_eigv,
-                    numx.ndarray) and len(dim_or_eigv.shape) == 1:
+        d = (numx_rand.random(dim) * 2) - 1
+    elif isinstance(dim_or_eigv, numx.ndarray) and len(dim_or_eigv.shape) == 1:
         dim = dim_or_eigv.shape[0]
         d = dim_or_eigv
     else:
@@ -94,11 +100,12 @@ def symrand(dim_or_eigv, dtype="d"):
     #h = mdp.utils.mult(mdp.utils.mult(hermitian(v), mdp.numx.diag(d)), v)
     h = mdp.utils.mult(mult_diag(d, hermitian(v), left=False), v)
     # to avoid roundoff errors, symmetrize the matrix (again)
-    h = 0.5*(h.T+h)
+    h = 0.5 * (h.T + h)
     if dtype in ('D', 'F', 'G'):
         h2 = symrand(dim_or_eigv)
-        h = h + 1j*(numx.triu(h2)-numx.tril(h2))
+        h = h + 1j * (numx.triu(h2) - numx.tril(h2))
     return refcast(h, dtype)
+
 
 def random_rot(dim, dtype='d'):
     """Return a random rotation matrix, drawn from the Haar distribution
@@ -110,28 +117,30 @@ def random_rot(dim, dtype='d'):
     For more information see
     http://en.wikipedia.org/wiki/Orthogonal_matrix#Randomization"""
     H = mdp.numx.eye(dim, dtype=dtype)
-    D = mdp.numx.ones((dim,), dtype=dtype)
+    D = mdp.numx.ones((dim, ), dtype=dtype)
     for n in range(1, dim):
-        x = mdp.numx_rand.normal(size=(dim-n+1,)).astype(dtype)
-        D[n-1] = mdp.numx.sign(x[0])
-        x[0] -= D[n-1]*mdp.numx.sqrt((x*x).sum())
+        x = mdp.numx_rand.normal(size=(dim - n + 1, )).astype(dtype)
+        D[n - 1] = mdp.numx.sign(x[0])
+        x[0] -= D[n - 1] * mdp.numx.sqrt((x * x).sum())
         # Householder transformation
-        Hx = ( mdp.numx.eye(dim-n+1, dtype=dtype)
-               - 2.*mdp.numx.outer(x, x)/(x*x).sum() )
+        Hx = (mdp.numx.eye(dim - n + 1, dtype=dtype) -
+              2. * mdp.numx.outer(x, x) / (x * x).sum())
         mat = mdp.numx.eye(dim, dtype=dtype)
-        mat[n-1:, n-1:] = Hx
+        mat[n - 1:, n - 1:] = Hx
         H = mdp.utils.mult(H, mat)
     # Fix the last sign such that the determinant is 1
-    D[-1] = (-1)**(1-dim%2)*D.prod()
+    D[-1] = (-1)**(1 - dim % 2) * D.prod()
     # Equivalent to mult(numx.diag(D), H) but faster
-    H = (D*H.T).T
+    H = (D * H.T).T
     return H
+
 
 def norm2(v):
     """Compute the 2-norm for 1D arrays.
     norm2(v) = sqrt(sum(v_i^2))"""
 
-    return numx.sqrt((v*v).sum())
+    return numx.sqrt((v * v).sum())
+
 
 def cov2(x, y):
     """Compute the covariance between 2D matrices x and y.
@@ -141,15 +150,16 @@ def cov2(x, y):
     mnx = x.mean(axis=0)
     mny = y.mean(axis=0)
     tlen = x.shape[0]
-    return mdp.utils.mult(x.T, y)/(tlen-1) - numx.outer(mnx, mny)
+    return mdp.utils.mult(x.T, y) / (tlen - 1) - numx.outer(mnx, mny)
+
 
 def cov_maxima(cov):
     """Extract the maxima of a covariance matrix."""
     dim = cov.shape[0]
     maxs = []
     if dim >= 1:
-        cov=abs(cov)
-        glob_max_idx = (cov.argmax()//dim, cov.argmax()%dim)
+        cov = abs(cov)
+        glob_max_idx = (cov.argmax() // dim, cov.argmax() % dim)
         maxs.append(cov[glob_max_idx[0], glob_max_idx[1]])
         cov_reduce = cov.copy()
         cov_reduce = cov_reduce[numx.arange(dim) != glob_max_idx[0], :]
@@ -173,19 +183,21 @@ def mult_diag(d, mtx, left=True):
       mult_diag(d, mts, left=False) == dot(mtx, diag(d))
     """
     if left:
-        return (d*mtx.T).T
+        return (d * mtx.T).T
     else:
-        return d*mtx
+        return d * mtx
+
 
 def comb(N, k):
     """Return number of combinations of k objects from a set of N objects
     without repetitions, a.k.a. the binomial coefficient of N and k."""
     ret = 1
-    for mlt in xrange(N, N-k, -1):
+    for mlt in range(N, N - k, -1):
         ret *= mlt
-    for dv in xrange(1, k+1):
+    for dv in range(1, k + 1):
         ret //= dv
     return ret
+
 
 # WARNING numpy.linalg.eigh does not support float sizes larger than 64 bits,
 # and complex numbers of size larger than 128 bits.
@@ -204,16 +216,20 @@ def get_dtypes(typecodes_key, _safe=True):
         try:
             type_ = numx.dtype(c)
             if (_safe and not mdp.config.has_symeig == 'scipy.linalg.eigh'
-                and type_ in _UNSAFE_DTYPES):
+                    and type_ in _UNSAFE_DTYPES):
                 continue
             types.append(type_)
         except TypeError:
             pass
     return types
 
-_UNSAFE_DTYPES = [numx.typeDict[d] for d in
-                  ['float16', 'float96', 'float128', 'complex192', 'complex256']
-                  if d in numx.typeDict]
+
+_UNSAFE_DTYPES = [
+    numx.typeDict[d]
+    for d in ['float16', 'float96', 'float128', 'complex192', 'complex256']
+    if d in numx.typeDict
+]
+
 
 def nongeneral_svd(A, range=None, **kwargs):
     """SVD routine for simple eigenvalue problem, API is compatible with
@@ -225,14 +241,16 @@ def nongeneral_svd(A, range=None, **kwargs):
     Z = Z.take(idx, axis=0).T
     if range is not None:
         lo, hi = range
-        Z = Z[:, lo-1:hi]
-        w = w[lo-1:hi]
+        Z = Z[:, lo - 1:hi]
+        w = w[lo - 1:hi]
     return w, Z
+
 
 def sqrtm(A):
     """This is a symmetric definite positive matrix sqrt function"""
     d, V = mdp.utils.symeig(A)
     return mdp.utils.mult(V, mult_diag(numx.sqrt(d), V.T))
+
 
 # replication functions
 def lrep(x, n):
@@ -241,34 +259,40 @@ def lrep(x, n):
     shp.extend(x.shape)
     return x.reshape(shp).repeat(n, axis=0)
 
+
 def rrep(x, n):
     """Replicate x n-times on a new last dimension"""
-    shp = x.shape + (1,)
+    shp = x.shape + (1, )
     return x.reshape(shp).repeat(n, axis=-1)
+
 
 def irep(x, n, dim):
     """Replicate x n-times on a new dimension dim-th dimension"""
     x_shape = x.shape
-    shp = x_shape[:dim] + (1,) + x_shape[dim:]
+    shp = x_shape[:dim] + (1, ) + x_shape[dim:]
     return x.reshape(shp).repeat(n, axis=dim)
+
+
 # /replication functions
 
 try:
     # product exists only in itertools >= 2.6
     from itertools import product
 except ImportError:
+
     def product(*args, **kwds):
         """Cartesian product of input iterables.
         """
         # taken from python docs 2.6
         # product('ABCD', 'xy') --> Ax Ay Bx By Cx Cy Dx Dy
         # product(range(2), repeat=3) --> 000 001 010 011 100 101 110 111
-        pools = map(tuple, args) * kwds.get('repeat', 1)
+        pools = list(map(tuple, args)) * kwds.get('repeat', 1)
         result = [[]]
         for pool in pools:
-            result = [x+[y] for x in result for y in pool]
+            result = [x + [y] for x in result for y in pool]
         for prod in result:
             yield tuple(prod)
+
 
 def orthogonal_permutations(a_dict):
     """
@@ -292,7 +316,7 @@ def orthogonal_permutations(a_dict):
     """
     pool = dict(a_dict)
     args = []
-    for func, all_args in pool.items():
+    for func, all_args in list(pool.items()):
         # check the size of the list in the second item of the tuple
         args_with_fun = [(func, arg) for arg in all_args]
         args.append(args_with_fun)
@@ -324,16 +348,17 @@ def izip_stretched(*iterables):
     (2, -1)
     (3, -1)
     """
+
     def iter_or_repeat(val):
         try:
             return iter(val)
         except TypeError:
             return itertools.repeat(val)
 
-    iterables= map(iter_or_repeat, iterables)
+    iterables = list(map(iter_or_repeat, iterables))
     while iterables:
         # need to care about python < 2.6
-        yield tuple([it.next() for it in iterables])
+        yield tuple([next(it) for it in iterables])
 
 
 def weighted_choice(a_dict, normalize=True):
@@ -352,21 +377,23 @@ def weighted_choice(a_dict, normalize=True):
     if normalize:
         d = a_dict.copy()
         s = sum(d.values())
-        for key, val in d.items():
+        for key, val in list(d.items()):
             d[key] = d[key] / s
     else:
         d = a_dict
     rand_num = random.random()
     total_rand = 0
-    for key, val in d.items():
+    for key, val in list(d.items()):
         total_rand += val
         if total_rand > rand_num:
             return key
     return None
 
+
 def bool_to_sign(an_array):
     """Return -1 for each False; +1 for each True"""
     return numx.sign(an_array - 0.5)
+
 
 def sign_to_bool(an_array, zero=True):
     """Return False for each negative value, else True.
@@ -377,6 +404,7 @@ def sign_to_bool(an_array, zero=True):
         return numx.array(an_array) >= 0
     else:
         return numx.array(an_array) > 0
+
 
 def gabor(size, alpha, phi, freq, sgm, x0=None, res=1, ampl=1.):
     """Return a 2D array containing a Gabor wavelet.
@@ -398,21 +426,21 @@ def gabor(size, alpha, phi, freq, sgm, x0=None, res=1, ampl=1.):
 
     # init
     w, h = size
-    if x0 is None: x0 = (w//2, h//2)
+    if x0 is None: x0 = (w // 2, h // 2)
     y0, x0 = x0
 
     # some useful quantities
     freq *= res
     sinalpha = numx.sin(alpha)
     cosalpha = numx.cos(alpha)
-    v0, u0 = freq*cosalpha, freq*sinalpha
+    v0, u0 = freq * cosalpha, freq * sinalpha
 
     # coordinates
     #x = numx.mgrid[-x0:w-x0, -y0:h-y0]
-    x = numx.meshgrid(numx.arange(w)-x0, numx.arange(h)-y0)
+    x = numx.meshgrid(numx.arange(w) - x0, numx.arange(h) - y0)
     x = (x[0].T, x[1].T)
-    xr = x[0]*cosalpha - x[1]*sinalpha
-    yr = x[0]*sinalpha + x[1]*cosalpha
+    xr = x[0] * cosalpha - x[1] * sinalpha
+    yr = x[0] * sinalpha + x[1] * cosalpha
 
     # gabor
     im = ampl*numx.exp(-0.5*(xr*xr/(sgm[0]*sgm[0]) + yr*yr/(sgm[1]*sgm[1]))) \
@@ -420,15 +448,18 @@ def gabor(size, alpha, phi, freq, sgm, x0=None, res=1, ampl=1.):
 
     return im
 
+
 def residuals(app_x, y_noisy, exp_funcs, x_orig, k=0.0):
     """Function used internally by invert_exp_funcs2 to approximate
     inverses in ConstantExpansionNode. """
-    app_x = app_x.reshape((1,len(app_x)))
-    app_exp_x =  numx.concatenate([func(app_x) for func in exp_funcs],axis=1)
+    app_x = app_x.reshape((1, len(app_x)))
+    app_exp_x = numx.concatenate([func(app_x) for func in exp_funcs], axis=1)
 
     div_y = numx.sqrt(len(y_noisy))
     div_x = numx.sqrt(len(x_orig))
-    return numx.append( (1-k)*(y_noisy-app_exp_x[0]) / div_y, k * (x_orig - app_x[0])/div_x )
+    return numx.append((1 - k) * (y_noisy - app_exp_x[0]) / div_y,
+                       k * (x_orig - app_x[0]) / div_x)
+
 
 def invert_exp_funcs2(exp_x_noisy, dim_x, exp_funcs, use_hint=False, k=0.0):
     """Approximates a preimage app_x of exp_x_noisy.
@@ -459,15 +490,17 @@ def invert_exp_funcs2(exp_x_noisy, dim_x, exp_funcs, use_hint=False, k=0.0):
     if isinstance(use_hint, numx.ndarray):
         app_x = use_hint.copy()
     elif use_hint == True:
-        app_x = exp_x_noisy[:,0:dim_x].copy()
+        app_x = exp_x_noisy[:, 0:dim_x].copy()
     else:
-        app_x = numx.random.normal(size=(num_samples,dim_x))
+        app_x = numx.random.normal(size=(num_samples, dim_x))
 
     for row in range(num_samples):
-        plsq = scipy.optimize.leastsq(residuals, app_x[row],
-                                      args=(exp_x_noisy[row], exp_funcs,
-                                            app_x[row], k), maxfev=50*dim_x)
+        plsq = scipy.optimize.leastsq(
+            residuals,
+            app_x[row],
+            args=(exp_x_noisy[row], exp_funcs, app_x[row], k),
+            maxfev=50 * dim_x)
         app_x[row] = plsq[0]
 
-    app_exp_x = numx.concatenate([func(app_x) for func in exp_funcs],axis=1)
+    app_exp_x = numx.concatenate([func(app_x) for func in exp_funcs], axis=1)
     return app_x, app_exp_x

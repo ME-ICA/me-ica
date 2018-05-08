@@ -12,8 +12,7 @@ except ImportError:
     have_dicom = False
 else:
     have_dicom = True
-dicom_test = np.testing.dec.skipif(not have_dicom,
-                                   'could not import pydicom')
+dicom_test = np.testing.dec.skipif(not have_dicom, 'could not import pydicom')
 
 from .. import dicomwrappers as didw
 from .. import dicomreaders as didr
@@ -37,25 +36,24 @@ DATA_FILE_SLC_NORM = pjoin(IO_DATA_PATH, 'csa_slice_norm.dcm')
 # matching with SPM check reg.  We have flipped the first and second
 # rows to allow for rows, cols tranpose in current return compared to
 # original case.
-EXPECTED_AFFINE = np.array(
-    [[ -1.796875, 0, 0, 115],
-     [0, -1.79684984, -0.01570896, 135.028779],
-     [0, -0.00940843750, 2.99995887, -78.710481],
-     [0, 0, 0, 1]])[:,[1,0,2,3]]
+EXPECTED_AFFINE = np.array([[-1.796875, 0, 0,
+                             115], [0, -1.79684984, -0.01570896, 135.028779],
+                            [0, -0.00940843750, 2.99995887,
+                             -78.710481], [0, 0, 0, 1]])[:, [1, 0, 2, 3]]
 
 # from Guys and Matthew's SPM code, undoing SPM's Y flip, and swapping
 # first two values in vector, to account for data rows, cols difference.
-EXPECTED_PARAMS = [992.05050247, (0.00507649,
-                                  0.99997450,
-                                  -0.005023611)]
+EXPECTED_PARAMS = [992.05050247, (0.00507649, 0.99997450, -0.005023611)]
+
 
 @dicom_test
 def test_wrappers():
     # test direct wrapper calls
     # first with empty data
-    for maker, kwargs in ((didw.Wrapper,{}),
-                          (didw.SiemensWrapper, {}),
-                          (didw.MosaicWrapper, {'n_mosaic':10})):
+    for maker, kwargs in ((didw.Wrapper, {}), (didw.SiemensWrapper, {}),
+                          (didw.MosaicWrapper, {
+                              'n_mosaic': 10
+                          })):
         dw = maker(**kwargs)
         assert_equal(dw.get('InstanceNumber'), None)
         assert_equal(dw.get('AcquisitionNumber'), None)
@@ -65,11 +63,8 @@ def test_wrappers():
     for klass in (didw.Wrapper, didw.SiemensWrapper):
         dw = klass()
         assert_false(dw.is_mosaic)
-    for maker in (didw.wrapper_from_data,
-                  didw.Wrapper,
-                  didw.SiemensWrapper,
-                  didw.MosaicWrapper
-                  ):
+    for maker in (didw.wrapper_from_data, didw.Wrapper, didw.SiemensWrapper,
+                  didw.MosaicWrapper):
         dw = maker(DATA)
         assert_equal(dw.get('InstanceNumber'), 2)
         assert_equal(dw.get('AcquisitionNumber'), 2)
@@ -88,17 +83,16 @@ def test_wrapper_from_data():
         assert_raises(KeyError, dw.__getitem__, 'not an item')
         assert_true(dw.is_mosaic)
         assert_array_almost_equal(
-            np.dot(didr.DPCS_TO_TAL, dw.get_affine()),
-            EXPECTED_AFFINE)
+            np.dot(didr.DPCS_TO_TAL, dw.get_affine()), EXPECTED_AFFINE)
 
 
 @dicom_test
 def test_dwi_params():
     dw = didw.wrapper_from_data(DATA)
     b_matrix = dw.b_matrix
-    assert_equal(b_matrix.shape, (3,3))
+    assert_equal(b_matrix.shape, (3, 3))
     q = dw.q_vector
-    b = np.sqrt(np.sum(q * q)) # vector norm
+    b = np.sqrt(np.sum(q * q))  # vector norm
     g = q / b
     assert_array_almost_equal(b, EXPECTED_PARAMS[0])
     assert_array_almost_equal(g, EXPECTED_PARAMS[1])
@@ -127,10 +121,12 @@ def test_vol_matching():
     assert_true(dw_empty.is_same_series(dw_empty))
     assert_false(dw_empty.is_same_series(dw_plain))
     assert_false(dw_plain.is_same_series(dw_empty))
+
     # Just to check the interface, make a pretend signature-providing
     # object.
     class C(object):
         series_signature = {}
+
     assert_true(dw_empty.is_same_series(C()))
 
 
@@ -150,23 +146,23 @@ def test_orthogonal():
     #Test that the slice normal is sufficiently orthogonal
     dw = didw.wrapper_from_file(DATA_FILE_SLC_NORM)
     R = dw.rotation_matrix
-    assert  np.allclose(np.eye(3),
-                        np.dot(R, R.T),
-                        atol=1e-6)
-                    
+    assert np.allclose(np.eye(3), np.dot(R, R.T), atol=1e-6)
+
+
 @dicom_test
 def test_use_csa_sign():
-    #Test that we get the same slice normal, even after swapping the iop 
+    #Test that we get the same slice normal, even after swapping the iop
     #directions
     dw = didw.wrapper_from_file(DATA_FILE_SLC_NORM)
     iop = dw.image_orient_patient
-    dw.image_orient_patient = np.c_[iop[:,1], iop[:,0]]
+    dw.image_orient_patient = np.c_[iop[:, 1], iop[:, 0]]
     dw2 = didw.wrapper_from_file(DATA_FILE_SLC_NORM)
     assert np.allclose(dw.slice_normal, dw2.slice_normal)
 
+
 @dicom_test
 def test_assert_parallel():
-    #Test that we get an AssertionError if the cross product and the CSA 
+    #Test that we get an AssertionError if the cross product and the CSA
     #slice normal are not parallel
     dw = didw.wrapper_from_file(DATA_FILE_SLC_NORM)
     dw.image_orient_patient = np.c_[[1., 0., 0.], [0., 1., 0.]]

@@ -2,6 +2,7 @@ __docformat__ = "restructuredtext en"
 
 import mdp
 
+
 class XSFANode(mdp.Node):
     """Perform Non-linear Blind Source Separation using Slow Feature Analysis.
 
@@ -45,8 +46,15 @@ class XSFANode(mdp.Node):
     Journal of Machine Learning Research. 
     http://cogprints.org/7056/1/SprekelerZitoWiskott-Cogprints-2010.pdf
     """
-    def __init__(self, basic_exp=None, intern_exp=None, svd=False, verbose=False,
-                 input_dim=None, output_dim=None, dtype=None):
+
+    def __init__(self,
+                 basic_exp=None,
+                 intern_exp=None,
+                 svd=False,
+                 verbose=False,
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None):
         """
         :Keywords:
            basic_exp
@@ -108,8 +116,8 @@ class XSFANode(mdp.Node):
         self._flow = None
         self.verbose = verbose
         self.svd = svd
-        super(XSFANode, self).__init__(input_dim=input_dim,
-                                       output_dim=output_dim, dtype=dtype)
+        super(XSFANode, self).__init__(
+            input_dim=input_dim, output_dim=output_dim, dtype=dtype)
 
     @property
     def flow(self):
@@ -136,8 +144,8 @@ class XSFANode(mdp.Node):
             # but we can assure that we will have more than 1:
             return [(None, None), (None, None)]
         else:
-            return ([(self._train, self._stop_training)] *
-                    sum(self._training_phases))
+            return ([(self._train,
+                      self._stop_training)] * sum(self._training_phases))
 
     def _set_input_dim(self, n):
         self._input_dim = n
@@ -151,7 +159,7 @@ class XSFANode(mdp.Node):
         if self._flow is None:
             self._initialize_internal_flow()
             if self.verbose:
-                print "Extracting source 1..."
+                print("Extracting source 1...")
 
     def _initialize_internal_flow(self):
         # create the initial flow if it's not there already
@@ -169,15 +177,17 @@ class XSFANode(mdp.Node):
         for S in range(self.output_dim):
             # get the number of training phases of every single
             # source extractor module
-            mod = self._get_source_extractor(S+1, S)
+            mod = self._get_source_extractor(S + 1, S)
             training_phases.append(len(mod._train_seq))
 
         self._training_phases = training_phases
 
         # this is a list of the training phases the correspond to
         # completed training of a source extractor module
-        self._training_phases_mods = [sum(training_phases[:i+1]) for i in
-                                      range(len(training_phases[:-1]))]
+        self._training_phases_mods = [
+            sum(training_phases[:i + 1])
+            for i in range(len(training_phases[:-1]))
+        ]
 
     @staticmethod
     def is_invertible():
@@ -195,41 +205,39 @@ class XSFANode(mdp.Node):
         # if we finished to train the current source extractor module
         # and we still have to extract some sources
         # append a new source extractor module
-        if (cur_tr_ph in self._training_phases_mods and
-            self.n_extracted_src != (self.output_dim - 1)):
+        if (cur_tr_ph in self._training_phases_mods
+                and self.n_extracted_src != (self.output_dim - 1)):
 
             self.n_extracted_src += 1
             mod = self._get_source_extractor(self._flow[-1].output_dim,
                                              self.n_extracted_src)
             self._flow.append(mod)
             if self.verbose:
-                print "Extracting source %d..." % (self.n_extracted_src+1)
+                print("Extracting source %d..." % (self.n_extracted_src + 1))
 
     def _execute(self, x):
-        return self._flow(x)[:,:self.output_dim]
+        return self._flow(x)[:, :self.output_dim]
 
     def _get_source_extractor(self, dim, nsources):
         # returns a module to extract the next source and remove its
         # projections in the data space
         S = nsources
-        L = dim-S
+        L = dim - S
 
         # sfa - extracts the next source
         sfa = mdp.nodes.SFANode(input_dim=L, output_dim=L)
 
         # identity - copies the new sources
-        idn_new1 = mdp.nodes.IdentityNode(input_dim=S+1)
+        idn_new1 = mdp.nodes.IdentityNode(input_dim=S + 1)
         # source expansion
         self.exp_kwargs['input_dim'] = S + 1
         # N2
-        src_exp = mdp.hinet.FlowNode(self.exp(*self.exp_args,
-                                              **self.exp_kwargs) +
-                                     NormalizeNode() +
-                                     mdp.nodes.WhiteningNode(svd=self.svd,
-                                                             reduce=True))
+        src_exp = mdp.hinet.FlowNode(
+            self.exp(*self.exp_args, **self.exp_kwargs) + NormalizeNode() +
+            mdp.nodes.WhiteningNode(svd=self.svd, reduce=True))
         N2Layer = mdp.hinet.SameInputLayer((src_exp, idn_new1))
-        N2ContLayer = mdp.hinet.Layer((N2Layer,
-                                       mdp.nodes.IdentityNode(input_dim=L-1)))
+        N2ContLayer = mdp.hinet.Layer(
+            (N2Layer, mdp.nodes.IdentityNode(input_dim=L - 1)))
 
         if S == 0:
             # don't need to copy the current sources (there are none)
@@ -239,27 +247,28 @@ class XSFANode(mdp.Node):
             # take care of passing the sources down along the flow
             idn_old = mdp.nodes.IdentityNode(input_dim=S)
             return mdp.hinet.Layer((idn_old,
-                                    mdp.nodes.SFANode(input_dim=L,
-                                                      output_dim=1)))
+                                    mdp.nodes.SFANode(
+                                        input_dim=L, output_dim=1)))
         else:
             # take care of passing the sources down along the flow
             idn_old = mdp.nodes.IdentityNode(input_dim=S)
-            N1 = mdp.hinet.FlowNode(mdp.hinet.Layer((idn_old, sfa)) +
-                                    N2ContLayer)
+            N1 = mdp.hinet.FlowNode(
+                mdp.hinet.Layer((idn_old, sfa)) + N2ContLayer)
 
         # expanded sources projection
-        proj = ProjectionNode(S, L-1)
+        proj = ProjectionNode(S, L - 1)
         # use another identity node to copy the sources
         # we could in principle reuse the idn_new1 but using a new
         # node will make debugging much easier
-        idn_new2 = mdp.nodes.IdentityNode(input_dim=S+1)
+        idn_new2 = mdp.nodes.IdentityNode(input_dim=S + 1)
         # regularization after projection + new source copying
         reg_and_copy = mdp.hinet.Layer((idn_new2,
-                                        mdp.nodes.WhiteningNode(input_dim=L-1,
-                                                                svd=self.svd,
-                                                                reduce=True)))
+                                        mdp.nodes.WhiteningNode(
+                                            input_dim=L - 1,
+                                            svd=self.svd,
+                                            reduce=True)))
         # actual source removal flow
-        src_rem = mdp.hinet.FlowNode( proj + reg_and_copy )
+        src_rem = mdp.hinet.FlowNode(proj + reg_and_copy)
         # return the actual source extraction module
         return mdp.hinet.FlowNode(N1 + src_rem)
 
@@ -268,19 +277,20 @@ class ProjectionNode(mdp.Node):
     """Get expanded sources and input signals, and return
     the sources and the input signals projected into the space
     orthogonal to the expanded sources and their products."""
+
     def __init__(self, S, L):
         #!! IMPORTANT!!
         # this node *must* return the sources together with the
         # projected input signals
         self.proj_mtx = None
         self.L = L
-        super(ProjectionNode, self).__init__(output_dim=S+1+L)
+        super(ProjectionNode, self).__init__(output_dim=S + 1 + L)
         self._cov_mtx = mdp.utils.CrossCovarianceMatrix(self.dtype)
 
     def _train(self, x):
         # compute covariance between expanded sources
         # and input signals
-        self._cov_mtx.update(x[:,:-self.output_dim], x[:,-self.L:])
+        self._cov_mtx.update(x[:, :-self.output_dim], x[:, -self.L:])
 
     def _stop_training(self):
         self.proj_mtx, avgx, avgy, self.tlen = self._cov_mtx.fix()
@@ -297,8 +307,10 @@ class ProjectionNode(mdp.Node):
         result[:, :-self.L] = src
         return result
 
+
 class NormalizeNode(mdp.PreserveDimNode):
     """Make input signal meanfree and unit variance"""
+
     def __init__(self, input_dim=None, output_dim=None, dtype=None):
         self._cov_mtx = mdp.utils.CovarianceMatrix(dtype)
         super(NormalizeNode, self).__init__(input_dim, output_dim, dtype)
@@ -316,7 +328,7 @@ class NormalizeNode(mdp.PreserveDimNode):
         self.s = mdp.numx.sqrt(mdp.numx.diag(cov_mtx))
 
     def _execute(self, x):
-        return (x - self.m)/self.s
+        return (x - self.m) / self.s
 
     def _inverse(self, y):
-        return y*self.s + self.m
+        return y * self.s + self.m

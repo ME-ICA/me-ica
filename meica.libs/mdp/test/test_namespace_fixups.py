@@ -1,5 +1,6 @@
 import sys
-from _tools import *
+from ._tools import *
+
 
 def _list_module(module):
     try:
@@ -17,20 +18,25 @@ def _list_module(module):
         if hasattr(item, '__module__'):
             yield modname, name, item
 
-MODULES = ['mdp',
-           'mdp.nodes',
-           'mdp.hinet',
-           'mdp.parallel',
-           'mdp.graph',
-           'mdp.utils',
-           ]
+
+MODULES = [
+    'mdp',
+    'mdp.nodes',
+    'mdp.hinet',
+    'mdp.parallel',
+    'mdp.graph',
+    'mdp.utils',
+]
+
 
 def pytest_generate_tests(metafunc):
     generate_calls(MODULES, metafunc)
 
+
 def generate_calls(modules, metafunc):
     for module in modules:
         metafunc.addcall(funcargs=dict(parentname=module), id=module)
+
 
 def test_exports(parentname):
     rootname = parentname.split('.')[-1]

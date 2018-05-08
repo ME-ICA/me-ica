@@ -149,10 +149,7 @@ class Header(object):
     ''' Template class to implement header protocol '''
     default_x_flip = True
 
-    def __init__(self,
-                 data_dtype=np.float32,
-                 shape=(0,),
-                 zooms=None):
+    def __init__(self, data_dtype=np.float32, shape=(0, ), zooms=None):
         self.set_data_dtype(data_dtype)
         self._zooms = ()
         self.set_data_shape(shape)
@@ -169,8 +166,7 @@ class Header(object):
         # different field names
         if type(header) == klass:
             return header.copy()
-        return klass(header.get_data_dtype(),
-                     header.get_data_shape(),
+        return klass(header.get_data_dtype(), header.get_data_shape(),
                      header.get_zooms())
 
     @classmethod
@@ -181,12 +177,10 @@ class Header(object):
         raise NotImplementedError
 
     def __eq__(self, other):
-        return ((self.get_data_dtype(),
-                 self.get_data_shape(),
-                 self.get_zooms()) ==
-                (other.get_data_dtype(),
-                 other.get_data_shape(),
-                 other.get_zooms()))
+        return ((self.get_data_dtype(), self.get_data_shape(),
+                 self.get_zooms()) == (other.get_data_dtype(),
+                                       other.get_data_shape(),
+                                       other.get_zooms()))
 
     def __ne__(self, other):
         return not self == other
@@ -211,13 +205,13 @@ class Header(object):
     def set_data_shape(self, shape):
         ndim = len(shape)
         if ndim == 0:
-            self._shape = (0,)
-            self._zooms = (1.0,)
+            self._shape = (0, )
+            self._zooms = (1.0, )
             return
         self._shape = tuple([int(s) for s in shape])
         # set any unset zooms to 1.0
         nzs = min(len(self._zooms), ndim)
-        self._zooms = self._zooms[:nzs] + (1.0,) * (ndim-nzs)
+        self._zooms = self._zooms[:nzs] + (1.0, ) * (ndim - nzs)
 
     def get_zooms(self):
         return self._zooms
@@ -227,8 +221,8 @@ class Header(object):
         shape = self.get_data_shape()
         ndim = len(shape)
         if len(zooms) != ndim:
-            raise HeaderDataError('Expecting %d zoom values for ndim %d'
-                                  % (ndim, ndim))
+            raise HeaderDataError('Expecting %d zoom values for ndim %d' %
+                                  (ndim, ndim))
         if len([z for z in zooms if z < 0]):
             raise HeaderDataError('zooms must be positive')
         self._zooms = zooms
@@ -236,8 +230,7 @@ class Header(object):
     def get_base_affine(self):
         shape = self.get_data_shape()
         zooms = self.get_zooms()
-        return shape_zoom_affine(shape, zooms,
-                                 self.default_x_flip)
+        return shape_zoom_affine(shape, zooms, self.default_x_flip)
 
     get_default_affine = get_base_affine
 
@@ -265,12 +258,11 @@ class ImageFileError(Exception):
 
 class SpatialImage(object):
     header_class = Header
-    files_types = (('image', None),)
+    files_types = (('image', None), )
     _compressed_exts = ()
-
     ''' Template class for images '''
-    def __init__(self, data, affine, header=None,
-                 extra=None, file_map=None):
+
+    def __init__(self, data, affine, header=None, extra=None, file_map=None):
         ''' Initialize image
 
         The image is a combination of (array, affine matrix, header), with
@@ -304,7 +296,7 @@ class SpatialImage(object):
             # Copy affine to  isolate from environment.  Specify float type to
             # avoid surprising integer rounding when setting values into affine
             affine = np.array(affine, dtype=np.float64, copy=True)
-            if not affine.shape == (4,4):
+            if not affine.shape == (4, 4):
                 raise ValueError('Affine should be shape 4,4')
         self._affine = affine
         if extra is None:
@@ -329,13 +321,9 @@ class SpatialImage(object):
     def __str__(self):
         shape = self.shape
         affine = self.get_affine()
-        return '\n'.join((
-                str(self.__class__),
-                'data shape %s' % (shape,),
-                'affine: ',
-                '%s' % affine,
-                'metadata:',
-                '%s' % self._header))
+        return '\n'.join(
+            (str(self.__class__), 'data shape %s' % (shape, ), 'affine: ',
+             '%s' % affine, 'metadata:', '%s' % self._header))
 
     def get_data(self):
         return np.asanyarray(self._data)
@@ -349,9 +337,10 @@ class SpatialImage(object):
 
         This function deprecated; please use the ``shape`` property instead
         """
-        warnings.warn('Please use the shape property instead of get_shape',
-                      DeprecationWarning,
-                      stacklevel=2)
+        warnings.warn(
+            'Please use the shape property instead of get_shape',
+            DeprecationWarning,
+            stacklevel=2)
         return self.shape
 
     def get_data_dtype(self):
@@ -412,10 +401,12 @@ class SpatialImage(object):
 
     @classmethod
     def from_filespec(klass, filespec):
-        warnings.warn('``from_filespec`` class method is deprecated\n'
-                      'Please use the ``from_filename`` class method '
-                      'instead',
-                      DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            '``from_filespec`` class method is deprecated\n'
+            'Please use the ``from_filename`` class method '
+            'instead',
+            DeprecationWarning,
+            stacklevel=2)
         klass.from_filename(filespec)
 
     @classmethod
@@ -424,32 +415,37 @@ class SpatialImage(object):
 
     @classmethod
     def from_files(klass, file_map):
-        warnings.warn('``from_files`` class method is deprecated\n'
-                      'Please use the ``from_file_map`` class method '
-                      'instead',
-                      DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            '``from_files`` class method is deprecated\n'
+            'Please use the ``from_file_map`` class method '
+            'instead',
+            DeprecationWarning,
+            stacklevel=2)
         return klass.from_file_map(file_map)
 
     @classmethod
     def filespec_to_file_map(klass, filespec):
         try:
-            filenames = types_filenames(filespec,
-                                        klass.files_types,
-                                        trailing_suffixes=klass._compressed_exts)
+            filenames = types_filenames(
+                filespec,
+                klass.files_types,
+                trailing_suffixes=klass._compressed_exts)
         except TypesFilenamesError:
             raise ImageFileError('Filespec "%s" does not look right for '
-                             'class %s ' % (filespec, klass))
+                                 'class %s ' % (filespec, klass))
         file_map = {}
-        for key, fname in filenames.items():
+        for key, fname in list(filenames.items()):
             file_map[key] = FileHolder(filename=fname)
         return file_map
 
     @classmethod
     def filespec_to_files(klass, filespec):
-        warnings.warn('``filespec_to_files`` class method is deprecated\n'
-                      'Please use the ``filespec_to_file_map`` class method '
-                      'instead',
-                      DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            '``filespec_to_files`` class method is deprecated\n'
+            'Please use the ``filespec_to_file_map`` class method '
+            'instead',
+            DeprecationWarning,
+            stacklevel=2)
         return klass.filespec_to_file_map(filespec)
 
     def to_filename(self, filename):
@@ -470,19 +466,23 @@ class SpatialImage(object):
         self.to_file_map()
 
     def to_filespec(self, filename):
-        warnings.warn('``to_filespec`` is deprecated, please '
-                      'use ``to_filename`` instead',
-                      DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            '``to_filespec`` is deprecated, please '
+            'use ``to_filename`` instead',
+            DeprecationWarning,
+            stacklevel=2)
         self.to_filename(filename)
 
     def to_file_map(self, file_map=None):
         raise NotImplementedError
 
     def to_files(self, file_map=None):
-        warnings.warn('``to_files`` method is deprecated\n'
-                      'Please use the ``to_file_map`` method '
-                      'instead',
-                      DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            '``to_files`` method is deprecated\n'
+            'Please use the ``to_file_map`` method '
+            'instead',
+            DeprecationWarning,
+            stacklevel=2)
         self.to_file_map(file_map)
 
     @classmethod
@@ -510,7 +510,7 @@ class SpatialImage(object):
         for key, ext in klass.files_types:
             file_map[key] = FileHolder()
             mapval = mapping.get(key, None)
-            if isinstance(mapval, basestring):
+            if isinstance(mapval, str):
                 file_map[key].filename = mapval
             elif hasattr(mapval, 'tell'):
                 file_map[key].fileobj = mapval
@@ -554,8 +554,8 @@ class SpatialImage(object):
         cimg : ``spatialimage`` instance
            Image, of our own class
         '''
-        return klass(img.get_data(),
-                     img.get_affine(),
-                     klass.header_class.from_header(img.get_header()),
-                     extra=img.extra.copy())
-
+        return klass(
+            img.get_data(),
+            img.get_affine(),
+            klass.header_class.from_header(img.get_header()),
+            extra=img.extra.copy())

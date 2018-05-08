@@ -23,7 +23,7 @@ FLOAT_EPS = np.finfo(np.float).eps
 
 # Example rotations '''
 eg_rots = []
-params = np.arange(-pi*2,pi*2.5,pi/2)
+params = np.arange(-pi * 2, pi * 2.5, pi / 2)
 for x in params:
     for y in params:
         for z in params:
@@ -33,28 +33,19 @@ for x in params:
 def x_only(x):
     cosx = np.cos(x)
     sinx = np.sin(x)
-    return np.array(
-        [[1, 0, 0],
-         [0, cosx, -sinx],
-         [0, sinx, cosx]])
+    return np.array([[1, 0, 0], [0, cosx, -sinx], [0, sinx, cosx]])
 
 
 def y_only(y):
     cosy = np.cos(y)
     siny = np.sin(y)
-    return np.array(
-        [[cosy, 0, siny],
-         [0, 1, 0],
-         [-siny, 0, cosy]])
+    return np.array([[cosy, 0, siny], [0, 1, 0], [-siny, 0, cosy]])
 
 
 def z_only(z):
     cosz = np.cos(z)
     sinz = np.sin(z)
-    return np.array(
-                [[cosz, -sinz, 0],
-                 [sinz, cosz, 0],
-                 [0, 0, 1]])
+    return np.array([[cosz, -sinz, 0], [sinz, cosz, 0], [0, 0, 1]])
 
 
 def sympy_euler(z, y, x):
@@ -62,11 +53,15 @@ def sympy_euler(z, y, x):
     cos = math.cos
     sin = math.sin
     # the following copy / pasted from Sympy - see derivations subdirectory
-    return [
-        [                       cos(y)*cos(z),                       -cos(y)*sin(z),         sin(y)],
-        [cos(x)*sin(z) + cos(z)*sin(x)*sin(y), cos(x)*cos(z) - sin(x)*sin(y)*sin(z), -cos(y)*sin(x)],
-        [sin(x)*sin(z) - cos(x)*cos(z)*sin(y), cos(z)*sin(x) + cos(x)*sin(y)*sin(z),  cos(x)*cos(y)]
-        ]
+    return [[cos(y) * cos(z), -cos(y) * sin(z),
+             sin(y)], [
+                 cos(x) * sin(z) + cos(z) * sin(x) * sin(y),
+                 cos(x) * cos(z) - sin(x) * sin(y) * sin(z), -cos(y) * sin(x)
+             ], [
+                 sin(x) * sin(z) - cos(x) * cos(z) * sin(y),
+                 cos(z) * sin(x) + cos(x) * sin(y) * sin(z),
+                 cos(x) * cos(y)
+             ]]
 
 
 def is_valid_rotation(M):
@@ -99,10 +94,10 @@ def test_basic_euler():
     yield assert_true, np.all(nea.euler2mat(0, 0, xr) == nea.euler2mat(x=xr))
     # Applying an opposite rotation same as inverse (the inverse is
     # the same as the transpose, but just for clarity)
-    yield assert_true, np.allclose(nea.euler2mat(x=-xr),
-                       np.linalg.inv(nea.euler2mat(x=xr)))
+    yield assert_true, np.allclose(
+        nea.euler2mat(x=-xr), np.linalg.inv(nea.euler2mat(x=xr)))
 
-        
+
 def test_euler_mat():
     M = nea.euler2mat()
     yield assert_array_equal, M, np.eye(3)
@@ -125,10 +120,14 @@ def sympy_euler2quat(z=0, y=0, x=0):
     cos = math.cos
     sin = math.sin
     # the following copy / pasted from Sympy output
-    return (cos(0.5*x)*cos(0.5*y)*cos(0.5*z) - sin(0.5*x)*sin(0.5*y)*sin(0.5*z),
-            cos(0.5*x)*sin(0.5*y)*sin(0.5*z) + cos(0.5*y)*cos(0.5*z)*sin(0.5*x),
-            cos(0.5*x)*cos(0.5*z)*sin(0.5*y) - cos(0.5*y)*sin(0.5*x)*sin(0.5*z),
-            cos(0.5*x)*cos(0.5*y)*sin(0.5*z) + cos(0.5*z)*sin(0.5*x)*sin(0.5*y))
+    return (cos(0.5 * x) * cos(0.5 * y) * cos(0.5 * z) -
+            sin(0.5 * x) * sin(0.5 * y) * sin(0.5 * z),
+            cos(0.5 * x) * sin(0.5 * y) * sin(0.5 * z) +
+            cos(0.5 * y) * cos(0.5 * z) * sin(0.5 * x),
+            cos(0.5 * x) * cos(0.5 * z) * sin(0.5 * y) -
+            cos(0.5 * y) * sin(0.5 * x) * sin(0.5 * z),
+            cos(0.5 * x) * cos(0.5 * y) * sin(0.5 * z) +
+            cos(0.5 * z) * sin(0.5 * x) * sin(0.5 * y))
 
 
 def crude_mat2euler(M):
@@ -169,4 +168,3 @@ def test_quats():
         # same rotation matrix
         M2 = nea.euler2mat(zp, yp, xp)
         yield assert_array_almost_equal, M1, M2
-        

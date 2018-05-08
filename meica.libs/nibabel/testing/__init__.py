@@ -20,8 +20,8 @@ try:
 except ImportError:
     pass
 else:
-    from nose.tools import (assert_equal, assert_not_equal,
-                            assert_true, assert_false, assert_raises)
+    from nose.tools import (assert_equal, assert_not_equal, assert_true,
+                            assert_false, assert_raises)
 
 
 def assert_dt_equal(a, b):

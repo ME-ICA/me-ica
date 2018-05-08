@@ -15,11 +15,13 @@ Hettinger. http://users.rcn.com/python/download/Descriptor.htm
 [2] Python data model, http://docs.python.org/reference/datamodel.html
 """
 
+
 class OneTimeProperty(object):
-   """A descriptor to make special properties that become normal attributes.
+    """A descriptor to make special properties that become normal attributes.
    """
-   def __init__(self,func):
-       """Create a OneTimeProperty instance.
+
+    def __init__(self, func):
+        """Create a OneTimeProperty instance.
 
         Parameters
         ----------
@@ -29,30 +31,29 @@ class OneTimeProperty(object):
             Afterwards, the method's name will be a standard attribute holding
             the value of this computation.
             """
-       self.getter = func
-       self.name = func.func_name
+        self.getter = func
+        self.name = func.__name__
 
-   def __get__(self,obj,type=None):
-       """This will be called on attribute access on the class or instance. """
+    def __get__(self, obj, type=None):
+        """This will be called on attribute access on the class or instance. """
 
-       if obj is None:
-           # Being called on the class, return the original function. This way,
-           # introspection works on the class.
-           return self.getter
+        if obj is None:
+            # Being called on the class, return the original function. This way,
+            # introspection works on the class.
+            return self.getter
 
-       val = self.getter(obj)
-       #print "** setattr_on_read - loading '%s'" % self.name  # dbg
-       setattr(obj, self.name, val)
-       return val
+        val = self.getter(obj)
+        #print "** setattr_on_read - loading '%s'" % self.name  # dbg
+        setattr(obj, self.name, val)
+        return val
 
 
 def setattr_on_read(func):
-# XXX - beetter names for this?
-# - cor_property (copy on read property)
-# - sor_property (set on read property)
-# - prop2attr_on_read
-#... ?
-
+    # XXX - beetter names for this?
+    # - cor_property (copy on read property)
+    # - sor_property (set on read property)
+    # - prop2attr_on_read
+    #... ?
     """Decorator to create OneTimeProperty attributes.
 
     Parameters

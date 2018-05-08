@@ -5,6 +5,7 @@ from mdp.utils import mult
 from mdp.nodes import PCANode
 sqrt = numx.sqrt
 
+
 class NIPALSNode(Cumulator, PCANode):
     """Perform Principal Component Analysis using the NIPALS algorithm.
     This algorithm is particularyl useful if you have more variable than
@@ -43,8 +44,13 @@ class NIPALSNode(Cumulator, PCANode):
     Original code contributed by:
     Michael Schmuker, Susanne Lezius, and Farzad Farkhooi (2008).
     """
-    def __init__(self, input_dim=None, output_dim=None, dtype=None,
-                 conv = 1e-8, max_it = 100000):
+
+    def __init__(self,
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None,
+                 conv=1e-8,
+                 max_it=100000):
         """
         The number of principal components to be kept can be specified as
         'output_dim' directly (e.g. 'output_dim=10' means 10 components
@@ -88,7 +94,7 @@ class NIPALSNode(Cumulator, PCANode):
         exp_var = 0
 
         eigenv = numx.zeros((self.input_dim, self.input_dim), dtype=dtype)
-        d = numx.zeros((self.input_dim,), dtype = dtype)
+        d = numx.zeros((self.input_dim, ), dtype=dtype)
         for i in range(self.input_dim):
             it = 0
             # first score vector t is initialized to first column in X
@@ -100,18 +106,18 @@ class NIPALSNode(Cumulator, PCANode):
                 it += 1
                 # Project X onto t to find corresponding loading p
                 # and normalize loading vector p to length 1
-                p = mult(X.T, t)/mult(t, t)
+                p = mult(X.T, t) / mult(t, t)
                 p /= sqrt(mult(p, p))
 
                 # project X onto p to find corresponding score vector t_new
                 t_new = mult(X, p)
                 # difference between new and old score vector
                 tdiff = t_new - t
-                diff = (tdiff*tdiff).sum()
+                diff = (tdiff * tdiff).sum()
                 t = t_new
                 if it > max_it:
                     msg = ('PC#%d: no convergence after'
-                           ' %d iterations.'% (i, max_it))
+                           ' %d iterations.' % (i, max_it))
                     raise NodeException(msg)
 
             # store ith eigenvector in result matrix
@@ -120,8 +126,8 @@ class NIPALSNode(Cumulator, PCANode):
             D = numx.outer(t, p)
             X -= D
             D = mult(D, p)
-            d[i] = (D*D).sum()/(tlen-1)
-            exp_var += d[i]/var
+            d[i] = (D * D).sum() / (tlen - 1)
+            exp_var += d[i] / var
             if des_var and (exp_var >= self.desired_variance):
                 self.output_dim = i + 1
                 break

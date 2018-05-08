@@ -1,15 +1,14 @@
 """ Testing fileholders
 """
 
-from StringIO import StringIO
+from io import StringIO
 
 import numpy as np
 
 from ..fileholders import FileHolder, FileHolderError, copy_file_map
 from ..tmpdirs import InTemporaryDirectory
 
-from numpy.testing import (assert_array_almost_equal,
-                           assert_array_equal)
+from numpy.testing import (assert_array_almost_equal, assert_array_equal)
 
 from nose.tools import assert_true, assert_false, assert_equal, assert_raises
 
@@ -48,6 +47,3 @@ def test_same_file_as():
     # pos doesn't matter
     fh4_again = FileHolder('a_fname', sio0, pos=4)
     assert_true(fh3.same_file_as(fh4_again))
-
-
-

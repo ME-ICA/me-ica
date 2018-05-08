@@ -6,6 +6,7 @@ import errno
 
 template = "tmp"
 
+
 class TemporaryDirectory(object):
     """Create and return a temporary directory.  This has the same
     behavior as mkdtemp but can be used as a context manager.  For
@@ -21,7 +22,7 @@ class TemporaryDirectory(object):
     def __init__(self, suffix="", prefix=template, dir=None):
         self._closed = False
         self._ENOENT = errno.ENOENT
-        self.name = None # Handle mkdtemp throwing an exception
+        self.name = None  # Handle mkdtemp throwing an exception
         self.name = mkdtemp(suffix, prefix, dir)
 
     def __repr__(self):
@@ -34,14 +35,14 @@ class TemporaryDirectory(object):
         if self.name and not self._closed:
             try:
                 self._rmtree(self.name)
-            except (TypeError, AttributeError), ex:
+            except (TypeError, AttributeError) as ex:
                 # Issue #10188: Emit a warning on stderr
                 # if the directory could not be cleaned
                 # up due to missing globals
                 if "None" not in str(ex):
                     raise
                 return
-            except OSError, ex:
+            except OSError as ex:
                 # ignore if the directory has been deleted already
                 if ex.errno != self._ENOENT:
                     raise

@@ -7,7 +7,6 @@
 #
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ##
 ''' Test for scaling / rounding in volumeutils module '''
-from __future__ import with_statement
 
 import sys
 
@@ -23,9 +22,9 @@ from numpy.testing import (assert_array_almost_equal, assert_array_equal)
 from nose.tools import (assert_true, assert_equal, assert_raises,
                         assert_not_equal)
 
-
 # Debug print statements
 DEBUG = True
+
 
 def test_scale_min_max():
     mx_dt = np.maximum_sctype(np.float)
@@ -34,27 +33,19 @@ def test_scale_min_max():
         # Need to pump up to max fp type to contain python longs
         imin = np.array(info.min, dtype=mx_dt)
         imax = np.array(info.max, dtype=mx_dt)
-        value_pairs = (
-            (0, imax),
-            (imin, 0),
-            (imin, imax),
-            (1, 10),
-            (-1, -1),
-            (1, 1),
-            (-10, -1),
-            (-100, 10))
+        value_pairs = ((0, imax), (imin, 0), (imin, imax), (1, 10), (-1, -1),
+                       (1, 1), (-10, -1), (-100, 10))
         for mn, mx in value_pairs:
             # with intercept
             scale, inter = scale_min_max(mn, mx, tp, True)
-            if mx-mn:
-                assert_array_almost_equal, (mx-inter) / scale, imax
-                assert_array_almost_equal, (mn-inter) / scale, imin
+            if mx - mn:
+                assert_array_almost_equal, (mx - inter) / scale, imax
+                assert_array_almost_equal, (mn - inter) / scale, imin
             else:
                 assert_equal, (scale, inter), (1.0, mn)
             # without intercept
             if imin == 0 and mn < 0 and mx > 0:
-                (assert_raises, ValueError,
-                       scale_min_max, mn, mx, tp, False)
+                (assert_raises, ValueError, scale_min_max, mn, mx, tp, False)
                 continue
             scale, inter = scale_min_max(mn, mx, tp, False)
             assert_equal, inter, 0.0
@@ -66,9 +57,9 @@ def test_scale_min_max():
             assert_true, sc_mn >= imin
             assert_true, sc_mx <= imax
             if imin == 0:
-                if mx > 0: # numbers all +ve
+                if mx > 0:  # numbers all +ve
                     assert_array_almost_equal, mx / scale, imax
-                else: # numbers all -ve
+                else:  # numbers all -ve
                     assert_array_almost_equal, mn / scale, imax
                 continue
             if abs(mx) >= abs(mn):
@@ -79,19 +70,19 @@ def test_scale_min_max():
 
 def test_finite_range():
     # Finite range utility function
-    a = np.array([[-1, 0, 1],[np.inf, np.nan, -np.inf]])
+    a = np.array([[-1, 0, 1], [np.inf, np.nan, -np.inf]])
     assert_equal(finite_range(a), (-1.0, 1.0))
-    a = np.array([[np.nan],[np.nan]])
+    a = np.array([[np.nan], [np.nan]])
     assert_equal(finite_range(a), (np.inf, -np.inf))
-    a = np.array([[-3, 0, 1],[2,-1,4]], dtype=np.int)
+    a = np.array([[-3, 0, 1], [2, -1, 4]], dtype=np.int)
     assert_equal(finite_range(a), (-3, 4))
-    a = np.array([[1, 0, 1],[2,3,4]], dtype=np.uint)
+    a = np.array([[1, 0, 1], [2, 3, 4]], dtype=np.uint)
     assert_equal(finite_range(a), (0, 4))
     a = a + 1j
     assert_raises(TypeError, finite_range, a)
     # 1D case
     a = np.array([0., 1, 2, 3])
-    assert_equal(finite_range(a), (0,3))
+    assert_equal(finite_range(a), (0, 3))
 
 
 def test_calculate_scale():
@@ -107,8 +98,8 @@ def test_calculate_scale():
     res = calculate_scale(npa([-1, 1], dtype=np.int8), np.uint8, 1)
     assert_equal(res, (1.0, -1.0, None, None))
     # Can't work for no offset case
-    assert_raises(ValueError,
-                  calculate_scale, npa([-1, 1], dtype=np.int8), np.uint8, 0)
+    assert_raises(ValueError, calculate_scale, npa([-1, 1], dtype=np.int8),
+                  np.uint8, 0)
     # Offset trick can't work when max is out of range
     res = calculate_scale(npa([-1, 255], dtype=np.int16), np.uint8, 1)
     assert_not_equal(res, (1.0, -1.0, None, None))
@@ -119,7 +110,7 @@ def test_a2f_mn_mx():
     str_io = BytesIO()
     for out_type in (np.int16, np.float32):
         arr = np.arange(6, dtype=out_type)
-        arr_orig = arr.copy() # safe backup for testing against
+        arr_orig = arr.copy()  # safe backup for testing against
         # Basic round trip to warm up
         array_to_file(arr, str_io)
         data_back = array_from_file(arr.shape, out_type, str_io)
@@ -130,21 +121,21 @@ def test_a2f_mn_mx():
         # arr unchanged
         assert_array_equal(arr, arr_orig)
         # returned value clipped low
-        assert_array_equal(data_back, [2,2,2,3,4,5])
+        assert_array_equal(data_back, [2, 2, 2, 3, 4, 5])
         # Clip high
         array_to_file(arr, str_io, mx=4)
         data_back = array_from_file(arr.shape, out_type, str_io)
         # arr unchanged
         assert_array_equal(arr, arr_orig)
         # returned value clipped high
-        assert_array_equal(data_back, [0,1,2,3,4,4])
+        assert_array_equal(data_back, [0, 1, 2, 3, 4, 4])
         # Clip both
         array_to_file(arr, str_io, mn=2, mx=4)
         data_back = array_from_file(arr.shape, out_type, str_io)
         # arr unchanged
         assert_array_equal(arr, arr_orig)
         # returned value clipped high
-        assert_array_equal(data_back, [2,2,2,3,4,4])
+        assert_array_equal(data_back, [2, 2, 2, 3, 4, 4])
 
 
 def test_a2f_nan2zero():
@@ -172,14 +163,14 @@ def test_array_file_scales():
     # Test scaling works for max, min when going from larger to smaller type,
     # and from float to integer.
     bio = BytesIO()
-    for in_type, out_type, err in ((np.int16, np.int16, None),
-                                   (np.int16, np.int8, None),
-                                   (np.uint16, np.uint8, None),
-                                   (np.int32, np.int8, None),
-                                   (np.float32, np.uint8, None),
+    for in_type, out_type, err in ((np.int16, np.int16,
+                                    None), (np.int16, np.int8,
+                                            None), (np.uint16, np.uint8, None),
+                                   (np.int32, np.int8, None), (np.float32,
+                                                               np.uint8, None),
                                    (np.float32, np.int16, None)):
         out_dtype = np.dtype(out_type)
-        arr = np.zeros((3,), dtype=in_type)
+        arr = np.zeros((3, ), dtype=in_type)
         info = type_info(in_type)
         arr[0], arr[1] = info['min'], info['max']
         if not err is None:
@@ -200,18 +191,20 @@ def test_array_file_scales():
 def test_scaling_in_abstract():
     # Confirm that, for all ints and uints as input, and all possible outputs,
     # for any simple way of doing the calculation, the result is near enough
-    for category0, category1 in (('int', 'int'),
-                                 ('uint', 'int'),
-                                ):
+    for category0, category1 in (
+        ('int', 'int'),
+        ('uint', 'int'),
+    ):
         for in_type in np.sctypes[category0]:
             for out_type in np.sctypes[category1]:
                 check_int_a2f(in_type, out_type)
     # Converting floats to integer
-    for category0, category1 in (('float', 'int'),
-                                 ('float', 'uint'),
-                                 ('complex', 'int'),
-                                 ('complex', 'uint'),
-                                ):
+    for category0, category1 in (
+        ('float', 'int'),
+        ('float', 'uint'),
+        ('complex', 'int'),
+        ('complex', 'uint'),
+    ):
         for in_type in np.sctypes[category0]:
             for out_type in np.sctypes[category1]:
                 check_int_a2f(in_type, out_type)
@@ -227,10 +220,10 @@ def check_int_a2f(in_type, out_type):
         # Bug in numpy 1.6.2 on PPC leading to infs - abort
         if not np.all(np.isfinite(data)):
             if DEBUG:
-                print 'Hit PPC max -> inf bug; skip in_type %s' % in_type
+                print('Hit PPC max -> inf bug; skip in_type %s' % in_type)
             return
-    else: # Funny behavior with complex256
-        data = np.zeros((2,), in_type)
+    else:  # Funny behavior with complex256
+        data = np.zeros((2, ), in_type)
         data[0] = this_min + 0j
         data[1] = this_max + 0j
     str_io = BytesIO()
@@ -238,7 +231,7 @@ def check_int_a2f(in_type, out_type):
         scale, inter, mn, mx = calculate_scale(data, out_type, True)
     except ValueError:
         if DEBUG:
-            print in_type, out_type, sys.exc_info()[1]
+            print(in_type, out_type, sys.exc_info()[1])
         return
     array_to_file(data, str_io, out_type, 0, inter, scale, mn, mx)
     data_back = array_from_file(data.shape, out_type, str_io)
@@ -254,5 +247,7 @@ def check_int_a2f(in_type, out_type):
     # Clip at extremes to remove inf
     info = type_info(in_type)
     out_min, out_max = info['min'], info['max']
-    assert_true(np.allclose(big_floater(data),
-                            big_floater(np.clip(data_back, out_min, out_max))))
+    assert_true(
+        np.allclose(
+            big_floater(data), big_floater(
+                np.clip(data_back, out_min, out_max))))

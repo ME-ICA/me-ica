@@ -4,9 +4,9 @@ Thread based scheduler for distribution across multiple CPU cores.
 
 import threading
 import time
-import cPickle as pickle
+import pickle as pickle
 
-from scheduling import Scheduler, cpu_count
+from .scheduling import Scheduler, cpu_count
 
 SLEEP_TIME = 0.1  # time spend sleeping when waiting for a thread to finish
 
@@ -20,7 +20,10 @@ class ThreadScheduler(Scheduler):
     shared memory.
     """
 
-    def __init__(self, result_container=None, verbose=False, n_threads=1,
+    def __init__(self,
+                 result_container=None,
+                 verbose=False,
+                 n_threads=1,
                  copy_callable=True):
         """Initialize the scheduler.
 
@@ -34,8 +37,7 @@ class ThreadScheduler(Scheduler):
             execution (e.g., a BiNode using the coroutine decorator).
         """
         super(ThreadScheduler, self).__init__(
-                                            result_container=result_container,
-                                            verbose=verbose)
+            result_container=result_container, verbose=verbose)
         if n_threads:
             self._n_threads = n_threads
         else:
@@ -61,20 +63,20 @@ class ThreadScheduler(Scheduler):
                 task_callable = task_callable.fork()
                 if self.copy_callable:
                     # create a deep copy of the task_callable,
-                    # since it might not be thread safe 
+                    # since it might not be thread safe
                     # (but the fork is still required)
                     as_str = pickle.dumps(task_callable, -1)
                     task_callable = pickle.loads(as_str)
                 try:
-                    thread = threading.Thread(target=self._task_thread,
-                                              args=(data, task_callable,
-                                                    task_index))
+                    thread = threading.Thread(
+                        target=self._task_thread,
+                        args=(data, task_callable, task_index))
                     thread.start()
                     task_started = True
                 except Exception:
                     if self.verbose:
-                        print ("unable to create new thread,"
-                               " waiting 2 seconds...")
+                        print("unable to create new thread,"
+                              " waiting 2 seconds...")
                     time.sleep(2)
 
     def _task_thread(self, data, task_callable, task_index):

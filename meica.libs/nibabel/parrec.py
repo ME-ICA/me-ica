@@ -29,11 +29,11 @@ supported_versions = ['V4.2']
 # assign props to PAR header entries
 # values are: (shortname[, dtype[, shape]])
 _hdr_key_dict = {
-    'Patient name': ('patient_name',),
-    'Examination name': ('exam_name',),
-    'Protocol name': ('protocol_name',),
-    'Examination date/time': ('exam_date',),
-    'Series Type': ('series_type',),
+    'Patient name': ('patient_name', ),
+    'Examination name': ('exam_name', ),
+    'Protocol name': ('protocol_name', ),
+    'Examination date/time': ('exam_date', ),
+    'Series Type': ('series_type', ),
     'Acquisition nr': ('acq_nr', int),
     'Reconstruction nr': ('recon_nr', int),
     'Scan Duration [sec]': ('scan_duration', float),
@@ -42,19 +42,19 @@ _hdr_key_dict = {
     'Max. number of slices/locations': ('max_slices', int),
     'Max. number of dynamics': ('max_dynamics', int),
     'Max. number of mixes': ('max_mixes', int),
-    'Patient position': ('patient_position',),
-    'Preparation direction': ('prep_direction',),
-    'Technique': ('tech',),
-    'Scan resolution  (x, y)': ('scan_resolution', int, (2,)),
-    'Scan mode': ('san_mode',),
+    'Patient position': ('patient_position', ),
+    'Preparation direction': ('prep_direction', ),
+    'Technique': ('tech', ),
+    'Scan resolution  (x, y)': ('scan_resolution', int, (2, )),
+    'Scan mode': ('san_mode', ),
     'Repetition time [ms]': ('repetition_time', float),
-    'FOV (ap,fh,rl) [mm]': ('fov', float, (3,)),
+    'FOV (ap,fh,rl) [mm]': ('fov', float, (3, )),
     'Water Fat shift [pixels]': ('water_fat_shift', float),
-    'Angulation midslice(ap,fh,rl)[degr]': ('angulation', float, (3,)),
-    'Off Centre midslice(ap,fh,rl) [mm]': ('off_center', float, (3,)),
+    'Angulation midslice(ap,fh,rl)[degr]': ('angulation', float, (3, )),
+    'Off Centre midslice(ap,fh,rl) [mm]': ('off_center', float, (3, )),
     'Flow compensation <0=no 1=yes> ?': ('flow_compensation', int),
     'Presaturation     <0=no 1=yes> ?': ('presaturation', int),
-    'Phase encoding velocity [cm/sec]': ('phase_enc_velocity', float, (3,)),
+    'Phase encoding velocity [cm/sec]': ('phase_enc_velocity', float, (3, )),
     'MTC               <0=no 1=yes> ?': ('mtc', int),
     'SPIR              <0=no 1=yes> ?': ('spir', int),
     'EPI factor        <0,1=no EPI>': ('epi_factor', int),
@@ -64,59 +64,125 @@ _hdr_key_dict = {
     'Max. number of diffusion values': ('max_diffusion_values', int),
     'Max. number of gradient orients': ('max_gradient_orient', int),
     'Number of label types   <0=no ASL>': ('nr_label_types', int),
-    }
+}
 
 # header items order per image definition line
 image_def_dtd = [
     ('slice number', int),
-    ('echo number', int,),
-    ('dynamic scan number', int,),
-    ('cardiac phase number', int,),
-    ('image_type_mr', int,),
-    ('scanning sequence', int,),
-    ('index in REC file', int,),
-    ('image pixel size', int,),
-    ('scan percentage', int,),
-    ('recon resolution', int, (2,)),
+    (
+        'echo number',
+        int,
+    ),
+    (
+        'dynamic scan number',
+        int,
+    ),
+    (
+        'cardiac phase number',
+        int,
+    ),
+    (
+        'image_type_mr',
+        int,
+    ),
+    (
+        'scanning sequence',
+        int,
+    ),
+    (
+        'index in REC file',
+        int,
+    ),
+    (
+        'image pixel size',
+        int,
+    ),
+    (
+        'scan percentage',
+        int,
+    ),
+    ('recon resolution', int, (2, )),
     ('rescale intercept', float),
     ('rescale slope', float),
     ('scale slope', float),
-    ('window center', int,),
-    ('window width', int,),
-    ('image angulation', float, (3,)),
-    ('image offcentre', float, (3,)),
+    (
+        'window center',
+        int,
+    ),
+    (
+        'window width',
+        int,
+    ),
+    ('image angulation', float, (3, )),
+    ('image offcentre', float, (3, )),
     ('slice thickness', float),
     ('slice gap', float),
-    ('image_display_orientation', int,),
-    ('slice orientation', int,),
-    ('fmri_status_indication', int,),
-    ('image_type_ed_es', int,),
-    ('pixel spacing', float, (2,)),
+    (
+        'image_display_orientation',
+        int,
+    ),
+    (
+        'slice orientation',
+        int,
+    ),
+    (
+        'fmri_status_indication',
+        int,
+    ),
+    (
+        'image_type_ed_es',
+        int,
+    ),
+    ('pixel spacing', float, (2, )),
     ('echo_time', float),
     ('dyn_scan_begin_time', float),
     ('trigger_time', float),
     ('diffusion_b_factor', float),
-    ('number of averages', int,),
+    (
+        'number of averages',
+        int,
+    ),
     ('image_flip_angle', float),
-    ('cardiac frequency', int,),
-    ('minimum RR-interval', int,),
-    ('maximum RR-interval', int,), 
-    ('TURBO factor', int,),
+    (
+        'cardiac frequency',
+        int,
+    ),
+    (
+        'minimum RR-interval',
+        int,
+    ),
+    (
+        'maximum RR-interval',
+        int,
+    ),
+    (
+        'TURBO factor',
+        int,
+    ),
     ('Inversion delay', float),
-    ('diffusion b value number', int,),    # (imagekey!)
-    ('gradient orientation number', int,), # (imagekey!)
-    ('contrast type', 'S30'),              # XXX might be too short?
+    (
+        'diffusion b value number',
+        int,
+    ),  # (imagekey!)
+    (
+        'gradient orientation number',
+        int,
+    ),  # (imagekey!)
+    ('contrast type', 'S30'),  # XXX might be too short?
     ('diffusion anisotropy type', 'S30'),  # XXX might be too short?
-    ('diffusion', float, (3,)),
-    ('label type', int,),                  # (imagekey!)
-    ]
+    ('diffusion', float, (3, )),
+    (
+        'label type',
+        int,
+    ),  # (imagekey!)
+]
 image_def_dtype = np.dtype(image_def_dtd)
 
 # slice orientation codes
-slice_orientation_codes = Recoder((# code, label
-    (1, 'transversal'),
-    (2, 'sagital'),
-    (3, 'coronal')), fields=('code', 'label'))
+slice_orientation_codes = Recoder(
+    (  # code, label
+        (1, 'transversal'), (2, 'sagital'), (3, 'coronal')),
+    fields=('code', 'label'))
 
 
 class PARRECError(Exception):
@@ -157,13 +223,11 @@ def parse_PAR_header(fobj):
             if line.count('image export tool'):
                 version = line.split()[-1]
                 if not version in supported_versions:
-                    warnings.warn(
-                          "PAR/REC version '%s' is currently not "
-                          "supported -- making an attempt to read "
-                          "nevertheless. Please email the NiBabel "
-                          "mailing list, if you are interested in "
-                          "adding support for this version."
-                          % version)
+                    warnings.warn("PAR/REC version '%s' is currently not "
+                                  "supported -- making an attempt to read "
+                                  "nevertheless. Please email the NiBabel "
+                                  "mailing list, if you are interested in "
+                                  "adding support for this version." % version)
             else:
                 # just a comment
                 continue
@@ -222,6 +286,7 @@ def parse_PAR_header(fobj):
 
 class PARRECHeader(Header):
     """PAR/REC header"""
+
     def __init__(self, info, image_defs):
         """
         Parameters
@@ -241,14 +306,12 @@ class PARRECHeader(Header):
         # functionality
         # dtype
         dtype = np.typeDict[
-                    'int'
-                    + str(self._get_unique_image_prop('image pixel size')[0])]
-        Header.__init__(self,
-                        data_dtype=dtype,
-                        shape=self.get_data_shape_in_file(),
-                        zooms=self._get_zooms()
-                       )
-
+            'int' + str(self._get_unique_image_prop('image pixel size')[0])]
+        Header.__init__(
+            self,
+            data_dtype=dtype,
+            shape=self.get_data_shape_in_file(),
+            zooms=self._get_zooms())
 
     @classmethod
     def from_header(klass, header=None):
@@ -256,20 +319,17 @@ class PARRECHeader(Header):
             raise PARRECError('Cannot create PARRECHeader from air.')
         if type(header) == klass:
             return header.copy()
-        raise PARRECError('Cannot create PARREC header from non-PARREC header.')
-
+        raise PARRECError(
+            'Cannot create PARREC header from non-PARREC header.')
 
     @classmethod
     def from_fileobj(klass, fileobj):
         info, image_defs = parse_PAR_header(fileobj)
         return klass(info, image_defs)
 
-
     def copy(self):
         return PARRECHeader(
-                copy.deepcopy(self.general_info),
-                self.image_defs.copy())
-
+            copy.deepcopy(self.general_info), self.image_defs.copy())
 
     def _get_unique_image_prop(self, name):
         """Scan all image definitions and return the unique value of a property.
@@ -293,7 +353,6 @@ class PARRECHeader(Header):
         else:
             return np.array([uprop[0] for uprop in uprops])
 
-
     def get_voxel_size(self):
         """Returns the spatial extent of a voxel.
 
@@ -304,11 +363,9 @@ class PARRECHeader(Header):
         # slice orientation for the whole image series
         slice_thickness = self._get_unique_image_prop('slice thickness')[0]
         voxsize_inplane = self._get_unique_image_prop('pixel spacing')
-        voxsize = np.array((voxsize_inplane[0],
-                            voxsize_inplane[1],
+        voxsize = np.array((voxsize_inplane[0], voxsize_inplane[1],
                             slice_thickness))
         return voxsize
-
 
     def get_ndim(self):
         """Return the number of dimensions of the image data."""
@@ -317,7 +374,6 @@ class PARRECHeader(Header):
             return 4
         else:
             return 3
-
 
     def _get_zooms(self):
         """Compute image zooms from header data.
@@ -333,11 +389,10 @@ class PARRECHeader(Header):
         zooms[:3] = self.get_voxel_size()
         zooms[2] += slice_gap
         # time axis?
-        if len(zooms) > 3  and self.general_info['max_dynamics'] > 1:
+        if len(zooms) > 3 and self.general_info['max_dynamics'] > 1:
             # DTI also has 4D
             zooms[3] = self.general_info['repetition_time']
         return zooms
-
 
     def get_affine(self, origin='scanner'):
         """Compute affine transformation into scanner space.
@@ -366,24 +421,21 @@ class PARRECHeader(Header):
         ang_rad *= -1
 
         # R2AGUI approach is this, but it comes with remarks ;-)
-        # % trying to incorporate AP FH RL rotation angles: determined using some 
-        # % common sense, Chris Rordon's help + source code and trial and error, 
+        # % trying to incorporate AP FH RL rotation angles: determined using some
+        # % common sense, Chris Rordon's help + source code and trial and error,
         # % this is considered EXPERIMENTAL!
-        rot_rl = np.mat(
-                [[1.0, 0.0, 0.0],
-                 [0.0, np.cos(ang_rad[2]), -np.sin(ang_rad[2])],
-                 [0.0, np.sin(ang_rad[2]), np.cos(ang_rad[2])]]
-                )
-        rot_ap = np.mat(
-                [[np.cos(ang_rad[0]), 0.0, np.sin(ang_rad[0])],
-                 [0.0, 1.0, 0.0],
-                 [-np.sin(ang_rad[0]), 0.0, np.cos(ang_rad[0])]]
-                )
-        rot_fh = np.mat(
-                [[np.cos(ang_rad[1]), -np.sin(ang_rad[1]), 0.0],
-                 [np.sin(ang_rad[1]), np.cos(ang_rad[1]), 0.0],
-                 [0.0, 0.0, 1.0]]
-                )
+        rot_rl = np.mat([[1.0, 0.0,
+                          0.0], [0.0,
+                                 np.cos(ang_rad[2]), -np.sin(ang_rad[2])],
+                         [0.0, np.sin(ang_rad[2]),
+                          np.cos(ang_rad[2])]])
+        rot_ap = np.mat([[np.cos(ang_rad[0]), 0.0,
+                          np.sin(ang_rad[0])], [0.0, 1.0, 0.0],
+                         [-np.sin(ang_rad[0]), 0.0,
+                          np.cos(ang_rad[0])]])
+        rot_fh = np.mat([[np.cos(ang_rad[1]), -np.sin(ang_rad[1]), 0.0],
+                         [np.sin(ang_rad[1]),
+                          np.cos(ang_rad[1]), 0.0], [0.0, 0.0, 1.0]])
         rot_r2agui = rot_rl * rot_ap * rot_fh
         # NiBabel way of doing it
         # order is [ap, fh, rl]
@@ -394,7 +446,7 @@ class PARRECHeader(Header):
         # XXX for now put some safety net, until we have recorded proper
         # test data with oblique orientations and different readout directions
         # to verify the order of arguments of euler2mat
-        assert(np.all(rot_r2agui == rot_nibabel))
+        assert (np.all(rot_r2agui == rot_nibabel))
         rot = rot_nibabel
 
         # FOV (always in ap, fh, rl)
@@ -405,28 +457,22 @@ class PARRECHeader(Header):
         slice_orientation = self.get_slice_orientation()
         if slice_orientation == 'sagital':
             # inplane: AP, FH   slices: RL
-            recfg_data_axis = np.mat([[  0,  0,  1],
-                                      [ -1,  0,  0],
-                                      [  0, -1,  0]])
+            recfg_data_axis = np.mat([[0, 0, 1], [-1, 0, 0], [0, -1, 0]])
             # fov is already like the data
             fov = fov
         elif slice_orientation == 'transversal':
             # inplane: RL, AP   slices: FH
-            recfg_data_axis = np.mat([[ -1,  0,  0],
-                                      [  0, -1,  0],
-                                      [  0,  0,  1]])
+            recfg_data_axis = np.mat([[-1, 0, 0], [0, -1, 0], [0, 0, 1]])
             # fov is already like the data
-            fov = fov[[2,0,1]]
+            fov = fov[[2, 0, 1]]
         elif slice_orientation == 'coronal':
             # inplane: RL, FH   slices: AP
-            recfg_data_axis = np.mat([[ -1,  0,  0],
-                                      [  0,  0, -1],
-                                      [  0, -1,  0]])
+            recfg_data_axis = np.mat([[-1, 0, 0], [0, 0, -1], [0, -1, 0]])
             # fov is already like the data
-            fov = fov[[2,1,0]]
+            fov = fov[[2, 1, 0]]
         else:
-            raise PARRECError("Unknown slice orientation (%s)."
-                              % slice_orientation)
+            raise PARRECError(
+                "Unknown slice orientation (%s)." % slice_orientation)
 
         rot = rot * recfg_data_axis
 
@@ -442,18 +488,18 @@ class PARRECHeader(Header):
 
         # compose the affine
         aff = np.eye(4)
-        aff[:3,:3] = scaled
+        aff[:3, :3] = scaled
         # offset
-        aff[:3,3] = fov_center_offset
+        aff[:3, 3] = fov_center_offset
         if origin == 'fov':
             pass
         elif origin == 'scanner':
             # offset to scanner's iso center (always in ap, fh, rl)
             # -- turn into rl, ap, fh and then lr, pa, fh
-            iso_offset = self.general_info['off_center'][[2,0,1]] * [-1,-1,0]
-            aff[:3,3] += iso_offset
+            iso_offset = self.general_info['off_center'][[2, 0, 1
+                                                          ]] * [-1, -1, 0]
+            aff[:3, 3] += iso_offset
         return aff
-
 
     def get_data_shape_in_file(self):
         """Return the shape of the binary blob in the REC file.
@@ -473,8 +519,8 @@ class PARRECHeader(Header):
         nslices = len(np.unique(self.image_defs['slice number']))
         if not nslices == self.general_info['max_slices']:
             raise PARRECError("Header inconsistency: Found %i slices, "
-                              "but header claims to have %i."
-                              % (nslices, self.general_info['max_slices']))
+                              "but header claims to have %i." %
+                              (nslices, self.general_info['max_slices']))
 
         inplane_shape = tuple(self._get_unique_image_prop('recon resolution'))
 
@@ -484,8 +530,7 @@ class PARRECHeader(Header):
         elif ndtivolumes > 1:
             return inplane_shape + (nslices, ndtivolumes)
         else:
-            return tuple(inplane_shape) + (nslices,)
-
+            return tuple(inplane_shape) + (nslices, )
 
     def get_data_scaling(self, method="dv"):
         """Returns scaling slope and intercept.
@@ -529,7 +574,6 @@ class PARRECHeader(Header):
             raise ValueError("Unknown scling method '%s'." % method)
         return (slope, intercept)
 
-
     def get_slice_orientation(self):
         """Returns the slice orientation label.
 
@@ -543,7 +587,6 @@ class PARRECHeader(Header):
                     self._get_unique_image_prop('slice orientation')[0]]
         return self._slice_orientation
 
-
     def raw_data_from_fileobj(self, fileobj):
         """Returns memmap array of raw unscaled image data.
 
@@ -552,13 +595,13 @@ class PARRECHeader(Header):
         # memmap the data -- it is guaranteed to be uncompressed and all
         # properties are known
         # read in Fortran order to have spatial axes first
-        data = np.memmap(fileobj,
-                         dtype=self.get_data_dtype(),
-                         mode='c', # copy-on-write
-                         shape=self.get_data_shape_in_file(),
-                         order='F')
+        data = np.memmap(
+            fileobj,
+            dtype=self.get_data_dtype(),
+            mode='c',  # copy-on-write
+            shape=self.get_data_shape_in_file(),
+            order='F')
         return data
-
 
     def data_from_fileobj(self, fileobj):
         """Returns scaled image data.
@@ -572,7 +615,6 @@ class PARRECHeader(Header):
         scaled = unscaled * slope
         scaled += intercept
         return scaled
-
 
 
 class PARRECImage(SpatialImage):
@@ -597,18 +639,14 @@ class PARRECImage(SpatialImage):
             # embedded header knows it, without having to touch the data
             return self._hdr.get_data_shape()
 
-
     @classmethod
     def from_file_map(klass, file_map):
         hdr_fobj = file_map['header'].get_prepare_fileobj()
         rec_fobj = file_map['image'].get_prepare_fileobj()
         hdr = PARRECHeader.from_fileobj(hdr_fobj)
         data = klass.ImageArrayProxy(rec_fobj, hdr)
-        return klass(data,
-                     hdr.get_affine(),
-                     header=hdr,
-                     extra=None,
-                     file_map=file_map)
+        return klass(
+            data, hdr.get_affine(), header=hdr, extra=None, file_map=file_map)
 
 
 load = PARRECImage.load

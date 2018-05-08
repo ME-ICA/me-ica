@@ -89,80 +89,55 @@ from .volumeutils import (native_code, swapped_code, make_dt_codes, allopen,
                           apply_read_scaling)
 from .arraywriters import make_array_writer, get_slope_inter, WriterError
 from .wrapstruct import WrapStruct
-from .spatialimages import (HeaderDataError, HeaderTypeError,
-                            SpatialImage)
+from .spatialimages import (HeaderDataError, HeaderTypeError, SpatialImage)
 from .fileholders import copy_file_map
 from .batteryrunners import Report
 from .arrayproxy import ArrayProxy
 
 # Sub-parts of standard analyze header from
 # Mayo dbh.h file
-header_key_dtd = [
-    ('sizeof_hdr', 'i4'),
-    ('data_type', 'S10'),
-    ('db_name', 'S18'),
-    ('extents', 'i4'),
-    ('session_error', 'i2'),
-    ('regular', 'S1'),
-    ('hkey_un0', 'S1')
-    ]
-image_dimension_dtd = [
-    ('dim', 'i2', (8,)),
-    ('vox_units', 'S4'),
-    ('cal_units', 'S8'),
-    ('unused1', 'i2'),
-    ('datatype', 'i2'),
-    ('bitpix', 'i2'),
-    ('dim_un0', 'i2'),
-    ('pixdim', 'f4', (8,)),
-    ('vox_offset', 'f4'),
-    ('funused1', 'f4'),
-    ('funused2', 'f4'),
-    ('funused3', 'f4'),
-    ('cal_max', 'f4'),
-    ('cal_min', 'f4'),
-    ('compressed', 'i4'),
-    ('verified', 'i4'),
-    ('glmax', 'i4'),
-    ('glmin', 'i4')
-    ]
-data_history_dtd = [
-    ('descrip', 'S80'),
-    ('aux_file', 'S24'),
-    ('orient', 'S1'),
-    ('originator', 'S10'),
-    ('generated', 'S10'),
-    ('scannum', 'S10'),
-    ('patient_id', 'S10'),
-    ('exp_date', 'S10'),
-    ('exp_time', 'S10'),
-    ('hist_un0', 'S3'),
-    ('views', 'i4'),
-    ('vols_added', 'i4'),
-    ('start_field', 'i4'),
-    ('field_skip', 'i4'),
-    ('omax', 'i4'),
-    ('omin', 'i4'),
-    ('smax', 'i4'),
-    ('smin', 'i4')
-    ]
+header_key_dtd = [('sizeof_hdr', 'i4'), ('data_type', 'S10'),
+                  ('db_name', 'S18'), ('extents', 'i4'),
+                  ('session_error', 'i2'), ('regular', 'S1'), ('hkey_un0',
+                                                               'S1')]
+image_dimension_dtd = [('dim', 'i2', (8, )), ('vox_units', 'S4'), ('cal_units',
+                                                                   'S8'),
+                       ('unused1', 'i2'), ('datatype', 'i2'), ('bitpix', 'i2'),
+                       ('dim_un0', 'i2'), ('pixdim', 'f4',
+                                           (8, )), ('vox_offset',
+                                                    'f4'), ('funused1', 'f4'),
+                       ('funused2',
+                        'f4'), ('funused3',
+                                'f4'), ('cal_max',
+                                        'f4'), ('cal_min',
+                                                'f4'), ('compressed', 'i4'),
+                       ('verified', 'i4'), ('glmax', 'i4'), ('glmin', 'i4')]
+data_history_dtd = [('descrip', 'S80'), ('aux_file', 'S24'), ('orient', 'S1'),
+                    ('originator',
+                     'S10'), ('generated',
+                              'S10'), ('scannum', 'S10'), ('patient_id',
+                                                           'S10'), ('exp_date',
+                                                                    'S10'),
+                    ('exp_time', 'S10'), ('hist_un0', 'S3'), ('views', 'i4'),
+                    ('vols_added', 'i4'), ('start_field', 'i4'), ('field_skip',
+                                                                  'i4'),
+                    ('omax', 'i4'), ('omin', 'i4'), ('smax', 'i4'), ('smin',
+                                                                     'i4')]
 
 # Full header numpy dtype combined across sub-fields
-header_dtype = np.dtype(header_key_dtd + image_dimension_dtd +
-                        data_history_dtd)
+header_dtype = np.dtype(
+    header_key_dtd + image_dimension_dtd + data_history_dtd)
 
-_dtdefs = ( # code, conversion function, equivalent dtype, aliases
+_dtdefs = (  # code, conversion function, equivalent dtype, aliases
     (0, 'none', np.void),
-    (1, 'binary', np.void), # 1 bit per voxel, needs thought
+    (1, 'binary', np.void),  # 1 bit per voxel, needs thought
     (2, 'uint8', np.uint8),
     (4, 'int16', np.int16),
     (8, 'int32', np.int32),
     (16, 'float32', np.float32),
-    (32, 'complex64', np.complex64), # numpy complex format?
+    (32, 'complex64', np.complex64),  # numpy complex format?
     (64, 'float64', np.float64),
-    (128, 'RGB', np.dtype([('R','u1'),
-                  ('G', 'u1'),
-                  ('B', 'u1')])),
+    (128, 'RGB', np.dtype([('R', 'u1'), ('G', 'u1'), ('B', 'u1')])),
     (255, 'all', np.void))
 
 # Make full code alias bank, including dtype column
@@ -187,10 +162,7 @@ class AnalyzeHeader(WrapStruct):
     has_data_slope = False
     has_data_intercept = False
 
-    def __init__(self,
-                 binaryblock=None,
-                 endianness=None,
-                 check=True):
+    def __init__(self, binaryblock=None, endianness=None, check=True):
         ''' Initialize header from binary data block
 
         Parameters
@@ -339,7 +311,7 @@ class AnalyzeHeader(WrapStruct):
         hdr_data['dim'] = 1
         hdr_data['dim'][0] = 0
         hdr_data['pixdim'] = 1
-        hdr_data['datatype'] = 16 # float32
+        hdr_data['datatype'] = 16  # float32
         hdr_data['bitpix'] = 32
         return hdr_data
 
@@ -401,7 +373,7 @@ class AnalyzeHeader(WrapStruct):
         obj = klass(check=check)
         if header is None:
             return obj
-        try: # check if there is a specific conversion routine
+        try:  # check if there is a specific conversion routine
             mapping = header.as_analyze_map()
         except AttributeError:
             # most basic conversion
@@ -410,7 +382,7 @@ class AnalyzeHeader(WrapStruct):
             obj.set_zooms(header.get_zooms())
             return obj
         # header is convertible from a field mapping
-        for key, value in mapping.items():
+        for key, value in list(mapping.items()):
             try:
                 obj[key] = value
             except (ValueError, KeyError):
@@ -426,10 +398,9 @@ class AnalyzeHeader(WrapStruct):
             obj.set_data_dtype(orig_code)
         except HeaderDataError:
             raise HeaderDataError('Input header %s has datatype %s but '
-                                  'output header %s does not support it'
-                                  % (header.__class__,
-                                     header.get_value_label('datatype'),
-                                     klass))
+                                  'output header %s does not support it' %
+                                  (header.__class__,
+                                   header.get_value_label('datatype'), klass))
         if check:
             obj.check_fix()
         return obj
@@ -522,16 +493,14 @@ class AnalyzeHeader(WrapStruct):
         data = np.asanyarray(data)
         shape = self.get_data_shape()
         if data.shape != shape:
-            raise HeaderDataError('Data should be shape (%s)' %
-                                  ', '.join(str(s) for s in shape))
+            raise HeaderDataError('Data should be shape (%s)' % ', '.join(
+                str(s) for s in shape))
         out_dtype = self.get_data_dtype()
         try:
-            arr_writer = make_array_writer(data,
-                                           out_dtype,
-                                           self.has_data_slope,
-                                           self.has_data_intercept)
+            arr_writer = make_array_writer(
+                data, out_dtype, self.has_data_slope, self.has_data_intercept)
         except WriterError:
-            msg = sys.exc_info()[1] # python 2 / 3 compatibility
+            msg = sys.exc_info()[1]  # python 2 / 3 compatibility
             raise HeaderTypeError(msg)
         seek_tell(fileobj, self.get_data_offset())
         arr_writer.to_fileobj(fileobj)
@@ -574,8 +543,7 @@ class AnalyzeHeader(WrapStruct):
         try:
             code = self._data_type_codes[datatype]
         except KeyError:
-            raise HeaderDataError(
-                'data dtype "%s" not recognized' % datatype)
+            raise HeaderDataError('data dtype "%s" not recognized' % datatype)
         dtype = self._data_type_codes.dtype[code]
         # test for void, being careful of user-defined types
         if dtype.type is np.void and not dtype.fields:
@@ -605,7 +573,7 @@ class AnalyzeHeader(WrapStruct):
         ndims = dims[0]
         if ndims == 0:
             return 0,
-        return tuple(int(d) for d in dims[1:ndims+1])
+        return tuple(int(d) for d in dims[1:ndims + 1])
 
     def set_data_shape(self, shape):
         ''' Set shape of data
@@ -622,12 +590,12 @@ class AnalyzeHeader(WrapStruct):
         ndims = len(shape)
         dims[:] = 1
         dims[0] = ndims
-        dims[1:ndims+1] = shape
+        dims[1:ndims + 1] = shape
         # Check that dimensions fit
-        if not np.all(dims[1:ndims+1] == shape):
+        if not np.all(dims[1:ndims + 1] == shape):
             raise HeaderDataError('shape %s does not fit in dim datatype' %
-                                   (shape,))
-        self._structarr['pixdim'][ndims+1:] = 1.0
+                                  (shape, ))
+        self._structarr['pixdim'][ndims + 1:] = 1.0
 
     def get_base_affine(self):
         ''' Get affine from basic (shared) header fields
@@ -651,8 +619,8 @@ class AnalyzeHeader(WrapStruct):
         hdr = self._structarr
         dims = hdr['dim']
         ndim = dims[0]
-        return shape_zoom_affine(hdr['dim'][1:ndim+1],
-                                 hdr['pixdim'][1:ndim+1],
+        return shape_zoom_affine(hdr['dim'][1:ndim + 1],
+                                 hdr['pixdim'][1:ndim + 1],
                                  self.default_x_flip)
 
     get_best_affine = get_base_affine
@@ -681,9 +649,9 @@ class AnalyzeHeader(WrapStruct):
         dims = hdr['dim']
         ndim = dims[0]
         if ndim == 0:
-            return (1.0,)
+            return (1.0, )
         pixdims = hdr['pixdim']
-        return tuple(pixdims[1:ndim+1])
+        return tuple(pixdims[1:ndim + 1])
 
     def set_zooms(self, zooms):
         ''' Set zooms into header fields
@@ -695,12 +663,12 @@ class AnalyzeHeader(WrapStruct):
         ndim = dims[0]
         zooms = np.asarray(zooms)
         if len(zooms) != ndim:
-            raise HeaderDataError('Expecting %d zoom values for ndim %d'
-                                  % (ndim, ndim))
+            raise HeaderDataError('Expecting %d zoom values for ndim %d' %
+                                  (ndim, ndim))
         if np.any(zooms < 0):
             raise HeaderDataError('zooms must be positive')
         pixdims = hdr['pixdim']
-        pixdims[1:ndim+1] = zooms[:]
+        pixdims[1:ndim + 1] = zooms[:]
 
     def as_analyze_map(self):
         return self
@@ -752,9 +720,7 @@ class AnalyzeHeader(WrapStruct):
     @classmethod
     def _get_checks(klass):
         ''' Return sequence of check functions for this class '''
-        return (klass._chk_sizeof_hdr,
-                klass._chk_datatype,
-                klass._chk_bitpix,
+        return (klass._chk_sizeof_hdr, klass._chk_datatype, klass._chk_bitpix,
                 klass._chk_pixdims)
 
     ''' Check functions in format expected by BatteryRunner class '''
@@ -808,7 +774,7 @@ class AnalyzeHeader(WrapStruct):
         rep.problem_level = 10
         rep.problem_msg = 'bitpix does not match datatype'
         if fix:
-            hdr['bitpix'] = bitpix # inplace modification
+            hdr['bitpix'] = bitpix  # inplace modification
             rep.fix_msg = 'setting bitpix to match datatype'
         return hdr, rep
 
@@ -845,7 +811,7 @@ class AnalyzeHeader(WrapStruct):
 
 class AnalyzeImage(SpatialImage):
     header_class = AnalyzeHeader
-    files_types = (('image','.img'), ('header','.hdr'))
+    files_types = (('image', '.img'), ('header', '.hdr'))
     _compressed_exts = ('.gz', '.bz2')
 
     ImageArrayProxy = ArrayProxy
@@ -868,7 +834,7 @@ class AnalyzeImage(SpatialImage):
         hdr_fh, img_fh = klass._get_fileholders(file_map)
         hdrf = hdr_fh.get_prepare_fileobj(mode='rb')
         header = klass.header_class.from_fileobj(hdrf)
-        if hdr_fh.fileobj is None: # was filename
+        if hdr_fh.fileobj is None:  # was filename
             hdrf.close()
         hdr_copy = header.copy()
         imgf = img_fh.fileobj
@@ -879,9 +845,11 @@ class AnalyzeImage(SpatialImage):
         img = klass(data, None, header, file_map=file_map)
         # set affine from header though
         img._affine = header.get_best_affine()
-        img._load_cache = {'header': hdr_copy,
-                           'affine': img._affine.copy(),
-                           'file_map': copy_file_map(file_map)}
+        img._load_cache = {
+            'header': hdr_copy,
+            'affine': img._affine.copy(),
+            'file_map': copy_file_map(file_map)
+        }
         return img
 
     @staticmethod
@@ -925,9 +893,7 @@ class AnalyzeImage(SpatialImage):
         self.update_header()
         hdr = self.get_header()
         out_dtype = self.get_data_dtype()
-        arr_writer = make_array_writer(data,
-                                       out_dtype,
-                                       hdr.has_data_slope,
+        arr_writer = make_array_writer(data, out_dtype, hdr.has_data_slope,
                                        hdr.has_data_intercept)
         hdr_fh, img_fh = self._get_fileholders(file_map)
         # Check if hdr and img refer to same file; this can happen with odd
@@ -943,14 +909,14 @@ class AnalyzeImage(SpatialImage):
         # Write image
         shape = hdr.get_data_shape()
         if data.shape != shape:
-            raise HeaderDataError('Data should be shape (%s)' %
-                                  ', '.join(str(s) for s in shape))
+            raise HeaderDataError('Data should be shape (%s)' % ', '.join(
+                str(s) for s in shape))
         seek_tell(imgf, hdr.get_data_offset())
         arr_writer.to_fileobj(imgf)
-        if hdr_fh.fileobj is None: # was filename
+        if hdr_fh.fileobj is None:  # was filename
             hdrf.close()
         if not hdr_img_same:
-            if img_fh.fileobj is None: # was filename
+            if img_fh.fileobj is None:  # was filename
                 imgf.close()
         self._header = hdr
         self.file_map = file_map

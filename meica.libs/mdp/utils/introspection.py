@@ -1,6 +1,7 @@
 import types
-import cPickle
+import pickle
 import mdp
+
 
 class _Walk(object):
     """Recursively crawl an object and search for attributes that
@@ -10,18 +11,19 @@ class _Walk(object):
     Usage:
         _Walk()(object)
     """
+
     def __init__(self):
         self.arrays = {}
         self.start = None
         self.allobjs = {}
 
-    def __call__(self, x, start = None):
+    def __call__(self, x, start=None):
         arrays = self.arrays
         # loop through the object dictionary
         for name in dir(x):
             # get the corresponding member
             obj = getattr(x, name)
-            if id(obj) in self.allobjs.keys():
+            if id(obj) in list(self.allobjs.keys()):
                 # if we already examined the member, skip to the next
                 continue
             else:
@@ -42,7 +44,7 @@ class _Walk(object):
                     arrays[struct] = obj
                 else:
                     arrays[name] = obj
-            elif name.startswith('__') or type(obj) in (int, long, float,
+            elif name.startswith('__') or type(obj) in (int, int, float,
                                                         types.MethodType):
                 # the present member is a private member or a known
                 # type that does not support arrays as attributes
@@ -52,25 +54,27 @@ class _Walk(object):
                 continue
             else:
                 # we need to examine the present member in more detail
-                arrays.update(self(obj, start = struct))
+                arrays.update(self(obj, start=struct))
         self.start = start
         return arrays
 
+
 def _format_dig(dict_):
-    longest_name = max(map(len, dict_.keys()))
-    longest_size = max(map(lambda x: len('%d'%x[0]), dict_.values()))
+    longest_name = max(list(map(len, list(dict_.keys()))))
+    longest_size = max([len('%d' % x[0]) for x in list(dict_.values())])
     msgs = []
     total_size = 0
     for name in sorted(dict_.keys()):
         size = dict_[name][0]
         total_size += size
-        pname = (name+':').ljust(longest_name+1)
-        psize = ('%d bytes' % size).rjust(longest_size+6)
+        pname = (name + ':').ljust(longest_name + 1)
+        psize = ('%d bytes' % size).rjust(longest_size + 6)
         msg = "%s %s" % (pname, psize)
         msgs.append(msg)
     final = "Total %d arrays (%d bytes)" % (len(dict_), total_size)
     msgs.append(final)
     return '\n'.join(msgs)
+
 
 def dig_node(x):
     """Crawl recursively an MDP Node looking for arrays.
@@ -82,15 +86,16 @@ def dig_node(x):
     if not isinstance(x, mdp.Node):
         raise Exception('Cannot dig %s' % (str(type(x))))
     arrays = _Walk()(x)
-    for name in arrays.keys():
+    for name in list(arrays.keys()):
         ar = arrays[name]
         if len(ar.shape) == 0:
             size = 1
         else:
             size = mdp.numx.prod(ar.shape)
-        bytes = ar.itemsize*size
+        bytes = ar.itemsize * size
         arrays[name] = (bytes, ar)
     return arrays, _format_dig(arrays)
+
 
 def get_node_size(x):
     """Return node total byte-size using cPickle with protocol=2.
@@ -99,8 +104,9 @@ def get_node_size(x):
     """
     # TODO: add check for problematic node types, like NoiseNode?
     # TODO: replace this with sys.getsizeof for Python >= 2.6
-    size = len(cPickle.dumps(x, protocol = 2))
+    size = len(pickle.dumps(x, protocol=2))
     return size
+
 
 def get_node_size_str(x, si_units=False):
     """Return node total byte-size as a well readable string.
@@ -111,8 +117,10 @@ def get_node_size_str(x, si_units=False):
     """
     return _memory_size_str(get_node_size(x), si_units=si_units)
 
+
 _SI_MEMORY_PREFIXES = ("", "k", "M", "G", "T", "P", "E")
 _IEC_MEMORY_PREFIXES = ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei")
+
 
 def _memory_size_str(size, si_units=False):
     """Convert the given memory size into a nicely formatted string.
@@ -124,7 +132,7 @@ def _memory_size_str(size, si_units=False):
     else:
         base = 2**10
     scale = 0  # 1024**scale is the actual scale
-    while size > base**(scale+1):
+    while size > base**(scale + 1):
         scale += 1
     unit = "B"
     if scale:

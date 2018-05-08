@@ -3,7 +3,7 @@
 
 import os
 from os.path import join as pjoin, dirname
-import StringIO
+import io
 
 import numpy as np
 
@@ -22,6 +22,7 @@ pil_test = np.testing.dec.skipif(not have_pil, 'could not import PIL.Image')
 
 data_dir = pjoin(dirname(__file__), 'data')
 
+
 def setup_module():
     if os.name == 'nt':
         raise SkipTest('FUSE not available for windows, skipping dft tests')
@@ -37,7 +38,7 @@ def test_init():
 def test_study():
     studies = dft.get_studies(data_dir)
     assert_equal(len(studies), 1)
-    assert_equal(studies[0].uid, 
+    assert_equal(studies[0].uid,
                  '1.3.12.2.1107.5.2.32.35119.30000010011408520750000000022')
     assert_equal(studies[0].date, '20100114')
     assert_equal(studies[0].time, '121314.000000')
@@ -52,7 +53,7 @@ def test_series():
     studies = dft.get_studies(data_dir)
     assert_equal(len(studies[0].series), 1)
     ser = studies[0].series[0]
-    assert_equal(ser.uid, 
+    assert_equal(ser.uid,
                  '1.3.12.2.1107.5.2.32.35119.2010011420292594820699190.0.0.0')
     assert_equal(ser.number, '12')
     assert_equal(ser.description, 'CBU_DTI_64D_1A')
@@ -82,14 +83,13 @@ def test_storage_instance():
 def test_png():
     studies = dft.get_studies(data_dir)
     data = studies[0].series[0].as_png()
-    im = PImage.open(StringIO.StringIO(data))
+    im = PImage.open(io.StringIO(data))
     assert_equal(im.size, (256, 256))
 
 
 def test_nifti():
     studies = dft.get_studies(data_dir)
     data = studies[0].series[0].as_nifti()
-    assert_equal(len(data), 352 + 2*256*256*2)
+    assert_equal(len(data), 352 + 2 * 256 * 256 * 2)
     h = nifti1.Nifti1Header(data[:348])
     assert_equal(h.get_data_shape(), (256, 256, 2))
-

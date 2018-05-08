@@ -2,8 +2,10 @@ __docformat__ = "restructuredtext en"
 
 from mdp import numx, numx_rand, utils, graph, Node
 
+
 class _NGNodeData(object):
     """Data associated to a node in a Growing Neural Gas graph."""
+
     def __init__(self, pos, error=0.0, hits=0, label=None):
         # reference vector (spatial position)
         self.pos = pos
@@ -12,10 +14,13 @@ class _NGNodeData(object):
         self.hits = hits
         self.label = label
 
+
 class _NGEdgeData(object):
     """Data associated to an edge in a Growing Neural Gas graph."""
+
     def __init__(self, age=0):
         self.age = age
+
     def inc_age(self):
         self.age += 1
 
@@ -39,9 +44,18 @@ class GrowingNeuralGasNode(Node):
 
     - graph -- The corresponding `mdp.graph.Graph` object
     """
-    def __init__(self, start_poss=None, eps_b=0.2, eps_n=0.006, max_age=50,
-                 lambda_=100, alpha=0.5, d=0.995, max_nodes=2147483647,
-                 input_dim=None, dtype=None):
+
+    def __init__(self,
+                 start_poss=None,
+                 eps_b=0.2,
+                 eps_n=0.006,
+                 max_age=50,
+                 lambda_=100,
+                 alpha=0.5,
+                 d=0.995,
+                 max_nodes=2147483647,
+                 input_dim=None,
+                 dtype=None):
         """Growing Neural Gas algorithm.
 
         :Parameters:
@@ -100,8 +114,8 @@ class GrowingNeuralGasNode(Node):
 
         #copy parameters
         (self.eps_b, self.eps_n, self.max_age, self.lambda_, self.alpha,
-         self.d, self.max_nodes) = (eps_b, eps_n, max_age, lambda_, alpha,
-                                    d, max_nodes)
+         self.d, self.max_nodes) = (eps_b, eps_n, max_age, lambda_, alpha, d,
+                                    max_nodes)
 
         super(GrowingNeuralGasNode, self).__init__(input_dim, None, dtype)
 
@@ -126,14 +140,16 @@ class GrowingNeuralGasNode(Node):
     def _get_nearest_nodes(self, x):
         """Return the two nodes in the graph that are nearest to x and their
         squared distances. (Return ([node1, node2], [dist1, dist2])"""
+
         # distance function
         def _distance_from_node(node):
             #return norm(node.data.pos-x)**2
             tmp = node.data.pos - x
             return utils.mult(tmp, tmp)
+
         g = self.graph
         # distances of all graph nodes from x
-        distances = numx.array(map(_distance_from_node, g.nodes))
+        distances = numx.array(list(map(_distance_from_node, g.nodes)))
         ids = distances.argsort()[:2]
         #nearest = [g.nodes[idx] for idx in ids]
         #return nearest, distances[ids]
@@ -142,7 +158,7 @@ class GrowingNeuralGasNode(Node):
     def _move_node(self, node, x, eps):
         """Move a node by eps in the direction x."""
         # ! make sure that eps already has the right dtype
-        node.data.pos += eps*(x - node.data.pos)
+        node.data.pos += eps * (x - node.data.pos)
 
     def _remove_old_edges(self, edges):
         """Remove all edges older than the maximal age."""
@@ -160,15 +176,15 @@ class GrowingNeuralGasNode(Node):
         where the error is the largest)."""
         g = self.graph
         # determine the node with the highest error
-        errors = map(lambda x: x.data.cum_error, g.nodes)
+        errors = [x.data.cum_error for x in g.nodes]
         qnode = g.nodes[numx.argmax(errors)]
         # determine the neighbour with the highest error
         neighbors = qnode.neighbors()
-        errors = map(lambda x: x.data.cum_error, neighbors)
+        errors = [x.data.cum_error for x in neighbors]
         fnode = neighbors[numx.argmax(errors)]
         # new node, halfway between the worst node and the worst of
         # its neighbors
-        new_pos = 0.5*(qnode.data.pos + fnode.data.pos)
+        new_pos = 0.5 * (qnode.data.pos + fnode.data.pos)
         new_node = self._add_node(new_pos)
         # update edges
         edges = qnode.get_edges(neighbor=fnode)
@@ -178,18 +194,18 @@ class GrowingNeuralGasNode(Node):
         # update errors
         qnode.data.cum_error *= self.alpha
         fnode.data.cum_error *= self.alpha
-        new_node.data.cum_error = 0.5*(qnode.data.cum_error+
-                                       fnode.data.cum_error)
+        new_node.data.cum_error = 0.5 * (
+            qnode.data.cum_error + fnode.data.cum_error)
 
     def get_nodes_position(self):
-        return numx.array(map(lambda n: n.data.pos, self.graph.nodes),
-                          dtype = self.dtype)
+        return numx.array(
+            [n.data.pos for n in self.graph.nodes], dtype=self.dtype)
 
     def _train(self, input):
         g = self.graph
         d = self.d
 
-        if len(g.nodes)==0:
+        if len(g.nodes) == 0:
             # if missing, generate two initial nodes at random
             # assuming that the input data has zero mean and unit variance,
             # choose the random position according to a gaussian distribution
@@ -255,6 +271,7 @@ class GrowingNeuralGasNode(Node):
             dists.append(numx.sqrt(dist[0]))
         return nodes, dists
 
+
 class NeuralGasNode(GrowingNeuralGasNode):
     """Learn the topological structure of the input data by building a
     corresponding graph approximation (original Neural Gas algorithm).
@@ -269,18 +286,21 @@ class NeuralGasNode(GrowingNeuralGasNode):
     - graph -- The corresponding `mdp.graph.Graph` object
     - max_epochs - maximum number of epochs until which to train.
     """
-    def __init__(self, num_nodes = 10,
-                       start_poss=None,
-                       epsilon_i=0.3,               # initial epsilon
-                       epsilon_f=0.05,              # final epsilon
-                       lambda_i=30.,                # initial lambda
-                       lambda_f=0.01,               # final lambda
-                       max_age_i=20,                # initial edge lifetime
-                       max_age_f=200,               # final edge lifetime
-                       max_epochs=100,
-                       n_epochs_to_train=None,
-                       input_dim=None,
-                       dtype=None):
+
+    def __init__(
+            self,
+            num_nodes=10,
+            start_poss=None,
+            epsilon_i=0.3,  # initial epsilon
+            epsilon_f=0.05,  # final epsilon
+            lambda_i=30.,  # initial lambda
+            lambda_f=0.01,  # final lambda
+            max_age_i=20,  # initial edge lifetime
+            max_age_f=200,  # final edge lifetime
+            max_epochs=100,
+            n_epochs_to_train=None,
+            input_dim=None,
+            dtype=None):
         """Neural Gas algorithm.
 
         Default parameters taken from the original publication.
@@ -357,7 +377,6 @@ class NeuralGasNode(GrowingNeuralGasNode):
                 self._add_node(self._refcast(start_poss[node_ind]))
         self.epoch = 0
 
-
     def _train(self, input):
         g = self.graph
 
@@ -383,19 +402,19 @@ class NeuralGasNode(GrowingNeuralGasNode):
             # reset permutation of data points
             di = numx.random.permutation(input)
             if epoch < max_epochs:
-                denom = epoch/max_epochs
+                denom = epoch / max_epochs
             else:
                 denom = 1.
-            epsilon = e_i * ((e_f/e_i)**denom)
-            lmbda = l_i * ((l_f/l_i)**denom)
-            T = T_i * ((T_f/T_i)**denom)
+            epsilon = e_i * ((e_f / e_i)**denom)
+            lmbda = l_i * ((l_f / l_i)**denom)
+            T = T_i * ((T_f / T_i)**denom)
             epoch += 1
             for x in di:
                 # Step 1 rank nodes according to their distance to random point
                 ranked_nodes = self._rank_nodes_by_distance(x)
 
                 # Step 2 move nodes
-                for rank,node in enumerate(ranked_nodes):
+                for rank, node in enumerate(ranked_nodes):
                     #TODO: cut off at some rank when using many nodes
                     #TODO: check speedup by vectorizing
                     delta_w = epsilon * numx.exp(-rank / lmbda) * \
@@ -422,7 +441,6 @@ class NeuralGasNode(GrowingNeuralGasNode):
             remaining_epochs -= 1
         self.epoch = epoch
 
-
     def _rank_nodes_by_distance(self, x):
         """Return the nodes in the graph in a list ranked by their squared
         distance to x. """
@@ -432,17 +450,16 @@ class NeuralGasNode(GrowingNeuralGasNode):
         # distance function
         def _distance_from_node(node):
             tmp = node.data.pos - x
-            return utils.mult(tmp, tmp) # maps to mdp.numx.dot
+            return utils.mult(tmp, tmp)  # maps to mdp.numx.dot
 
         g = self.graph
 
         # distances of all graph nodes from x
-        distances = numx.array(map(_distance_from_node, g.nodes))
+        distances = numx.array(list(map(_distance_from_node, g.nodes)))
         ids = distances.argsort()
         ranked_nodes = [g.nodes[id] for id in ids]
 
         return ranked_nodes
-
 
     def _remove_old_edges(self, max_age):
         """Remove edges with age > max_age."""

@@ -2,9 +2,10 @@ __docformat__ = "restructuredtext en"
 
 import mdp
 from mdp import numx
-from mdp.utils import (mult, nongeneral_svd, CovarianceMatrix,
-                       symeig, SymeigException)
+from mdp.utils import (mult, nongeneral_svd, CovarianceMatrix, symeig,
+                       SymeigException)
 import warnings as _warnings
+
 
 class PCANode(mdp.Node):
     """Filter the input data through the most significatives of its
@@ -32,8 +33,14 @@ class PCANode(mdp.Node):
     I.T. Jolliffe, Principal Component Analysis, Springer-Verlag (1986).
     """
 
-    def __init__(self, input_dim=None, output_dim=None, dtype=None,
-                 svd=False, reduce=False, var_rel=1E-12, var_abs=1E-15,
+    def __init__(self,
+                 input_dim=None,
+                 output_dim=None,
+                 dtype=None,
+                 svd=False,
+                 reduce=False,
+                 var_rel=1E-12,
+                 var_abs=1E-15,
                  var_part=None):
         """The number of principal components to be kept can be specified as
         'output_dim' directly (e.g. 'output_dim=10' means 10 components
@@ -128,8 +135,7 @@ class PCANode(mdp.Node):
         # specified directly
         if self.output_dim is not None and self.output_dim >= 1:
             # (eigenvalues sorted in ascending order)
-            return (self.input_dim - self.output_dim + 1,
-                   self.input_dim)
+            return (self.input_dim - self.output_dim + 1, self.input_dim)
         # otherwise, the number of principal components to keep has been
         # specified by the fraction of variance to be explained
         else:
@@ -176,16 +182,16 @@ class PCANode(mdp.Node):
             d, v = self._symeig(self.cov_mtx, range=rng, overwrite=(not debug))
             # if reduce=False and svd=False. we should check for
             # negative eigenvalues and fail
-            if not (self.reduce or self.svd or (self.desired_variance is
-                                                not None)):
+            if not (self.reduce or self.svd or
+                    (self.desired_variance is not None)):
                 if d.min() < 0:
                     raise mdp.NodeException(
                         "Got negative eigenvalues: %s.\n"
                         "You may either set output_dim to be smaller, "
                         "or set reduce=True and/or svd=True" % str(d))
-        except SymeigException, exception:
-            err = str(exception)+("\nCovariance matrix may be singular."
-                                  "Try setting svd=True.")
+        except SymeigException as exception:
+            err = str(exception) + ("\nCovariance matrix may be singular."
+                                    "Try setting svd=True.")
             raise mdp.NodeException(err)
 
         # delete covariance matrix if no exception occurred
@@ -193,12 +199,12 @@ class PCANode(mdp.Node):
             del self.cov_mtx
 
         # sort by descending order
-        d = numx.take(d, range(d.shape[0]-1, -1, -1))
+        d = numx.take(d, list(range(d.shape[0] - 1, -1, -1)))
         v = v[:, ::-1]
 
         if self.desired_variance is not None:
             # throw away immediately negative eigenvalues
-            d = d[ d > 0 ]
+            d = d[d > 0]
             # the number of principal components to keep has
             # been specified by the fraction of variance to be explained
             varcum = (d / vartot).cumsum(axis=0)
@@ -216,16 +222,16 @@ class PCANode(mdp.Node):
         if self.reduce:
             # remove entries that are smaller then var_abs and
             # smaller then var_rel relative to the maximum
-            d = d[ d > self.var_abs ]
+            d = d[d > self.var_abs]
             # check that we did not throw away everything
             if len(d) == 0:
                 raise mdp.NodeException('No eigenvalues larger than'
-                                        ' var_abs=%e!'%self.var_abs)
-            d = d[ d / d.max() > self.var_rel ]
+                                        ' var_abs=%e!' % self.var_abs)
+            d = d[d / d.max() > self.var_rel]
 
             # filter for variance relative to total variance
             if self.var_part:
-                d = d[ d / vartot > self.var_part ]
+                d = d[d / vartot > self.var_part]
 
             v = v[:, 0:d.shape[0]]
             self._output_dim = d.shape[0]
@@ -259,8 +265,8 @@ class PCANode(mdp.Node):
         """Project the input on the first 'n' principal components.
         If 'n' is not set, use all available components."""
         if n is not None:
-            return mult(x-self.avg, self.v[:, :n])
-        return mult(x-self.avg, self.v)
+            return mult(x - self.avg, self.v[:, :n])
+        return mult(x - self.avg, self.v)
 
     def _inverse(self, y, n=None):
         """Project 'y' to the input space using the first 'n' components.
@@ -311,13 +317,13 @@ class WhiteningNode(PCANode):
     def get_eigenvectors(self):
         """Return the eigenvectors of the covariance matrix."""
         self._if_training_stop_training()
-        return numx.sqrt(self.d)*self.v
+        return numx.sqrt(self.d) * self.v
 
     def get_recmatrix(self, transposed=1):
         """Return the back-projection matrix (i.e. the reconstruction matrix).
         """
         self._if_training_stop_training()
-        v_inverse = self.v*self.d
+        v_inverse = self.v * self.d
         if transposed:
             return v_inverse.T
         return v_inverse

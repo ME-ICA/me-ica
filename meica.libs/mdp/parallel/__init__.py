@@ -19,64 +19,48 @@ aspects of the parallelization, but do not have to know anything about
 flows or nodes.
 """
 
-
-from scheduling import (
-    ResultContainer, ListResultContainer, OrderedResultContainer, TaskCallable,
-    SqrTestCallable, SleepSqrTestCallable, TaskCallableWrapper, Scheduler,
-    cpu_count, MDPVersionCallable
-)
-from process_schedule import ProcessScheduler
-from thread_schedule import ThreadScheduler
-from parallelnodes import (
+from .scheduling import (ResultContainer, ListResultContainer,
+                         OrderedResultContainer, TaskCallable, SqrTestCallable,
+                         SleepSqrTestCallable, TaskCallableWrapper, Scheduler,
+                         cpu_count, MDPVersionCallable)
+from .process_schedule import ProcessScheduler
+from .thread_schedule import ThreadScheduler
+from .parallelnodes import (
     ParallelExtensionNode, NotForkableParallelException, JoinParallelException,
-    ParallelPCANode, ParallelSFANode, ParallelFDANode, ParallelHistogramNode
-)
-from parallelclassifiers import (
-    ParallelGaussianClassifier, ParallelNearestMeanClassifier,
-    ParallelKNNClassifier
-)
-from parallelflows import (
+    ParallelPCANode, ParallelSFANode, ParallelFDANode, ParallelHistogramNode)
+from .parallelclassifiers import (ParallelGaussianClassifier,
+                                  ParallelNearestMeanClassifier,
+                                  ParallelKNNClassifier)
+from .parallelflows import (
     _purge_flownode, FlowTaskCallable, FlowTrainCallable, FlowExecuteCallable,
-    TrainResultContainer, ExecuteResultContainer,
-    ParallelFlowException, NoTaskException,
-    ParallelFlow, ParallelCheckpointFlow
-)
-from parallelhinet import (
-    ParallelFlowNode, ParallelLayer, ParallelCloneLayer
-)
+    TrainResultContainer, ExecuteResultContainer, ParallelFlowException,
+    NoTaskException, ParallelFlow, ParallelCheckpointFlow)
+from .parallelhinet import (ParallelFlowNode, ParallelLayer,
+                            ParallelCloneLayer)
 
 from mdp import config
 from mdp.utils import fixup_namespace
 
 if config.has_parallel_python:
-    import pp_support
+    from . import pp_support
 
 # Note: the modules with the actual extension node classes are still available
 
 __all__ = [
-    "ResultContainer", "ListResultContainer",
-    "OrderedResultContainer", "TaskCallable", "SqrTestCallable",
-    "SleepSqrTestCallable", "TaskCallableWrapper", "Scheduler",
-    "ProcessScheduler", "ThreadScheduler",
+    "ResultContainer", "ListResultContainer", "OrderedResultContainer",
+    "TaskCallable", "SqrTestCallable", "SleepSqrTestCallable",
+    "TaskCallableWrapper", "Scheduler", "ProcessScheduler", "ThreadScheduler",
     "ParallelExtensionNode", "JoinParallelException",
-    "NotForkableParallelException",
-    "ParallelSFANode", "ParallelSFANode", "ParallelFDANode",
-    "ParallelHistogramNode",
-    "FlowTaskCallable", "FlowTrainCallable", "FlowExecuteCallable",
-    "ExecuteResultContainer", "TrainResultContainer", "ParallelFlowException",
-    "NoTaskException",
-    "ParallelFlow", "ParallelCheckpointFlow",
-    "ParallelFlowNode", "ParallelLayer", "ParallelCloneLayer"]
+    "NotForkableParallelException", "ParallelSFANode", "ParallelSFANode",
+    "ParallelFDANode", "ParallelHistogramNode", "FlowTaskCallable",
+    "FlowTrainCallable", "FlowExecuteCallable", "ExecuteResultContainer",
+    "TrainResultContainer", "ParallelFlowException", "NoTaskException",
+    "ParallelFlow", "ParallelCheckpointFlow", "ParallelFlowNode",
+    "ParallelLayer", "ParallelCloneLayer"
+]
 
 import sys as _sys
 fixup_namespace(__name__, __all__,
-                ('scheduling',
-                 'process_schedule',
-                 'thread_schedule',
-                 'parallelnodes',
-                 'parallelflows',
-                 'parallelhinet',
-                 'parallelclassifiers',
-                 'config',
-                 'fixup_namespace'
-                 ))
+                ('scheduling', 'process_schedule', 'thread_schedule',
+                 'parallelnodes', 'parallelflows', 'parallelhinet',
+                 'parallelclassifiers', 'config', 'fixup_namespace'))

@@ -1,6 +1,7 @@
 """ Class to raise error for missing modules or other misfortunes
 """
 
+
 class TripWireError(Exception):
     """ Exception if trying to use TripWire object """
 
@@ -40,6 +41,7 @@ class TripWire(object):
         ...
     TripWireError: We do not have silly_module_name
     """
+
     def __init__(self, msg):
         self._msg = msg
 

@@ -10,8 +10,7 @@ import numpy as np
 
 from .. import environment as nibe
 
-from numpy.testing import (assert_array_almost_equal,
-                           assert_array_equal)
+from numpy.testing import (assert_array_almost_equal, assert_array_equal)
 
 from nose.tools import assert_true, assert_equal, assert_raises
 
@@ -37,7 +36,7 @@ def teardown_environment():
     """Restore things that were remembered by the setup_environment function
     """
     orig_env = GIVEN_ENV['env']
-    for key in env.keys():
+    for key in list(env.keys()):
         if key not in orig_env:
             del env[key]
     env.update(orig_env)

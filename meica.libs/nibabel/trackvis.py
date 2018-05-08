@@ -8,8 +8,8 @@ import numpy as np
 import numpy.linalg as npl
 
 from .py3k import asbytes, asstr
-from .volumeutils import (native_code, swapped_code, endian_codes,
-                          allopen, rec2dict)
+from .volumeutils import (native_code, swapped_code, endian_codes, allopen,
+                          rec2dict)
 from .orientations import aff2axcodes
 from .affines import apply_affine
 
@@ -39,7 +39,7 @@ header_1_dtd = [
     ('n_count', 'i4'),
     ('version', 'i4'),
     ('hdr_size', 'i4'),
-    ]
+]
 
 # Version 2 adds a 4x4 matrix giving the affine transformtation going
 # from voxel coordinates in the referenced 3D voxel matrix, to xyz
@@ -54,7 +54,7 @@ header_2_dtd = [
     ('scalar_name', 'S20', 10),
     ('n_properties', 'h'),
     ('property_name', 'S20', 10),
-    ('vox_to_ras', 'f4', (4,4)), # new field for version 2
+    ('vox_to_ras', 'f4', (4, 4)),  # new field for version 2
     ('reserved', 'S444'),
     ('voxel_order', 'S4'),
     ('pad2', 'S4'),
@@ -69,7 +69,7 @@ header_2_dtd = [
     ('n_count', 'i4'),
     ('version', 'i4'),
     ('hdr_size', 'i4'),
-    ]
+]
 
 # Full header numpy dtypes
 header_1_dtype = np.dtype(header_1_dtd)
@@ -137,9 +137,7 @@ def read(fileobj, as_generator=False, points_space=None):
     fileobj = allopen(fileobj, mode='rb')
     hdr_str = fileobj.read(header_2_dtype.itemsize)
     # try defaulting to version 2 format
-    hdr = np.ndarray(shape=(),
-                     dtype=header_2_dtype,
-                     buffer=hdr_str)
+    hdr = np.ndarray(shape=(), dtype=header_2_dtype, buffer=hdr_str)
     if np.asscalar(hdr['id_string'])[:5] != asbytes('TRACK'):
         raise HeaderError('Expecting TRACK as first '
                           '5 characters of id_string')
@@ -148,24 +146,21 @@ def read(fileobj, as_generator=False, points_space=None):
     else:
         hdr = hdr.newbyteorder()
         if hdr['hdr_size'] != 1000:
-            raise HeaderError('Invalid hdr_size of %s'
-                              % hdr['hdr_size'])
+            raise HeaderError('Invalid hdr_size of %s' % hdr['hdr_size'])
         endianness = swapped_code
     # Check version and adapt structure accordingly
     version = hdr['version']
     if version not in (1, 2):
         raise HeaderError('Reader only supports versions 1 and 2')
-    if version == 1: # make a new header with the same data
-        hdr = np.ndarray(shape=(),
-                         dtype=header_1_dtype,
-                         buffer=hdr_str)
+    if version == 1:  # make a new header with the same data
+        hdr = np.ndarray(shape=(), dtype=header_1_dtype, buffer=hdr_str)
         if endianness == swapped_code:
             hdr = hdr.newbyteorder()
     # Do points_space checks
     _check_hdr_points_space(hdr, points_space)
     # prepare transforms for later use
     if points_space == 'voxel':
-        zooms = hdr['voxel_size'][None,:].astype('f4')
+        zooms = hdr['voxel_size'][None, :].astype('f4')
     elif points_space == 'rasmm':
         zooms = hdr['voxel_size']
         affine = hdr['vox_to_ras']
@@ -181,6 +176,7 @@ def read(fileobj, as_generator=False, points_space=None):
     stream_count = hdr['n_count']
     if stream_count < 0:
         raise HeaderError('Unexpected negative n_count')
+
     def track_gen():
         n_streams = 0
         # For case where there are no scalars or no properties
@@ -190,41 +186,39 @@ def read(fileobj, as_generator=False, points_space=None):
             n_str = fileobj.read(4)
             if len(n_str) < 4:
                 if stream_count:
-                    raise HeaderError(
-                        'Expecting %s points, found only %s' % (
-                                stream_count, n_streams))
+                    raise HeaderError('Expecting %s points, found only %s' %
+                                      (stream_count, n_streams))
                 break
             n_pts = struct.unpack(i_fmt, n_str)[0]
             pts_str = fileobj.read(n_pts * pt_size)
             pts = np.ndarray(
-                shape = (n_pts, pt_cols),
-                dtype = f4dt,
-                buffer = pts_str)
+                shape=(n_pts, pt_cols), dtype=f4dt, buffer=pts_str)
             if n_p:
                 ps_str = fileobj.read(ps_size)
-                ps = np.ndarray(
-                    shape = (n_p,),
-                    dtype = f4dt,
-                    buffer = ps_str)
-            xyz = pts[:,:3]
+                ps = np.ndarray(shape=(n_p, ), dtype=f4dt, buffer=ps_str)
+            xyz = pts[:, :3]
             if points_space == 'voxel':
                 xyz = xyz / zooms
             elif points_space == 'rasmm':
                 xyz = apply_affine(tv2mm, pts)
             if n_s:
-                scalars = pts[:,3:]
+                scalars = pts[:, 3:]
             yield (xyz, scalars, ps)
             n_streams += 1
             # deliberately misses case where stream_count is 0
             if n_streams == stream_count:
                 raise StopIteration
+
     streamlines = track_gen()
     if not as_generator:
         streamlines = list(streamlines)
     return streamlines, hdr
 
 
-def write(fileobj, streamlines,  hdr_mapping=None, endianness=None,
+def write(fileobj,
+          streamlines,
+          hdr_mapping=None,
+          endianness=None,
           points_space=None):
     ''' Write header and `streamlines` to trackvis file `fileobj`
 
@@ -323,8 +317,8 @@ def write(fileobj, streamlines,  hdr_mapping=None, endianness=None,
     '''
     stream_iter = iter(streamlines)
     try:
-        streams0 = stream_iter.next()
-    except StopIteration: # empty sequence or iterable
+        streams0 = next(stream_iter)
+    except StopIteration:  # empty sequence or iterable
         # write header without streams
         hdr = _hdr_from_mapping(None, hdr_mapping, endianness)
         fileobj = allopen(fileobj, mode='wb')
@@ -339,7 +333,7 @@ def write(fileobj, streamlines,  hdr_mapping=None, endianness=None,
     # value with meaning - keep reading until you run out of data.
     try:
         n_streams = len(streamlines)
-    except TypeError: # iterable; we don't know the number of streams
+    except TypeError:  # iterable; we don't know the number of streams
         n_streams = 0
     hdr['n_count'] = n_streams
     # Get number of scalars and properties
@@ -360,7 +354,7 @@ def write(fileobj, streamlines,  hdr_mapping=None, endianness=None,
     _check_hdr_points_space(hdr, points_space)
     # prepare transforms for later use
     if points_space == 'voxel':
-        zooms = hdr['voxel_size'][None,:].astype('f4')
+        zooms = hdr['voxel_size'][None, :].astype('f4')
     elif points_space == 'rasmm':
         zooms = hdr['voxel_size']
         affine = hdr['vox_to_ras']
@@ -392,8 +386,8 @@ def write(fileobj, streamlines,  hdr_mapping=None, endianness=None,
                 raise DataError('Expecting 0 scalars per point')
         else:
             if scalars.shape != (n_pts, n_s):
-                raise DataError('Scalars should be shape (%s, %s)'
-                                 % (n_pts, n_s))
+                raise DataError('Scalars should be shape (%s, %s)' % (n_pts,
+                                                                      n_s))
             if scalars.dtype != f4dt:
                 scalars = scalars.astype(f4dt)
             pts = np.c_[pts, scalars]
@@ -452,26 +446,25 @@ def _check_hdr_points_space(hdr, points_space):
             raise HeaderError('Need "vox_to_ras" field to get '
                               'affine with which to convert points; '
                               'this is present for headers >= version 2')
-        if np.all(affine == 0) or affine[3,3] == 0:
+        if np.all(affine == 0) or affine[3, 3] == 0:
             raise HeaderError('Need non-zero affine to convert between '
                               'rasmm points and voxmm')
         zooms = hdr['voxel_size']
-        aff_zooms = np.sqrt(np.sum(affine[:3,:3]**2,axis=0))
+        aff_zooms = np.sqrt(np.sum(affine[:3, :3]**2, axis=0))
         if not np.allclose(aff_zooms, zooms):
             raise HeaderError('Affine zooms %s differ from voxel_size '
                               'field value %s' % (aff_zooms, zooms))
         aff_order = ''.join(aff2axcodes(affine))
         voxel_order = asstr(np.asscalar(hdr['voxel_order']))
         if voxel_order == '':
-            voxel_order = 'LPS' # trackvis default
+            voxel_order = 'LPS'  # trackvis default
         if not voxel_order == aff_order:
             raise HeaderError('Affine implies voxel_order %s but '
-                              'header voxel_order is %s' %
-                              (aff_order, voxel_order))
+                              'header voxel_order is %s' % (aff_order,
+                                                            voxel_order))
     else:
-        raise ValueError('Painfully confusing "points_space" value of "%s"'
-                         % points_space)
-
+        raise ValueError(
+            'Painfully confusing "points_space" value of "%s"' % points_space)
 
 
 def _hdr_from_mapping(hdr=None, mapping=None, endianness=native_code):
@@ -487,13 +480,13 @@ def _hdr_from_mapping(hdr=None, mapping=None, endianness=native_code):
         if mapping is None:
             version = 2
         else:
-            version =  mapping.get('version', 2)
+            version = mapping.get('version', 2)
         hdr = empty_header(endianness, version)
     if mapping is None:
         return hdr
     if isinstance(mapping, np.ndarray):
         mapping = rec2dict(mapping)
-    for key, value in mapping.items():
+    for key, value in list(mapping.items()):
         hdr[key] = value
     # check header values
     if np.asscalar(hdr['id_string'])[:5] != asbytes('TRACK'):
@@ -596,14 +589,15 @@ def aff_from_hdr(trk_hdr, atleast_v2=None):
     estimate the affine from version 1 fields
     '''
     if atleast_v2 is None:
-        warnings.warn('Defaulting to `atleast_v2` of False.  Future versions '
-                      'will default to True',
-                      FutureWarning,
-                      stacklevel=2)
+        warnings.warn(
+            'Defaulting to `atleast_v2` of False.  Future versions '
+            'will default to True',
+            FutureWarning,
+            stacklevel=2)
         atleast_v2 = False
     if trk_hdr['version'] == 2:
         aff = trk_hdr['vox_to_ras']
-        if aff[3,3] != 0:
+        if aff[3, 3] != 0:
             return aff
         if atleast_v2:
             raise HeaderError('Requiring version 2 affine and this affine is '
@@ -613,19 +607,19 @@ def aff_from_hdr(trk_hdr, atleast_v2=None):
     # negative voxel sizes
     aff = np.eye(4)
     # The IOP field has only two of the three columns we need
-    iop = trk_hdr['image_orientation_patient'].reshape(2,3).T
+    iop = trk_hdr['image_orientation_patient'].reshape(2, 3).T
     # R might be a rotation matrix (and so completed by the cross product of the
     # first two columns), or it might be an orthogonal matrix with negative
     # determinant. We try pure rotation first
     R = np.c_[iop, np.cross(*iop.T)]
     vox = trk_hdr['voxel_size']
-    aff[:3,:3] = R * vox
-    aff[:3,3] = trk_hdr['origin']
+    aff[:3, :3] = R * vox
+    aff[:3, 3] = trk_hdr['origin']
     aff = np.dot(DPCS_TO_TAL, aff)
     # Next we check against the 'voxel_order' field if present and not empty.
     try:
         voxel_order = asstr(np.asscalar(trk_hdr['voxel_order']))
-    except KeyError, ValueError:
+    except KeyError as ValueError:
         voxel_order = ''
     if voxel_order == '':
         return aff
@@ -634,7 +628,7 @@ def aff_from_hdr(trk_hdr, atleast_v2=None):
     exp_order = ''.join(aff2axcodes(aff))
     if voxel_order != exp_order:
         # If first pass doesn't match, try flipping the (estimated) third column
-        aff[:,2] *= -1
+        aff[:, 2] *= -1
         exp_order = ''.join(aff2axcodes(aff))
         if voxel_order != exp_order:
             raise HeaderError('Estimate of header affine does not match '
@@ -685,20 +679,22 @@ def aff_to_hdr(affine, trk_hdr, pos_vox=None, set_order=None):
     use the 'image_orientation_patient' field.
     '''
     if pos_vox is None:
-        warnings.warn('Default for ``pos_vox`` will change to True in '
-                      'future versions of nibabel',
-                      FutureWarning,
-                      stacklevel=2)
+        warnings.warn(
+            'Default for ``pos_vox`` will change to True in '
+            'future versions of nibabel',
+            FutureWarning,
+            stacklevel=2)
         pos_vox = False
     if set_order is None:
-        warnings.warn('Default for ``set_order`` will change to True in '
-                      'future versions of nibabel',
-                      FutureWarning,
-                      stacklevel=2)
+        warnings.warn(
+            'Default for ``set_order`` will change to True in '
+            'future versions of nibabel',
+            FutureWarning,
+            stacklevel=2)
         set_order = False
     try:
         version = trk_hdr['version']
-    except (KeyError, ValueError): # dict or structured array
+    except (KeyError, ValueError):  # dict or structured array
         version = 2
     if version == 2:
         trk_hdr['vox_to_ras'] = affine
@@ -718,7 +714,7 @@ def aff_to_hdr(affine, trk_hdr, pos_vox=None, set_order=None):
     # you might want to disallow this with the pos_vox option.
     if not pos_vox and npl.det(RS) < 0:
         zooms[0] *= -1
-        RS[:,0] *= -1
+        RS[:, 0] *= -1
     # retrieve rotation matrix from RS with polar decomposition.
     # Discard shears because we cannot store them.
     P, S, Qs = npl.svd(RS)
@@ -728,7 +724,7 @@ def aff_to_hdr(affine, trk_hdr, pos_vox=None, set_order=None):
     # set into header
     trk_hdr['origin'] = trans
     trk_hdr['voxel_size'] = zooms
-    trk_hdr['image_orientation_patient'] = R[:,0:2].T.ravel()
+    trk_hdr['image_orientation_patient'] = R[:, 0:2].T.ravel()
 
 
 class TrackvisFileError(Exception):
@@ -763,14 +759,16 @@ class TrackvisFile(object):
         space. If 'points_space' is not None, you can use this to give the
         relationship between voxels, rasmm and voxmm space (above).
     '''
-    def __init__(self,
-                 streamlines,
-                 mapping=None,
-                 endianness=None,
-                 filename=None,
-                 points_space=None,
-                 affine = None,
-                ):
+
+    def __init__(
+            self,
+            streamlines,
+            mapping=None,
+            endianness=None,
+            filename=None,
+            points_space=None,
+            affine=None,
+    ):
         try:
             n_streams = len(streamlines)
         except TypeError:
@@ -792,15 +790,17 @@ class TrackvisFile(object):
     @classmethod
     def from_file(klass, file_like, points_space=None):
         streamlines, header = read(file_like, points_space=points_space)
-        filename = (file_like if isinstance(file_like, basestring)
-                    else None)
+        filename = (file_like if isinstance(file_like, str) else None)
         return klass(streamlines, header, None, filename, points_space)
 
     def to_file(self, file_like):
-        write(file_like, self.streamlines, self.header, self.endianness,
-              points_space=self.points_space)
-        self.filename = (file_like if isinstance(file_like, basestring)
-                         else None)
+        write(
+            file_like,
+            self.streamlines,
+            self.header,
+            self.endianness,
+            points_space=self.points_space)
+        self.filename = (file_like if isinstance(file_like, str) else None)
 
     def get_affine(self, atleast_v2=None):
         """ Get affine from header in object
@@ -820,10 +820,11 @@ class TrackvisFile(object):
         nibabel we will raise an error for trackvis headers < version 2.
         """
         if atleast_v2 is None:
-            warnings.warn('Defaulting to `atleast_v2` of False.  Future versions '
-                          'will default to True',
-                          FutureWarning,
-                          stacklevel=2)
+            warnings.warn(
+                'Defaulting to `atleast_v2` of False.  Future versions '
+                'will default to True',
+                FutureWarning,
+                stacklevel=2)
             atleast_v2 = False
         return aff_from_hdr(self.header, atleast_v2)
 
@@ -855,15 +856,17 @@ class TrackvisFile(object):
         None
         """
         if pos_vox is None:
-            warnings.warn('Default for ``pos_vox`` will change to True in '
-                          'future versions of nibabel',
-                          FutureWarning,
-                          stacklevel=2)
+            warnings.warn(
+                'Default for ``pos_vox`` will change to True in '
+                'future versions of nibabel',
+                FutureWarning,
+                stacklevel=2)
             pos_vox = False
         if set_order is None:
-            warnings.warn('Default for ``set_order`` will change to True in '
-                          'future versions of nibabel',
-                          FutureWarning,
-                          stacklevel=2)
+            warnings.warn(
+                'Default for ``set_order`` will change to True in '
+                'future versions of nibabel',
+                FutureWarning,
+                stacklevel=2)
             set_order = False
         return aff_to_hdr(affine, self.header, pos_vox, set_order)

@@ -1,17 +1,16 @@
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 ''' Tests for data module '''
-from __future__ import with_statement
+
 import os
 from os.path import join as pjoin
 from os import environ as env
 import sys
 import tempfile
 
-from ..data import (get_data_path, find_data_dir,
-    DataError, _cfg_value, make_datasource,
-    Datasource, VersionedDatasource, Bomber,
-    datasource_or_bomber)
+from ..data import (get_data_path, find_data_dir, DataError, _cfg_value,
+                    make_datasource, Datasource, VersionedDatasource, Bomber,
+                    datasource_or_bomber)
 
 from ..tmpdirs import TemporaryDirectory
 
@@ -21,12 +20,11 @@ from nose import with_setup
 
 from nose.tools import (assert_equal, assert_raises, raises, assert_false)
 
-from .test_environment import (setup_environment,
-                               teardown_environment,
-                               DATA_KEY,
-                               USER_KEY)
+from .test_environment import (setup_environment, teardown_environment,
+                               DATA_KEY, USER_KEY)
 
 DATA_FUNCS = {}
+
 
 def setup_data_env():
     setup_environment()
@@ -52,33 +50,24 @@ def test_datasource():
     pth = pjoin('some', 'path')
     ds = Datasource(pth)
     yield assert_equal, ds.get_filename('unlikeley'), pjoin(pth, 'unlikeley')
-    yield (assert_equal, ds.get_filename('un','like','ley'),
-           pjoin(pth, 'un','like','ley'))
+    yield (assert_equal, ds.get_filename('un', 'like', 'ley'),
+           pjoin(pth, 'un', 'like', 'ley'))
 
 
 def test_versioned():
     with TemporaryDirectory() as tmpdir:
-        yield (assert_raises,
-               DataError,
-               VersionedDatasource,
-               tmpdir)
+        yield (assert_raises, DataError, VersionedDatasource, tmpdir)
         tmpfile = pjoin(tmpdir, 'config.ini')
         # ini file, but wrong section
         with open(tmpfile, 'wt') as fobj:
             fobj.write('[SOMESECTION]\n')
             fobj.write('version = 0.1\n')
-        yield (assert_raises,
-               DataError,
-               VersionedDatasource,
-               tmpdir)
+        yield (assert_raises, DataError, VersionedDatasource, tmpdir)
         # ini file, but right section, wrong key
         with open(tmpfile, 'wt') as fobj:
             fobj.write('[DEFAULT]\n')
             fobj.write('somekey = 0.1\n')
-        yield (assert_raises,
-               DataError,
-               VersionedDatasource,
-               tmpdir)
+        yield (assert_raises, DataError, VersionedDatasource, tmpdir)
         # ini file, right section and key
         with open(tmpfile, 'wt') as fobj:
             fobj.write('[DEFAULT]\n')
@@ -137,8 +126,8 @@ def test_data_path():
     if USER_KEY in env:
         del os.environ[USER_KEY]
     fake_user_dir = '/user/path'
-    nibd.get_nipy_system_dir = lambda : '/unlikely/path'
-    nibd.get_nipy_user_dir = lambda : fake_user_dir
+    nibd.get_nipy_system_dir = lambda: '/unlikely/path'
+    nibd.get_nipy_user_dir = lambda: fake_user_dir
     # now we should only have anything pointed to in the user's dir
     old_pth = get_data_path()
     # We should have only sys.prefix and, iff sys.prefix == /usr,
@@ -163,13 +152,13 @@ def test_data_path():
         with open(tmpfile, 'wt') as fobj:
             fobj.write('[DATA]\n')
             fobj.write('path = %s' % tst_pth)
-        nibd.get_nipy_user_dir = lambda : tmpdir
+        nibd.get_nipy_user_dir = lambda: tmpdir
         assert_equal(get_data_path(), tst_list + def_dirs + [tmpdir])
-    nibd.get_nipy_user_dir = lambda : fake_user_dir
+    nibd.get_nipy_user_dir = lambda: fake_user_dir
     assert_equal(get_data_path(), old_pth)
     # with some trepidation, the system config files
     with TemporaryDirectory() as tmpdir:
-        nibd.get_nipy_system_dir = lambda : tmpdir
+        nibd.get_nipy_system_dir = lambda: tmpdir
         tmpfile = pjoin(tmpdir, 'an_example.ini')
         with open(tmpfile, 'wt') as fobj:
             fobj.write('[DATA]\n')
@@ -178,8 +167,7 @@ def test_data_path():
         with open(tmpfile, 'wt') as fobj:
             fobj.write('[DATA]\n')
             fobj.write('path = %s\n' % '/path/two')
-        assert_equal(get_data_path(),
-                     tst_list + ['/path/two'] + old_pth)
+        assert_equal(get_data_path(), tst_list + ['/path/two'] + old_pth)
 
 
 def test_find_data_dir():
@@ -189,18 +177,10 @@ def test_find_data_dir():
     # under_here == '<rootpath>/nipy/utils'
     # subhere = 'tests'
     # fails with non-existant path
-    yield (assert_raises,
-           DataError,
-           find_data_dir,
-           [here],
-           'implausible',
+    yield (assert_raises, DataError, find_data_dir, [here], 'implausible',
            'directory')
     # fails with file, when directory expected
-    yield (assert_raises,
-           DataError,
-           find_data_dir,
-           [here],
-           fname)
+    yield (assert_raises, DataError, find_data_dir, [here], fname)
     # passes with directory that exists
     dd = find_data_dir([under_here], subhere)
     yield assert_equal, dd, here
@@ -212,20 +192,13 @@ def test_find_data_dir():
 
 @with_environment
 def test_make_datasource():
-    pkg_def = dict(
-        relpath = 'pkg')
+    pkg_def = dict(relpath='pkg')
     with TemporaryDirectory() as tmpdir:
-        nibd.get_data_path = lambda : [tmpdir]
-        yield (assert_raises,
-           DataError,
-           make_datasource,
-           pkg_def)
+        nibd.get_data_path = lambda: [tmpdir]
+        yield (assert_raises, DataError, make_datasource, pkg_def)
         pkg_dir = pjoin(tmpdir, 'pkg')
         os.mkdir(pkg_dir)
-        yield (assert_raises,
-           DataError,
-           make_datasource,
-           pkg_def)
+        yield (assert_raises, DataError, make_datasource, pkg_def)
         tmpfile = pjoin(pkg_dir, 'config.ini')
         with open(tmpfile, 'wt') as fobj:
             fobj.write('[DEFAULT]\n')
@@ -247,16 +220,11 @@ def test_bomber_inspect():
 
 @with_environment
 def test_datasource_or_bomber():
-    pkg_def = dict(
-        relpath = 'pkg')
+    pkg_def = dict(relpath='pkg')
     with TemporaryDirectory() as tmpdir:
-        nibd.get_data_path = lambda : [tmpdir]
+        nibd.get_data_path = lambda: [tmpdir]
         ds = datasource_or_bomber(pkg_def)
-        yield (assert_raises,
-               DataError,
-               getattr,
-               ds,
-               'get_filename')
+        yield (assert_raises, DataError, getattr, ds, 'get_filename')
         pkg_dir = pjoin(tmpdir, 'pkg')
         os.mkdir(pkg_dir)
         tmpfile = pjoin(pkg_dir, 'config.ini')
@@ -267,13 +235,8 @@ def test_datasource_or_bomber():
         fn = ds.get_filename('some_file.txt')
         # check that versioning works
         pkg_def['min version'] = '0.2'
-        ds = datasource_or_bomber(pkg_def) # OK
+        ds = datasource_or_bomber(pkg_def)  # OK
         fn = ds.get_filename('some_file.txt')
         pkg_def['min version'] = '0.3'
-        ds = datasource_or_bomber(pkg_def) # not OK
-        yield (assert_raises,
-               DataError,
-               getattr,
-               ds,
-               'get_filename')
-
+        ds = datasource_or_bomber(pkg_def)  # not OK
+        yield (assert_raises, DataError, getattr, ds, 'get_filename')

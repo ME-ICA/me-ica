@@ -13,8 +13,7 @@ from nose.tools import assert_true, assert_false, \
 
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
-from .test_dicomwrappers import (have_dicom, dicom_test,
-                                 IO_DATA_PATH, DATA)
+from .test_dicomwrappers import (have_dicom, dicom_test, IO_DATA_PATH, DATA)
 
 CSA2_B0 = open(pjoin(IO_DATA_PATH, 'csa2_b0.bin'), 'rb').read()
 CSA2_B1000 = open(pjoin(IO_DATA_PATH, 'csa2_b1000.bin'), 'rb').read()
@@ -24,9 +23,9 @@ CSA2_0len = gzip.open(pjoin(IO_DATA_PATH, 'csa2_zero_len.bin.gz'), 'rb').read()
 @dicom_test
 def test_csa_header_read():
     hdr = csa.get_csa_header(DATA, 'image')
-    assert_equal(hdr['n_tags'],83)
-    assert_equal(csa.get_csa_header(DATA,'series')['n_tags'],65)
-    assert_raises(ValueError, csa.get_csa_header, DATA,'xxxx')
+    assert_equal(hdr['n_tags'], 83)
+    assert_equal(csa.get_csa_header(DATA, 'series')['n_tags'], 65)
+    assert_raises(ValueError, csa.get_csa_header, DATA, 'xxxx')
     assert_true(csa.is_mosaic(hdr))
 
 
@@ -61,9 +60,8 @@ def test_csa_params():
         n_o_m = csa.get_n_mosaic(csa_info)
         assert_equal(n_o_m, 48)
         snv = csa.get_slice_normal(csa_info)
-        assert_equal(snv.shape, (3,))
-        assert_true(np.allclose(1,
-                np.sqrt((snv * snv).sum())))
+        assert_equal(snv.shape, (3, ))
+        assert_true(np.allclose(1, np.sqrt((snv * snv).sum())))
         amt = csa.get_acq_mat_txt(csa_info)
         assert_equal(amt, '128p*128')
     csa_info = csa.read(CSA2_B0)
@@ -75,26 +73,25 @@ def test_csa_params():
     assert_equal(g_vector, None)
     csa_info = csa.read(CSA2_B1000)
     b_matrix = csa.get_b_matrix(csa_info)
-    assert_equal(b_matrix.shape, (3,3))
+    assert_equal(b_matrix.shape, (3, 3))
     # check (by absence of error) that the B matrix is positive
     # semi-definite.
     q = dwp.B2q(b_matrix)
     b_value = csa.get_b_value(csa_info)
     assert_equal(b_value, 1000)
     g_vector = csa.get_g_vector(csa_info)
-    assert_equal(g_vector.shape, (3,))
-    assert_true(
-        np.allclose(1, np.sqrt((g_vector * g_vector).sum())))
+    assert_equal(g_vector.shape, (3, ))
+    assert_true(np.allclose(1, np.sqrt((g_vector * g_vector).sum())))
 
 
 def test_ice_dims():
-    ex_dims0 = ['X', '1', '1', '1', '1', '1', '1',
-                '48', '1', '1', '1', '1', '201']
-    ex_dims1 = ['X', '1', '1', '1', '2', '1', '1',
-               '48', '1', '1', '1', '1', '201']
-    for csa_str, ex_dims in ((CSA2_B0, ex_dims0),
-                             (CSA2_B1000, ex_dims1)):
+    ex_dims0 = [
+        'X', '1', '1', '1', '1', '1', '1', '48', '1', '1', '1', '1', '201'
+    ]
+    ex_dims1 = [
+        'X', '1', '1', '1', '2', '1', '1', '48', '1', '1', '1', '1', '201'
+    ]
+    for csa_str, ex_dims in ((CSA2_B0, ex_dims0), (CSA2_B1000, ex_dims1)):
         csa_info = csa.read(csa_str)
-        assert_equal(csa.get_ice_dims(csa_info),
-                           ex_dims)
+        assert_equal(csa.get_ice_dims(csa_info), ex_dims)
     assert_equal(csa.get_ice_dims({}), None)

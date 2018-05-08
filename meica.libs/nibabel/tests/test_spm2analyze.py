@@ -30,16 +30,13 @@ class TestSpm2AnalyzeHeader(test_spm99analyze.TestSpm99AnalyzeHeader):
         problem_msg = ('no valid scaling in scalefactor '
                        '(=None) or cal / gl fields; '
                        'scalefactor assumed 1.0')
-        yield assert_equal(message,
-                           problem_msg +
-                           '; setting scalefactor "scl_slope" to 1')
+        yield assert_equal(
+            message, problem_msg + '; setting scalefactor "scl_slope" to 1')
         yield assert_raises(*raiser)
         dxer = self.header_class.diagnose_binaryblock
-        yield assert_equal(dxer(hdr.binaryblock),
-                           problem_msg)
+        yield assert_equal(dxer(hdr.binaryblock), problem_msg)
         hdr['scl_slope'] = np.inf
-        yield assert_equal(dxer(hdr.binaryblock),
-                           problem_msg)
+        yield assert_equal(dxer(hdr.binaryblock), problem_msg)
 
 
 class TestSpm2AnalyzeImage(test_spm99analyze.TestSpm99AnalyzeImage):
@@ -56,11 +53,10 @@ def test_origin_affine():
 def test_slope_inter():
     hdr = Spm2AnalyzeHeader()
     assert_equal(hdr.get_slope_inter(), (1.0, 0.0))
-    for intup, outup in (((2.0,), (2.0, 0.0)),
-                         ((None,), (None, None)),
+    for intup, outup in (((2.0, ), (2.0, 0.0)), ((None, ), (None, None)),
                          ((1.0, None), (1.0, 0.0)),
-                         ((0.0, None), (None, None)),
-                         ((None, 0.0), (None, None))):
+                         ((0.0, None), (None, None)), ((None, 0.0), (None,
+                                                                     None))):
         hdr.set_slope_inter(*intup)
         assert_equal(hdr.get_slope_inter(), outup)
         # Check set survives through checking
@@ -69,4 +65,3 @@ def test_slope_inter():
     # Setting not-zero to offset raises error
     assert_raises(HeaderTypeError, hdr.set_slope_inter, None, 1.1)
     assert_raises(HeaderTypeError, hdr.set_slope_inter, 2.0, 1.1)
-

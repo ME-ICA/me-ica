@@ -11,10 +11,11 @@ exp = mdp.numx.exp
 # TODO: does it make sense to define the inverse of RBMNode as sampling
 #    from the visible layer given an hidden state?
 
+
 # this and the other replication functions should go in mdp.utils
 def rrep(x, n):
     """Replicate x n-times on a new last dimension"""
-    shp = x.shape + (1,)
+    shp = x.shape + (1, )
     return x.reshape(shp).repeat(n, axis=-1)
 
 
@@ -50,7 +51,7 @@ class RBMNode(mdp.Node):
     Geoffrey E. Hinton (2007) Boltzmann machine. Scholarpedia, 2(5):1668
     """
 
-    def __init__(self, hidden_dim, visible_dim = None, dtype = None):
+    def __init__(self, hidden_dim, visible_dim=None, dtype=None):
         """
         :Parameters:
           hidden_dim
@@ -68,29 +69,35 @@ class RBMNode(mdp.Node):
         self._initialized = True
 
         # weights
-        self.w = self._refcast(randn(self.input_dim, self.output_dim)*0.1)
+        self.w = self._refcast(randn(self.input_dim, self.output_dim) * 0.1)
         # bias on the visibile (input) units
-        self.bv = self._refcast(randn(self.input_dim)*0.1)
+        self.bv = self._refcast(randn(self.input_dim) * 0.1)
         # bias on the hidden (output) units
-        self.bh = self._refcast(randn(self.output_dim)*0.1)
+        self.bh = self._refcast(randn(self.output_dim) * 0.1)
 
         # delta w, bv, bh used for momentum term
         self._delta = (0., 0., 0.)
 
     def _sample_h(self, v):
         # returns P(h=1|v,W,b) and a sample from it
-        probs = 1./(1. + exp(-self.bh - mult(v, self.w)))
+        probs = 1. / (1. + exp(-self.bh - mult(v, self.w)))
         h = (probs > random(probs.shape)).astype(self.dtype)
         return probs, h
 
     def _sample_v(self, h):
         # returns  P(v=1|h,W,b) and a sample from it
-        probs = 1./(1. + exp(-self.bv - mult(h, self.w.T)))
+        probs = 1. / (1. + exp(-self.bv - mult(h, self.w.T)))
         v = (probs > random(probs.shape)).astype(self.dtype)
         return probs, v
 
-    def _train(self, v, n_updates=1, epsilon=0.1, decay=0., momentum=0.,
-               update_with_ph=True, verbose=False):
+    def _train(self,
+               v,
+               n_updates=1,
+               epsilon=0.1,
+               decay=0.,
+               momentum=0.,
+               update_with_ph=True,
+               verbose=False):
         """Update the internal structures according to the input data `v`.
         The training is performed using Contrastive Divergence (CD).
 
@@ -133,13 +140,14 @@ class RBMNode(mdp.Node):
         # update w
         data_term = mult(v.T, ph_data)
         model_term = mult(v_model.T, ph_model)
-        dw = momentum*dw + epsilon*((data_term - model_term)/n - decay*w)
+        dw = momentum * dw + epsilon * (
+            (data_term - model_term) / n - decay * w)
         w += dw
 
         # update bv
         data_term = v.sum(axis=0)
         model_term = v_model.sum(axis=0)
-        dbv = momentum*dbv + epsilon*((data_term - model_term)/n)
+        dbv = momentum * dbv + epsilon * ((data_term - model_term) / n)
         bv += dbv
 
         # update bh
@@ -149,16 +157,16 @@ class RBMNode(mdp.Node):
         else:
             data_term = h_data.sum(axis=0)
             model_term = h_model.sum(axis=0)
-        dbh = momentum*dbh + epsilon*((data_term - model_term)/n)
+        dbh = momentum * dbh + epsilon * ((data_term - model_term) / n)
         bh += dbh
 
         self._delta = (dw, dbv, dbh)
-        self._train_err = float(((v-v_model)**2.).sum())
+        self._train_err = float(((v - v_model)**2.).sum())
 
         if verbose:
-            print 'training error', self._train_err/v.shape[0]
+            print('training error', self._train_err / v.shape[0])
             ph, h = self._sample_h(v)
-            print 'energy', self._energy(v, ph).sum()
+            print('energy', self._energy(v, ph).sum())
 
     def _stop_training(self):
         #del self._delta
@@ -199,7 +207,7 @@ class RBMNode(mdp.Node):
 
     def _energy(self, v, h):
         return (-mult(v, self.bv) - mult(h, self.bh) -
-                (mult(v, self.w)*h).sum(axis=1))
+                (mult(v, self.w) * h).sum(axis=1))
 
     def energy(self, v, h):
         """Compute the energy of the RBM given observed variables state `v` and
@@ -217,6 +225,7 @@ class RBMNode(mdp.Node):
             return probs
         else:
             return h
+
 
 class RBMWithLabelsNode(RBMNode):
     """Restricted Boltzmann Machine with softmax labels. An RBM is an
@@ -262,7 +271,7 @@ class RBMWithLabelsNode(RBMNode):
 
         self._labels_dim = labels_dim
         if visible_dim is not None:
-            self.input_dim = visible_dim+labels_dim
+            self.input_dim = visible_dim + labels_dim
 
         self.output_dim = hidden_dim
         self._initialized = False
@@ -282,7 +291,7 @@ class RBMWithLabelsNode(RBMNode):
         av, al = a[:, :vdim], a[:, vdim:]
 
         # ## visible units: logistic activation
-        probs_v = 1./(1. + exp(-av))
+        probs_v = 1. / (1. + exp(-av))
         v = (probs_v > random(probs_v.shape)).astype('d')
 
         # ## label units: softmax activation
@@ -333,8 +342,8 @@ class RBMWithLabelsNode(RBMNode):
         """
         self._pre_inversion_checks(h)
 
-        probs_v, probs_l, v, l = self._sample_v(h, sample_l=True,
-                                                concatenate=False)
+        probs_v, probs_l, v, l = self._sample_v(
+            h, sample_l=True, concatenate=False)
         return probs_v, probs_l, v, l
 
     def energy(self, v, h, l):
@@ -344,7 +353,7 @@ class RBMWithLabelsNode(RBMNode):
         x = numx.concatenate((v, l), axis=1)
         return self._energy(x, h)
 
-    def execute(self, v, l, return_probs = True):
+    def execute(self, v, l, return_probs=True):
         """If `return_probs` is True, returns the probability of the
         hidden variables h[n,i] being 1 given the observations v[n,:]
         and l[n,:].  If `return_probs` is False, return a sample from
@@ -363,7 +372,13 @@ class RBMWithLabelsNode(RBMNode):
     def is_invertible():
         return False
 
-    def train(self, v, l, n_updates=1, epsilon=0.1, decay=0., momentum=0.,
+    def train(self,
+              v,
+              l,
+              n_updates=1,
+              epsilon=0.1,
+              decay=0.,
+              momentum=0.,
               verbose=False):
         """Update the internal structures according to the visible data `v`
         and the labels `l`.
@@ -394,9 +409,10 @@ class RBMWithLabelsNode(RBMNode):
         self._check_input(x)
 
         self._train_phase_started = True
-        self._train_seq[self._train_phase][0](self._refcast(x),
-                                              n_updates=n_updates,
-                                              epsilon=epsilon,
-                                              decay=decay,
-                                              momentum=momentum,
-                                              verbose=verbose)
+        self._train_seq[self._train_phase][0](
+            self._refcast(x),
+            n_updates=n_updates,
+            epsilon=epsilon,
+            decay=decay,
+            momentum=momentum,
+            verbose=verbose)
