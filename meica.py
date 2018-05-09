@@ -36,12 +36,13 @@ def dsprefix(idn):
         return str.split(datasetname, '+')[0]
 
     if len(str.split(idn, '.')) != 0:
-        if str.split(idn,
-                 '.')[-1] == 'HEAD' or str.split(idn, '.')[-1] == 'BRIK' or str.split(
-                     idn, '.')[-2:] == ['BRIK', 'gz']:
+        if str.split(idn, '.')[-1] == 'HEAD' or str.split(
+                idn, '.')[-1] == 'BRIK' or str.split(
+                    idn, '.')[-2:] == ['BRIK', 'gz']:
             return prefix(idn)
-        elif str.split(idn,
-                   '.')[-1] == 'nii' and not str.split(idn, '.')[-1] == 'nii.gz':
+        elif str.split(
+                idn,
+                '.')[-1] == 'nii' and not str.split(idn, '.')[-1] == 'nii.gz':
             return '.'.join(str.split(idn, '.')[:-1])
         elif str.split(idn, '.')[-2:] == ['nii', 'gz']:
             return '.'.join(str.split(idn, '.')[:-2])
@@ -836,7 +837,9 @@ if options.anat != '':
     abmprage = nsmprage
     refanat = nsmprage
     if options.space:
-        sl.append("afniatlasloc=`find /usr -name MNI_caez_N27+tlrc.HEAD -exec dirname '{}' ';'`")
+        sl.append(
+            "afniatlasloc=`find /usr -name MNI_caez_N27+tlrc.HEAD -exec dirname '{}' ';'`"
+        )
         if '/' in options.space:
             sl.append("ll=\"%s\"; templateloc=${ll%%/*}/" % options.space)
             options.space = options.space.split('/')[-1]
