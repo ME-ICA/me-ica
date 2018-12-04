@@ -8,7 +8,7 @@ welcome_block="""
 #
 # Kundu, P., Inati, S.J., Evans, J.W., Luh, W.M. & Bandettini, P.A. Differentiating 
 #   BOLD and non-BOLD signals in fMRI time series using multi-echo EPI. NeuroImage (2011).
-# http://dx.doi.org/10.1016/j.neuroimage.2011.12.028
+# https://doi.org/10.1016/j.neuroimage.2011.12.028
 #
 # PROCEDURE 2a: Model fitting and component selection routines
 """
