@@ -39,13 +39,13 @@ This means:
 
 Here's an example use in patient with brain lesion (i.e. Stroke):
 
-    python2 /where_you_place_me-ica_folder/me-ica-master/meica.py --OVERWRITE -d srestingMecho1.nii,srestingMecho2.nii,srestingMecho3.nii -e 10,20,30 -b 2v -a mprage.nii.gz --space=/usr/share/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz --qwarp --fres 2.5 --prefix=sub1_rest --cpus=16  --coreg_mode=lp-t2s --no_skullstrip --keep_int --tpattern=realignMB2.txt
+    python2 /where_you_place_me-ica_folder/me-ica-master/meica.py --OVERWRITE -d srestingMecho1.nii,srestingMecho2.nii,srestingMecho3.nii -e 10,20,30 -b 2v -a mprage_brain.nii.gz --space=/usr/share/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz --qwarp --fres 2.5 --prefix=sub1_rest --cpus=16  --coreg_mode=lp-t2s --no_skullstrip --keep_int --tpattern=realignMB2.txt
 
 This means:
 
     -e 10,20,30 are the echo times in milliseconds    
     -d srestingMecho1.nii,srestingMecho2.nii,srestingMecho3.nii are the 4-D time series datasets (comma separated list of dataset of each TE) from a multi-echo fMRI acqusition
-    -a mprage.nii.gz is a "raw" mprage with a skull
+    -a mprage_brain.nii.gz is a previously skullstripped mprage 
     -b 2V   means drop first 2 volumes for equilibration
     --space=/usr/share/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz warp anatomical to MNI space using a built-in high-resolution FSL MNI template. 
     --qwarp type of nonlinear normalization in AFNI
@@ -54,8 +54,8 @@ This means:
     --cpus=16 number of core avaliable  for processing data
     --coreg_mode=lp-t2s  functional to anat pearson correlation
     --no_skullstrip : this avoid skullstripping of anatomical T1w3D as provided in -a ...
-    --keep_int : only neceesary for debug purpose, mantain temporary results
-    --tpattern=realignMB2.txt : only necessary for specify slice timing or in case of Multiband acquisition
+    --keep_int : only necessary for debug purpose, mantaining temporary results
+    --tpattern=realignMB2.txt : only necessary for specifying slice timing or in case of Multiband acquisition
     
   Example of realignMB2.txt for a MB2, ascending, with 36 slices,TR 1sec:
     
