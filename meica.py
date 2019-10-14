@@ -380,6 +380,7 @@ if not options.resume and not options.tedica_only and not options.select_only an
 if options.resume:
 	headsl.append('if [ ! -e meica.%s/_meica.orig.sh ]; then mv `ls meica.%s/_meica*sh` meica.%s/_meica.orig.sh; fi' % (setname,setname,setname))
 if not options.tedica_only and not options.select_only: headsl.append("cp _meica_%s.sh meica.%s/" % (setname,setname))
+headsl.append("cp %s meica.%s/ " % ( options.tpattern,setname))
 headsl.append("cd meica.%s" % setname)
 thecwd= "%s/meica.%s" % (getcwd(),setname)
 
@@ -460,7 +461,7 @@ for echo_ii in range(len(datasets)):
 		sl.append("3dDespike -overwrite -prefix %s %s%s" % (intsname,dsprefix(indata),isf))
 	#Time shift datasets
 	if options.tpattern!='':
-		tpat_opt = ' -tpattern %s ' % options.tpattern
+		tpat_opt = ' -tpattern @%s ' % options.tpattern
 	else:
 		tpat_opt = ''
 	sl.append("3dTshift -heptic %s -prefix ./%s_ts+orig %s" % (tpat_opt,dsin,intsname) )
@@ -534,7 +535,7 @@ if options.anat!='':
 			sl.append("if [ ! -e %s/%s ]; then " % (startdir,nlatnsmprage))
 			logcomment("Compute non-linear warp to standard space using 3dQwarp (get lunch, takes a while) ")
 			sl.append("3dUnifize -overwrite -GM -prefix ./%su.nii.gz %s/%s" % (dsprefix(atnsmprage),startdir,atnsmprage))  
-			sl.append("3dQwarp -iwarp -overwrite -resample -useweight -blur 2 2 -duplo -workhard -base ${templateloc}/%s -prefix %s/%snl.nii.gz -source ./%su.nii.gz" % (options.space,startdir,dsprefix(atnsmprage),dsprefix(atnsmprage)))
+			sl.append("3dQwarp -iwarp -overwrite -resample -useweight -pblur  -Workhard:7 -base ${templateloc}/%s -prefix %s/%snl.nii.gz -source ./%su.nii.gz" % (options.space,startdir,dsprefix(atnsmprage),dsprefix(atnsmprage)))
 			sl.append("fi")
 			sl.append("if [ ! -e %s/%s ]; then ln -s %s/%s .; fi" % (startdir,nlatnsmprage,startdir,nlatnsmprage))
 			refanat = '%s/%snl.nii.gz' % (startdir,dsprefix(atnsmprage))
@@ -708,7 +709,7 @@ def export_result(infile,outfileprefix,comment='Created by %s' % runcmd,interp='
 	#If Qwarp, do Nwarpapply
 	if valid_qwarp_mode: 
 		warp_code = 'nlw'
-		this_nwarpstring =" -nwarp %s/%s_xns2at.aff12.1D '%s/%s_WARP.nii.gz' " % (startdir,anatprefix,startdir,dsprefix(nlatnsmprage))
+		this_nwarpstring =" -nwarp %s/%s_xns2at.aff12.1D 'FAC:0.7,0.8,0.7:%s/%s_WARP.nii.gz' " % (startdir,anatprefix,startdir,dsprefix(nlatnsmprage))
 		sl.append("%s3dNwarpApply -overwrite %s %s %s -source %s -interp %s -prefix %s_nlw.nii " % \
 				(tedflag,this_nwarpstring,export_master,qwfres,infile,interp,outfileprefix))
 		if not warp_code in mask_dict.keys(): 

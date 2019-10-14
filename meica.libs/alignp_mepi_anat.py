@@ -130,6 +130,7 @@ def allineate(sourcevol, weight, targetvol, prefix, maxrot, maxshf,maxscl,do_cma
 	outmat_prefix = "%s_al_mat"  % prefix
 	cmass_opt = ''
 	autocmass=False
+	do_cmass= '-cmass'
 	if do_cmass or options.autocmass: cmass_opt = '-cmass'
 	elif not do_cmass and not options.autocmass: cmass_opt=''
 	align_opts = "%s -weight %s -maxshf %s -maxrot %s -maxscl %s %s" % (options.cost, weightvol, maxrot, maxshf,maxscl,cmass_opt)
@@ -138,8 +139,8 @@ def allineate(sourcevol, weight, targetvol, prefix, maxrot, maxshf,maxscl,do_cma
 	if options.autocmass: 
 		cmass_opt=''
 		align_opts = "%s -weight %s -maxshf %s -maxrot %s -maxscl %s %s" % (options.cost, weightvol, maxrot, maxshf,maxscl,cmass_opt)
-	sl.append("3dAllineate -overwrite -weight_frac 1.0 -VERB -warp aff -source_automask+2 -master SOURCE -source %s -base %s -prefix ./ncm_%s -1Dmatrix_save ./ncm_%s %s " \
-		% (sourcevol,targetvol,outvol_prefix,outmat_prefix,align_opts))
+	sl.append("3dAllineate -overwrite -weight_frac 1.0 -VERB -warp aff -source_automask+2 -master SOURCE -source %s -base %s -prefix ./ncm_%s -1Dmatrix_save ./ncm_%s -EPI %s " \
+		% (sourcevol,targetvol,outvol_prefix,outmat_prefix,align_opts)) # included -EPI option to correct for FOV brain coverage in Z dir
 	outvol_name = niibrik(outvol_prefix)
 	outmat_name = outmat_prefix + 'blah'
 
