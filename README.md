@@ -1,3 +1,14 @@
+# Multi-echo ICA (ME-ICA) Processing of fMRI Data
+
+⚠️ **PLEASE NOTE** This code base is currently unmaintained. No new feature enhancements or bug fixes will be considered at this time.
+
+We encourage prospective users to instead consider [tedana](https://tedana.readthedocs.io),
+which maintains and extends many of the multi-echo-specific features of ME-ICA.
+
+For fMRI processing more generally, we refer users to [AFNI](https://afni.nimh.nih.gov/)
+or [fMRIPrep](https://fmriprep.readthedocs.io)
+
+This repository is a fork of the (also unmaintained) [Bitbucket repository](https://bitbucket.org/prantikk/me-ica/src/master/).
 
 # Dependencies
 
