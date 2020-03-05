@@ -2,7 +2,7 @@
 __version__="v3.2 beta1"
 """
 # Multi-Echo ICA, Version %s
-# See http://dx.doi.org/10.1016/j.neuroimage.2011.12.028
+# See https://doi.org/10.1016/j.neuroimage.2011.12.028
 #
 # Kundu, P., Brenowitz, N.D., Voon, V., Worbe, Y., Vertes, P.E., Inati, S.J., Saad, Z.S., 
 # Bandettini, P.A. & Bullmore, E.T. Integrated strategy for improving functional 
