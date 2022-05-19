@@ -183,14 +183,14 @@ def fitmodels_direct(catd,mmix,mask,t2s,tes,fout=None,reindex=False,mmixN=None,f
 		
 		if debugout or ('DEBUGOUT' in args):
 			#Package for debug
-			import cPickle as cP
+			import pickle as cP
 			import zlib
 			try: os.system('mkdir compsel.debug')
 			except: pass
 			selvars = ['Kappas','Rhos','WTS','varex','Z_maps','Z_clmaps','F_R2_clmaps','F_S0_clmaps','Br_clmaps_R2','Br_clmaps_S0']
 			for vv in selvars:
 				with open('compsel.debug/%s.pkl.gz' % vv,'wb') as ofh:
-					print "Writing debug output: compsel.debug/%s.pkl.gz" % vv
+					print("Writing debug output: compsel.debug/%s.pkl.gz" % vv)
 					ofh.write(zlib.compress(cP.dumps(eval(vv))))
 					ofh.close()
 
@@ -202,7 +202,7 @@ def selcomps(seldict,debug=False,olevel=2,oversion=99,knobargs=''):
 	#import ipdb
 
 	#Dump dictionary into variable names
-	for key in seldict.keys(): exec("%s=seldict['%s']" % (key,key))
+	for key in list(seldict.keys()): exec("%s=seldict['%s']" % (key,key))
 
 	#List of components
 	midk = []
