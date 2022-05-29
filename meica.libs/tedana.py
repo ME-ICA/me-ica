@@ -117,7 +117,7 @@ def fitmodels_direct(catd,mmix,mask,t2s,tes,fout=None,reindex=False,mmixN=None,f
     X1 = mumask.transpose()
 
     #Model 2
-    X2 = np.tile(tes,(1,NmD))*mumask.transpose()/t2smask.transpose()
+    X2 = -1*np.tile(tes,(1,NmD))*mumask.transpose()
 
     #Tables for component selection
     Kappas = np.zeros([nc])
@@ -133,6 +133,13 @@ def fitmodels_direct(catd,mmix,mask,t2s,tes,fout=None,reindex=False,mmixN=None,f
     Br_clmaps_R2 = np.zeros([Nm,nc])
     Br_clmaps_S0 = np.zeros([Nm,nc])
 
+	# Parametric outputs
+    coeff_R2_maps = np.zeros([NmD,nc])
+    dS0_maps = np.zeros([NmD,nc])
+    dT2_maps = np.zeros([NmD,nc])
+    pdT2_maps = np.zeros([NmD,nc])
+
+
     for i in range(nc):
 
         #size of B is (nc, nx*ny*nz)
@@ -147,13 +154,23 @@ def fitmodels_direct(catd,mmix,mask,t2s,tes,fout=None,reindex=False,mmixN=None,f
         SSE_S0 = SSE_S0.sum(axis=0)
         F_S0 = (alpha - SSE_S0)*2/(SSE_S0)
         F_S0_maps[:,i] = F_S0
+        dS0_maps[:,i] = coeffs_S0
 
         #R2 Model
+        # import ipdb
+        # ipdb.set_trace()
         coeffs_R2 = (B*X2).sum(axis=0)/(X2**2).sum(axis=0)
         SSE_R2 = (B - X2*np.tile(coeffs_R2,(Ne,1)))**2
         SSE_R2 = SSE_R2.sum(axis=0)
         F_R2 = (alpha - SSE_R2)*2/(SSE_R2)
         F_R2_maps[:,i] = F_R2
+        coeff_R2_maps[:,i] = coeffs_R2  # coeffs_R2 are delta-R2*
+
+        # Derive dT2* from dR2*   # testing
+        #import pdb
+        #pdb.set_trace()
+        dT2_maps[:,i] = 1./((1/t2smask)+coeffs_R2)-t2smask
+        pdT2_maps[:,i] = dT2_maps[:,i]/t2smask*100
 
         #Compute weights as Z-values
         wtsZ=(WTS[:,i]-WTS[:,i].mean())/WTS[:,i].std()
@@ -187,7 +204,7 @@ def fitmodels_direct(catd,mmix,mask,t2s,tes,fout=None,reindex=False,mmixN=None,f
         for i in range(nc):
 
             #Save out files
-            out = np.zeros((nx,ny,nz,4))
+            out = np.zeros((nx,ny,nz,8))
             if fout is not None:
                 ccname = "cc%.3d.nii" % i
             else: ccname = ".cc_temp.nii.gz"
@@ -196,8 +213,10 @@ def fitmodels_direct(catd,mmix,mask,t2s,tes,fout=None,reindex=False,mmixN=None,f
             out[:,:,:,1] = np.squeeze(unmask(F_R2_maps[:,i],t2s!=0))
             out[:,:,:,2] = np.squeeze(unmask(F_S0_maps[:,i],t2s!=0))
             out[:,:,:,3] = np.squeeze(unmask(Z_maps[:,i],mask))
-
-            #import ipdb; ipdb.set_trace()
+            out[:,:,:,4] = np.squeeze(unmask(coeff_R2_maps[:,i],t2s!=0))  # delta-R2* -> subbrik 4
+            out[:,:,:,5] = np.squeeze(unmask(dS0_maps[:,i],t2s!=0))
+            out[:,:,:,6] = np.squeeze(unmask(dT2_maps[:,i],t2s!=0))
+            out[:,:,:,7] = np.squeeze(unmask(pdT2_maps[:,i],t2s!=0))
 
             niwrite(out,fout,ccname)
             os.system('3drefit -sublabel 0 PSC -sublabel 1 F_R2  -sublabel 2 F_SO -sublabel 3 Z_sn %s 2> /dev/null > /dev/null'%ccname)
