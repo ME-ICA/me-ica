@@ -1311,6 +1311,7 @@ def tedica(dd,cost):
     mmix = (mmix-mmix.mean(0))/mmix.std(0)
     return mmix
 
+
 def write_split_ts(data,comptable,mmix,suffix=''):
     mdata = fmask(data,mask)
     betas = fmask(get_coeffs(unmask((mdata.T-mdata.T.mean(0)).T,mask),mask,mmix),mask)
@@ -1547,6 +1548,59 @@ def dwtcatd():
     trans_mask_catd,newlen = dwtmat(uncat2echos(catd,ne)[stackmask])
     newcatd = unmask(trans_mask_catd,stackmask)
 
+def ts_sigma_rescale(_fn, *, scale_fac, baseline=None, out_suffix='.pdt2s.nii'):
+    _prefix = _fn.split('.nii')[0]
+    _vol = nib.load(_fn)
+    _dat = _vol.get_fdata()
+    _nomu = _dat - _dat.mean(-1)[..., np.newaxis]
+    #import ipdb; ipdb.set_trace()
+    out_ts = _nomu / _nomu.std(-1)[..., np.newaxis] * scale_fac[..., np.newaxis]
+    if baseline is not None:
+        out_ts = out_ts + baseline[..., np.newaxis]
+    niwrite(out_ts, _vol.affine, f'{_prefix}{out_suffix}', header=_vol.header)
+
+
+def signal_to_t2s():
+    # Convert dataset from signal units to t2s units
+    ## For now we're expecting datasets to have been written
+    ## we're reloading them and doing this calculation.
+    ## There's an in-memory way to do this but this 
+    ## implementation is good for proof-of-concept 
+    ## and testing.
+    ts_fns = [f'hik_ts_e{_i}.nii' for _i in range(1,len(tes)+1)]
+    mu_fns = [f'dn_ts_e{_i}.nii' for _i in range(1,len(tes)+1)]
+    oc_fn = 'dn_ts_OC.nii'
+    hik_fn = 'hik_ts_OC.nii'
+
+    t2sm = t2s[t2s!=0]
+    mum = mu[t2s!=0]
+
+    # Read in split time series in delta-S
+    ts_vols = [nib.load(_ts_fn) for _ts_fn in ts_fns]
+    ts_dats = [_ts_vol.get_fdata() for _ts_vol in ts_vols]
+    ts_sigmas = [_ts_dat[t2s!=0].std(1) for _ts_dat in ts_dats]
+    B = ts_sigma = np.array(ts_sigmas)
+
+    #t2s keep in volume 
+    NmD = t2sm.flatten().shape[0]
+    X2 = (-1*np.tile(np.atleast_2d(tes).T,(1,NmD)).T*mum).T
+
+    # Fit for dR2*
+    coeffs_R2 = (B*X2).sum(axis=0)/(X2**2).sum(axis=0)  # dR2*
+    dt2sts = 1./((1/t2sm)+coeffs_R2)-t2sm
+    pdt2s = (dt2sts)/t2sm*100
+
+    # Write map of scaling %dT2* scaling factors
+    pdt2s_dat = unmask(pdt2s, t2s!=0)
+    niwrite(pdt2s_dat, aff, 'pdt2s_map.nii', header=head)
+
+    # Write optimially combined in absolute T2* units (ms)
+    ts_sigma_rescale(oc_fn, scale_fac=unmask(dt2sts, t2s!=0), baseline=t2s, out_suffix='.t2s.nii')
+
+    # Write Hi-K as %delta-T2* units
+    ts_sigma_rescale(hik_fn, scale_fac=pdt2s_dat, out_suffix='.pdt2s.nii')
+
+
 def writeresults():
     print("++ Writing optimally combined time series")
     ts = OCcatd
@@ -1590,6 +1644,7 @@ if __name__=='__main__':
     parser.add_option('-e',"--TEs",dest='tes',help="Echo times (in ms) ex: 15,39,63",default=None)
     parser.add_option('',"--mix",dest='mixm',help="Mixing matrix. If not provided, ME-PCA & ME-ICA (MDP) is done.",default=None)
     parser.add_option('',"--ctab",dest='ctab',help="Component table extract pre-computed classifications from.",default=None)
+    parser.add_option('',"--t2sts",dest='t2sts',action='store_true',help="Write time series outputs in delta-T2* and perc-delta-T2* units.",default=None)
     parser.add_option('',"--manacc",dest='manacc',help="Comma separated list of manually accepted components",default=None)
     parser.add_option('',"--strict",dest='strict',action='store_true',help="Ignore low-variance ambiguous components",default=False)
     #parser.add_option('',"--wav",dest='wav',help="Perform wavelet PCA, default False",default=False)
@@ -1698,4 +1753,8 @@ if __name__=='__main__':
 
     writeresults()
     gscontrol_mmix()
-    if options.dne: writeresults_echoes()
+
+    if options.dne or options.t2sts: 
+        writeresults_echoes()
+        if options.t2sts:
+            signal_to_t2s()
