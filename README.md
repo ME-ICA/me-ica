@@ -29,16 +29,16 @@ Install Python and other dependencies. If you have AFNI installed and on your pa
 
 # Important Files and Directories
 
-- `meica.py` : a master script that performs preprocessing and calls the ICA/TE-dependence analysis script `tedana.py`
+- `meica.py` : a master script that performs preprocessing and calls the ICA/TE-dependence analysis script `lib_tedana.py`
 - `meica.libs` : a folder that includes utility functions for TE-dependence analysis for denoising and anatomical-functional co-registration
-- `meica.libs/tedana.py` : performs ICA and TE-dependence calculations
+- `meica.libs/lib_tedana.py` : performs ICA and TE-dependence calculations
 
 # Usage
 
 fMRI data is called: 		rest_e1.nii.gz, rest_e2.nii.gz, rest_e3.nii.gz, etc. 
 Anatomical is:		mprage.nii.gz
 
-meica.py and tedana.py have a number of options which you can view using the -h flag. 
+meica.py and lib_tedana.py have a number of options which you can view using the -h flag. 
 
 Here's an example use:
 
