@@ -113,6 +113,8 @@ def dep_check():
     numpy_installed = 0
     scipy_installed = 0
     sklearn_installed = 0
+    mdp_installed = 0
+    nibabel_installed = 0
     python_version_ok = 0
     global grayweight_ok
     grayweight_ok = 0
@@ -122,6 +124,7 @@ def dep_check():
         fails += 1
     else:
         python_version_ok = 1
+
     try:
         import numpy
 
@@ -131,6 +134,7 @@ def dep_check():
             "*+ Can't import Numpy! Please check Numpy installation for this Python environment."
         )
         fails += 1
+
     try:
         import scipy
 
@@ -140,6 +144,7 @@ def dep_check():
             "*+ Can't import Scipy! Please check Scipy installation for this Python environment."
         )
         fails += 1
+
     try:
         import sklearn
 
@@ -147,6 +152,26 @@ def dep_check():
     except:
         print(
             "*+ Can't import scikit-learn! Please install scikit-learn version >0.15.0 for this Python environment."
+        )
+        fails += 1
+
+    try:
+        import mdp
+
+        mdp_installed = 1
+    except:
+        print(
+            "*+ Can't import MDP! Please install mdp >3.6 for this Python environment."
+        )
+        fails += 1
+
+    try:
+        import nibabel
+
+        nibabel_installed = 1
+    except:
+        print(
+            "*+ Can't import MDP! Please install mdp >3.6 for this Python environment."
         )
         fails += 1
 
@@ -172,6 +197,16 @@ def dep_check():
             print(
                 "*+ scikit-learn version is too old! Please upgrade to Scipy >=0.15.x!"
             )
+    if mdp_installed:
+        print(" + mdp version: %s" % (mdp.__version__))
+        if version_checker(mdp.__version__, "3.6") == False:
+            fails += 1
+            print("*+ MDP version is too old! Please 'pip install MDP==3.6")
+    if nibabel_installed:
+        print(" + nibabel version: %s" % (nibabel.__version__))
+        if version_checker(nibabel.__version__, "3.2.2") == False:
+            fails += 1
+            print("*+ nibabel version is too old! Please 'pip install nibabel==3.2.2")
     afnicheck = subprocess.getstatusoutput("3dinfo")
     afnisegcheck = subprocess.getstatusoutput("3dSeg -help")
     if afnicheck[0] != 0:
@@ -212,7 +247,9 @@ def getdsname(e_ii, prefixonly=False):
         return dsname
 
 
-def logcomment(comment, level=3):
+def logcomment(comment, level=3, buffer=None):
+    if buffer is None:
+        buffer = sl
     out_cmd = "echo"
     majmark = "\n"
     leading = "--------"
@@ -230,9 +267,9 @@ def logcomment(comment, level=3):
     if level == 1:
         # An echo with AFNI-style emphasis
         leading = "+* "
-        sl.append("""echo "\n++++++++++++++++++++++++" """)
+        buffer.append("""echo "\n++++++++++++++++++++++++" """)
         majmark = ""
-    sl.append(f"{majmark}{out_cmd} {leading} {comment}")
+    buffer.append(f'{majmark}{out_cmd} "{leading} {comment}"')
 
 
 # Configure options and help dialog
@@ -741,16 +778,20 @@ if (
     and not options.select_only
     and not options.export_only
 ):
-    if options.overwrite or options.overwrite_nowait:
-        if options.overwrite and options.overwrite_nowait:
+    if options.overwrite or options.overwrite_nowait:  # if we're overwriting
+        if options.overwrite and options.overwrite_nowait:  # if both overwrites,
             print("Specify either --OVERWRITE or --OVERWRITE_NOWAIT; not both.")
-            sys.exit()
+            sys.exit()  # bail
         else:
-            if options.overwrite and not options.overwrite_nowait:
+            if (
+                options.overwrite and not options.overwrite_nowait
+            ):  # if overwrite with wait
                 logcomment(
-                    "WAITING FOR 5 SECONDS BEFORE OVERWRITING. Ctrl-C TO ABORT.", 1
+                    "WAITING FOR 5 SECONDS BEFORE OVERWRITING. Ctrl-C TO ABORT.",
+                    1,
+                    buffer=headsl,
                 )
-                sl.append("sleep 5")
+                headsl.append("sleep 5")
             headsl.append("rm -rf meica.%s" % (setname))
     else:
         headsl.append(
