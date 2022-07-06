@@ -67,7 +67,7 @@ def niwrite(data,affine, name , header=None):
 	outni.to_filename(name)
 	
 
-	print 'done.'
+	print('done.')
 
 	return outni
 
@@ -79,7 +79,7 @@ def cat2echos(data,Ne):
 	data shape is (nx,ny,Ne*nz,nt)
 	"""
 	nx,ny = data.shape[0:2]
-	nz = data.shape[2]/Ne
+	nz = data.shape[2]//Ne
 	if len(data.shape) >3:
 		nt = data.shape[3]
 	else:
@@ -93,7 +93,7 @@ def uncat2echos(data,Ne):
 	Input:
 	data shape is (nx,ny,Ne,nz,nt)
 	"""
-    	nx,ny = data.shape[0:2]
+	nx,ny = data.shape[0:2]
 	nz = data.shape[2]*Ne
 	if len(data.shape) >4:
 		nt = data.shape[4]
@@ -296,7 +296,7 @@ def optcom(data,t2s,tes,mask):
 
 	fout  = np.average(fdat,axis = 1,weights=alpha)
 	out = unmask(fout,mask)
-	print 'Out shape is ', out.shape
+	print('Out shape is ', out.shape)
 	return out
 
 ###################################################################################################
@@ -313,10 +313,10 @@ if __name__=='__main__':
 
 	(options,args) = parser.parse_args()
 
-	print "-- T2* Map Component for ME-ICA %s --" % (__version__)
+	print("-- T2* Map Component for ME-ICA %s --" % (__version__))
 
 	if options.tes==None or options.data==None: 
-		print "*+ Need at least data and TEs, use -h for help."		
+		print("*+ Need at least data and TEs, use -h for help.")		
 		sys.exit()
 
 	if options.label!=None:
@@ -324,7 +324,7 @@ if __name__=='__main__':
 	else:
 		suf=''
 
-	print "++ Loading Data"
+	print("++ Loading Data")
 	tes = np.fromstring(options.tes,sep=',',dtype=np.float32)
 	ne = tes.shape[0]
 	catim  = nib.load(options.data)	
@@ -337,16 +337,16 @@ if __name__=='__main__':
 	mu  = catd.mean(axis=-1)
 	sig  = catd.std(axis=-1)
 	
-	print "++ Computing Mask"
+	print("++ Computing Mask")
 	mask,masksum  = makemask(catd,min=False,getsum=True)
 
-	print "++ Computing Adaptive T2* map"
+	print("++ Computing Adaptive T2* map")
 	t2s,s0,t2ss,s0vs   = t2sadmap(catd,mask,tes)
 	niwrite(masksum,aff,'masksum%s.nii' % suf )
 	niwrite(t2ss,aff,'t2ss%s.nii' % suf )
 	niwrite(s0vs,aff,'s0vs%s.nii' % suf )
 
-	print "++ Computing optimal combination"
+	print("++ Computing optimal combination")
 	tsoc = np.array(optcom(catd,t2s,tes,mask),dtype=float)
 
 	#Clean up numerical errors
