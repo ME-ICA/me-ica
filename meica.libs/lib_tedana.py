@@ -23,26 +23,25 @@ welcome_block="""
 
 import os
 import sys
-from optparse import OptionParser
-import numpy as np
-import nibabel as nib
-from sys import stdout,argv
-import scipy.stats as stats
 import time
 import datetime
+import gzip
+import pdb
+import numpy as np
+import nibabel as nib
+import pickle as pickle
 #if __name__=='__main__':
 #    selfuncfile='%s/select_model_fft20e.py' % os.path.dirname(argv[0])
 #    exec(compile(open(selfuncfile, "rb").read(), selfuncfile, 'exec'))
 # from select_model_fft20e import *
-
-import pickle as pickle
-import gzip
-import pdb
+from optparse import OptionParser
+from sys import stdout,argv
 
 import scipy.signal as SS
 from numpy import random
 from sklearn import svm
 import scipy.optimize
+import scipy.stats as stats
 
 if 'DEBUG' in argv:
     import ipdb
@@ -191,8 +190,10 @@ def fitmodels_direct(catd,mmix,mask,t2s,tes,fout=None,reindex=False,mmixN=None,f
         Kappas = comptab[:,1]; Rhos = comptab[:,2]; varex = comptab[:,3]; varex_norm = comptab[:,4]
         nnc = np.array(comptab[:,0],dtype=np.int)
         mmix_new = mmix[:,nnc]
-        F_S0_maps = F_S0_maps[:,nnc]; F_R2_maps = F_R2_maps[:,nnc]; Z_maps = Z_maps[:,nnc]
-        WTS = WTS[:,nnc]; PSC=PSC[:,nnc]; tsoc_B=tsoc_B[:,nnc]; tsoc_Babs=tsoc_Babs[:,nnc]
+        F_S0_maps = F_S0_maps[:,nnc]; F_R2_maps = F_R2_maps[:,nnc]; Z_maps = Z_maps[:,nnc];
+        WTS = WTS[:,nnc]; PSC=PSC[:,nnc]; tsoc_B=tsoc_B[:,nnc]; tsoc_Babs=tsoc_Babs[:,nnc];
+        coeff_R2_maps = coeff_R2_maps[:, nnc]; dS0_maps = dS0_maps[:,nnc];
+        dT2_maps = dT2_maps[:, nnc]; pdT2_maps = pdT2_maps[:, nnc];
         comptab[:,0] = np.arange(comptab.shape[0])
     else:
         comptab = comptab_pre
@@ -219,7 +220,7 @@ def fitmodels_direct(catd,mmix,mask,t2s,tes,fout=None,reindex=False,mmixN=None,f
             out[:,:,:,7] = np.squeeze(unmask(pdT2_maps[:,i],t2s!=0))
 
             niwrite(out,fout,ccname)
-            os.system('3drefit -sublabel 0 PSC -sublabel 1 F_R2  -sublabel 2 F_SO -sublabel 3 Z_sn %s 2> /dev/null > /dev/null'%ccname)
+            os.system('3drefit -sublabel 0 PSC -sublabel 1 F_R2  -sublabel 2 F_SO -sublabel 3 Z_sn -sublabel 4 dR2s  -sublabel 5 dS0  -sublabel 6 dT2s -sublabel 7 PdT2s %s 2>  /dev/null > /dev/null' % ccname)
 
             csize = np.max([int(Nm*0.0005)+5,20])
             #csize = 10
@@ -1235,11 +1236,14 @@ def tedpca(ste=0,mlepca=True):
     else:
         print("Loading PCA")
         pcastate_f = gzip.open(pcastate_fn,'rb')
-        pcastate = pickle.load(pcastate_f)
-        ctb = None
-        for key,val in list(pcastate.items()): 
-            print('dirty loading', key, val)
-            exec(key + '=val')  # dirty, TODO(pk): remove
+        pcastate = pickle.load(pcastate_f)  # A SimpleNameSpace
+        u = pcastate['u']
+        s = pcastate['s']
+        v = pcastate['v']
+        ctb = pcastate['ctb']
+        eigelb = pcastate['eigelb']
+        spmin = pcastate['spmin']
+        spcum = pcastate['spcum']
         pcastate_f.close()
     np.savetxt('comp_table_pca.txt',ctb[ctb[:,1].argsort(),:][::-1])
     np.savetxt('mepca_mix.1D',v[ctb[:,1].argsort()[::-1],:].T)
