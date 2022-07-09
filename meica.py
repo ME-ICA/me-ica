@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-__version__ = "v3.2 beta1"
+__version__ = "v3.3.0"
 welcome_block = """
 # Multi-Echo ICA, Version %s
 #
@@ -29,20 +29,22 @@ from re import split as resplit
 import re
 from os import system, getcwd, mkdir, chdir, popen
 import os.path
+
 # from string import rstrip, split  # python 3 deprecated string import
 from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
+from packaging import version
 
 # Filename parser for NIFTI and AFNI files
 def dsprefix(idn):
     # import ipdb; ipdb.set_trace()
     def prefix(datasetname):
-        return datasetname.split('+')[0]
+        return datasetname.split("+")[0]
 
     if len(idn.split(".")) != 0:
         if (
             idn.split(".") == "HEAD"
             or idn.split(".")[-1] == "BRIK"
-            or idn.split(".")[-2:] == ["BRIK","gz"]
+            or idn.split(".")[-2:] == ["BRIK", "gz"]
         ):
             return prefix(idn)
         elif idn.split(".")[-1] == "nii" and not idn.split(".")[-1] == "nii.gz":
@@ -66,6 +68,29 @@ def dssuffix(idna):
         return suffix
 
 
+# def version_checker(cur_ver, ref_ver):
+#     """
+#     Checks version in major/minor format of a current version versus a reference version.
+#     Supports 2 or more level versioning, only 2 levels checked)
+#
+#     Input:
+#     cur_ver: float or string of version to check
+#     ref_ver: float or string of reference version
+#
+#     Returns:
+#     bool for pass or fail
+#     """
+#     cur_ver = str(cur_ver)
+#     ref_ver = str(ref_ver)
+#     cur_Varr = [int(vvv) for vvv in cur_ver.split(".")[0:2]]
+#     cur_V = cur_Varr[0] * 10 ** 2 + cur_Varr[1] % 100
+#     ref_Varr = [int(vvv) for vvv in ref_ver.split(".")[0:2]]
+#     ref_V = ref_Varr[0] * 10 ** 2 + ref_Varr[1] % 100
+#     if cur_V > ref_V:
+#         return True
+#     return False
+
+
 def version_checker(cur_ver, ref_ver):
     """
     Checks version in major/minor format of a current version versus a reference version.
@@ -78,15 +103,7 @@ def version_checker(cur_ver, ref_ver):
     Returns:
     bool for pass or fail
     """
-    cur_ver = str(cur_ver)
-    ref_ver = str(ref_ver)
-    cur_Varr = [int(vvv) for vvv in cur_ver.split(".")[0:2]]
-    cur_V = cur_Varr[0] * 10 ** 2 + cur_Varr[1] % 100
-    ref_Varr = [int(vvv) for vvv in ref_ver.split(".")[0:2]]
-    ref_V = ref_Varr[0] * 10 ** 2 + ref_Varr[1] % 100
-    if cur_V > ref_V:
-        return True
-    return False
+    return version.parse(cur_ver) >= version.parse(ref_ver)
 
 
 # Run dependency check
@@ -96,17 +113,18 @@ def dep_check():
     numpy_installed = 0
     scipy_installed = 0
     sklearn_installed = 0
+    mdp_installed = 0
+    nibabel_installed = 0
     python_version_ok = 0
     global grayweight_ok
     grayweight_ok = 0
     print(" + Python version: %s" % (".".join([str(v) for v in sys.version_info[0:3]])))
-    if sys.version_info < (2, 6) or sys.version_info > (3, 0):
-        print(
-            "*+ Python 2.x is <2.6, please upgrade to Python 2.x >= 2.6 & Numpy >= 1.5.x."
-        )
+    if sys.version_info < (3, 7):
+        print("*+ Python upgrade to Python >= 3.7 & Numpy >= 1.5.x.")
         fails += 1
     else:
         python_version_ok = 1
+
     try:
         import numpy
 
@@ -116,6 +134,7 @@ def dep_check():
             "*+ Can't import Numpy! Please check Numpy installation for this Python environment."
         )
         fails += 1
+
     try:
         import scipy
 
@@ -125,6 +144,7 @@ def dep_check():
             "*+ Can't import Scipy! Please check Scipy installation for this Python environment."
         )
         fails += 1
+
     try:
         import sklearn
 
@@ -135,28 +155,58 @@ def dep_check():
         )
         fails += 1
 
+    try:
+        import mdp
+
+        mdp_installed = 1
+    except:
+        print(
+            "*+ Can't import MDP! Please install mdp >3.6 for this Python environment."
+        )
+        fails += 1
+
+    try:
+        import nibabel
+
+        nibabel_installed = 1
+    except:
+        print(
+            "*+ Can't import MDP! Please install mdp >3.6 for this Python environment."
+        )
+        fails += 1
+
     if numpy_installed:
         print(" + Numpy version: %s" % (numpy.__version__))
-        if version_checker(numpy.__version__, 1.5) == False:
+        if version_checker(numpy.__version__, "1.5") == False:
             fails += 1
             print("*+ Numpy version is too old! Please upgrade to Numpy >=1.5.x!")
         # Check BLAS installation (python 3)
-        blas_check = True in ['blas' in ff for ff in dir(numpy.__config__)]
+        blas_check = True in ["blas" in ff for ff in dir(numpy.__config__)]
         if not blas_check:
             fails += 1
             print("*+ Numpy is not linked to BLAS! Please check Numpy installation.")
     if scipy_installed:
         print(" + Scipy version: %s" % (scipy.__version__))
-        if version_checker(scipy.__version__, 0.11) == False:
+        if version_checker(scipy.__version__, "0.11") == False:
             fails += 1
             print("*+ Scipy version is too old! Please upgrade to Scipy >=0.11.x!")
     if sklearn_installed:
         print(" + scikit-learn version: %s" % (sklearn.__version__))
-        if version_checker(sklearn.__version__, 0.15) == False:
+        if version_checker(sklearn.__version__, "0.15") == False:
             fails += 1
             print(
                 "*+ scikit-learn version is too old! Please upgrade to Scipy >=0.15.x!"
             )
+    if mdp_installed:
+        print(" + mdp version: %s" % (mdp.__version__))
+        if version_checker(mdp.__version__, "3.6") == False:
+            fails += 1
+            print("*+ MDP version is too old! Please 'pip install MDP==3.6")
+    if nibabel_installed:
+        print(" + nibabel version: %s" % (nibabel.__version__))
+        if version_checker(nibabel.__version__, "3.2.2") == False:
+            fails += 1
+            print("*+ nibabel version is too old! Please 'pip install nibabel==3.2.2")
     afnicheck = subprocess.getstatusoutput("3dinfo")
     afnisegcheck = subprocess.getstatusoutput("3dSeg -help")
     if afnicheck[0] != 0:
@@ -197,16 +247,29 @@ def getdsname(e_ii, prefixonly=False):
         return dsname
 
 
-def logcomment(comment, level=3):
+def logcomment(comment, level=3, buffer=None):
+    if buffer is None:
+        buffer = sl
+    out_cmd = "echo"
     majmark = "\n"
     leading = "--------"
+    if level == 4:
+        # A regular comment
+        majmark = "#"
+        leading = ""
+        out_cmd = ""
     if level == 3:
+        # A simple echo
         majmark = ""
+    if level == 2:
+        # A section delimiter
+        leading = "\n--------\n"
     if level == 1:
+        # An echo with AFNI-style emphasis
         leading = "+* "
-        sl.append("""echo "\n++++++++++++++++++++++++" """)
+        buffer.append("""echo "\n++++++++++++++++++++++++" """)
         majmark = ""
-    sl.append("""%secho %s"%s" """ % (majmark, leading, comment))
+    buffer.append(f'{majmark}{out_cmd} "{leading} {comment}"')
 
 
 # Configure options and help dialog
@@ -276,6 +339,22 @@ extopts.add_option(
 )
 extopts.add_option(
     "",
+    "--t2s",
+    dest="t2s",
+    help="Produce denoised time series separately in T2* units",
+    action="store_true",
+    default=False,
+)
+extopts.add_option(
+    "",
+    "--ted_spms",
+    dest="ted_spms",
+    help="Export TE-dependence SPMs (warning: many files)",
+    action="store_true",
+    default=False,
+)
+extopts.add_option(
+    "",
     "--no_skullstrip",
     action="store_true",
     dest="no_skullstrip",
@@ -322,7 +401,6 @@ parser.add_option(
     default=False,
 )
 extopts.add_option(
-    "",
     "--smooth",
     dest="FWHM",
     help="Data FWHM smoothing (3dBlurInMask). Default off. ex: --smooth 3mm ",
@@ -476,6 +554,14 @@ runopts.add_option(
     help="If meica.xyz directory exists, overwrite. ",
     default=False,
 )
+runopts.add_option(
+    "",
+    "--OVERWRITE_NOWAIT",
+    dest="overwrite_nowait",
+    action="store_true",
+    help="",
+    default=False,
+)
 parser.add_option_group(runopts)
 (options, args) = parser.parse_args()
 
@@ -495,7 +581,7 @@ BOLD and non-BOLD signals in fMRI time series using multi-echo EPI. NeuroImage (
 )
 
 # Parse dataset input names
-if (options.dsinputs == "" or options.TR == 0):
+if options.dsinputs == "" or options.TR == 0:
     if not options.skip_check:
         dep_check()
     print("*+ Need at least dataset inputs and TE. Try meica.py -h")
@@ -507,7 +593,7 @@ if os.path.abspath(os.path.curdir).__contains__("meica."):
     sys.exit()
 
 # Parse shorthand input file specification and TEs
-tes = str(options.tes).split(',')
+tes = str(options.tes).split(",")
 outprefix = options.prefix
 if "[" in options.dsinputs:
     shorthand_dsin = True
@@ -637,7 +723,7 @@ if options.anat != "":
         abs(epicm[1] - anatcm[1]),
         abs(epicm[2] - anatcm[2]),
     ]
-    cmdist = 20 + sum([dd ** 2.0 for dd in deltas]) ** 0.5
+    cmdist = 20 + sum([dd**2.0 for dd in deltas]) ** 0.5
     cmdif = max(
         abs(epicm[0] - anatcm[0]), abs(epicm[1] - anatcm[1]), abs(epicm[2] - anatcm[2])
     )
@@ -692,8 +778,21 @@ if (
     and not options.select_only
     and not options.export_only
 ):
-    if options.overwrite:
-        headsl.append("rm -rf meica.%s" % (setname))
+    if options.overwrite or options.overwrite_nowait:  # if we're overwriting
+        if options.overwrite and options.overwrite_nowait:  # if both overwrites,
+            print("Specify either --OVERWRITE or --OVERWRITE_NOWAIT; not both.")
+            sys.exit()  # bail
+        else:
+            if (
+                options.overwrite and not options.overwrite_nowait
+            ):  # if overwrite with wait
+                logcomment(
+                    "WAITING FOR 5 SECONDS BEFORE OVERWRITING. Ctrl-C TO ABORT.",
+                    1,
+                    buffer=headsl,
+                )
+                headsl.append("sleep 5")
+            headsl.append("rm -rf meica.%s" % (setname))
     else:
         headsl.append(
             "if [[ -e meica.%s ]]; then echo ME-ICA directory exists, exiting; exit; fi"
@@ -744,7 +843,7 @@ if options.anat != "":
         nsmprage = "%s_ns.nii.gz" % (anatprefix)
 
 # Copy in functional datasets as NIFTI (if not in NIFTI already), calculate rigid body alignment
-#import ipdb; ipdb.set_trace()
+# import ipdb; ipdb.set_trace()
 vrbase = getdsname(0, True)
 logcomment("Copy in functional datasets, reset NIFTI tags as needed", level=1)
 for e_ii in range(len(datasets)):
@@ -1249,16 +1348,25 @@ strict_setting = ""
 if options.strict:
     strict_setting = "--strict"
 
+t2sts_setting = ""
+if options.t2s:
+    t2sts_setting = "--t2sts"
+
+ted_spms_setting = ""
+if options.ted_spms:
+    ted_spms_setting = "--fout"
+
 if os.path.exists("%s/meica.libs" % (meicadir)):
-    tedanapath = "meica.libs/tedana.py"
+    tedanapath = "meica.libs/lib_tedana.py"
 else:
-    tedanapath = "tedana.py"
+    tedanapath = "lib_tedana.py"
+
 logcomment("Perform TE-dependence analysis (takes a good while)", level=1)
 interactive_flag = ""
 if "IPYTHON" in args:
     interactive_flag = " -i -- "
 sl.append(
-    "%s%s %s %s -e %s  -d %s --sourceTEs=%s --kdaw=%s --rdaw=1 --initcost=%s --finalcost=%s --conv=2.5e-5 %s %s"
+    "%s%s %s %s -e %s  -d %s --sourceTEs=%s --kdaw=%s --rdaw=1 --initcost=%s --finalcost=%s --conv=2.5e-5 %s %s %s %s"
     % (
         tedflag,
         sys.executable,
@@ -1270,7 +1378,9 @@ sl.append(
         options.daw,
         options.initcost,
         options.finalcost,
+        t2sts_setting,
         strict_setting,
+        ted_spms_setting,
         options.ted_args,
     )
 )
@@ -1299,6 +1409,79 @@ if options.select_only:
 mask_dict = {}  # Need this here
 
 
+def export_glob(
+    inglob,
+    outfileprefix,
+    comment="Created by %s" % runcmd,
+    interp="wsinc5",
+    disable=False,
+    plaintext=False,
+    export_mask="./export_mask.nii.gz",
+    globsuffix=None,
+):
+    meicasuffix = None
+    exportmode = None
+
+    # Compile list of files to transform in one call
+    sl.append('FILE_LIST=""')
+    sl.append(f"for FILE in `ls {inglob}`; do")
+    sl.append('    FILE_LIST="${FILE_LIST} ${FILE}";')
+    sl.append("done")
+
+    # Transform in one step if Nwarp
+    if valid_qwarp_mode:
+        exportmode = "WARPONLY"
+        export_result(
+            "${FILE_LIST}",
+            outfileprefix=None,
+            comment=comment,
+            interp=interp,
+            disable=disable,
+            plaintext=plaintext,
+            export_mask=export_mask,
+            exportmode=exportmode,
+            globsuffix=globsuffix,
+        )
+        exportmode = "POSTONLY"
+        meicasuffix = "_nlw"
+
+    # If file is 'foo/bar/baz.nii.gz'
+    #   and globsuffix is _ted
+    # FILE_DIR is foo/bar
+    # FILE_BASE is baz.nii.gz
+    # FILE_PREFIX is baz
+    # FILE_TYPE is .nii
+    # INFILE is baz_ted.nii
+    #
+    sl.append(f"for FILE in $FILE_LIST; do")
+    sl.append("    FILE_DIR=${FILE%/*}")
+    sl.append("    FILE_BASE=${FILE#*/}")
+    sl.append("    FILE_PREFIX=${FILE_BASE%%.*}")
+    sl.append("    FILE_SUFFIX=%s" % globsuffix)
+    sl.append("    FILE_TYPE=.nii")
+    if valid_qwarp_mode:
+        sl.append("    INFILE=${FILE_BASE%%.*}${FILE_SUFFIX}${FILE_TYPE}")
+        sl.append(
+            "mv ${FILE_PREFIX}%s${FILE_TYPE} %s${FILE_PREFIX}%s%s${FILE_TYPE}"
+            % (globsuffix, outfileprefix, globsuffix, meicasuffix)
+        )
+    else:
+        exportmode = "WARPANDPOST"
+        sl.append("    INFILE=$FILE_BASE")
+    export_result(
+        "${FILE_DIR}/${INFILE}",
+        outfileprefix="%s${FILE_PREFIX}%s" % (outfileprefix, globsuffix),
+        comment=comment,
+        interp=interp,
+        disable=disable,
+        plaintext=plaintext,
+        export_mask=export_mask,
+        exportmode=exportmode,
+        globsuffix="",
+    )
+    sl.append("done")
+
+
 def export_result(
     infile,
     outfileprefix,
@@ -1307,13 +1490,19 @@ def export_result(
     disable=False,
     plaintext=False,
     export_mask="./export_mask.nii.gz",
+    exportmode="WARPANDPOST",
+    globsuffix=None,
 ):
+
+    logcomment(f"Export mode is {exportmode}", 4)
+
+    esl = []
     tedflag = ""
     if disable == True:
         tedflag = "#"
     native_export = options.native
     if plaintext:
-        sl.append("cp %s %s/%s" % (infile, startdir, outfileprefix))
+        sl.append("cp %s %s/%s;" % (infile, startdir, outfileprefix))
         return
     # Set output resolution parameters, either specified fres or original voxel dimensions
     if options.fres:
@@ -1327,14 +1516,22 @@ def export_result(
     # If Qwarp, do Nwarpapply
     if valid_qwarp_mode:
         warp_code = "nlw"
+
+        suffixopt = ""
+        prefixopt = ""
+        if globsuffix is not None:
+            suffixopt = f"-suffix {globsuffix}"
+        if outfileprefix is not None:
+            prefixopt = f"-prefix {outfileprefix}_{warp_code}.nii"
+
         this_nwarpstring = " -nwarp %s/%s_xns2at.aff12.1D '%s/%s_WARP.nii.gz' " % (
             startdir,
             anatprefix,
             startdir,
             dsprefix(nlatnsmprage),
         )
-        sl.append(
-            "%s3dNwarpApply -overwrite %s %s %s -source %s -interp %s -prefix %s_nlw.nii "
+        esl.append(
+            "%s3dNwarpApply -overwrite %s %s %s -source %s -interp %s %s %s;"
             % (
                 tedflag,
                 this_nwarpstring,
@@ -1342,12 +1539,14 @@ def export_result(
                 qwfres,
                 infile,
                 interp,
-                outfileprefix,
+                suffixopt,
+                prefixopt,
             )
         )
         if not warp_code in list(mask_dict.keys()):
-            sl.append(
-                "%s3dNwarpApply -overwrite %s %s %s -source %s -interp %s -prefix %s_export_mask.nii "
+            prefixopt = f"-prefix {warp_code}_export_mask.nii"
+            esl.append(
+                "%s3dNwarpApply -overwrite %s %s %s -source %s -interp %s %s;"
                 % (
                     tedflag,
                     this_nwarpstring,
@@ -1355,11 +1554,11 @@ def export_result(
                     qwfres,
                     "export_mask.nii.gz",
                     interp,
-                    warp_code,
+                    prefixopt,
                 )
             )
-            sl.append(
-                "%snifti_tool -mod_hdr -mod_field sform_code 2 -mod_field qform_code 2 -infiles %s_export_mask.nii -overwrite"
+            esl.append(
+                "%snifti_tool -mod_hdr -mod_field sform_code 2 -mod_field qform_code 2 -infiles %s_export_mask.nii -overwrite;"
                 % (tedflag, warp_code)
             )
             mask_dict[warp_code] = "%s_export_mask.nii" % warp_code
@@ -1369,8 +1568,8 @@ def export_result(
     # If there's a template space, allineate result to that space
     elif options.space:
         warp_code = "afw"
-        sl.append(
-            "%s3dAllineate -overwrite -final %s -%s -float -1Dmatrix_apply %s/%s_xns2at.aff12.1D -input %s -prefix ./%s_afw.nii %s %s"
+        esl.append(
+            "%s3dAllineate -overwrite -final %s -%s -float -1Dmatrix_apply %s/%s_xns2at.aff12.1D -input %s -prefix ./%s_afw.nii %s %s;"
             % (
                 tedflag,
                 interp,
@@ -1384,8 +1583,8 @@ def export_result(
             )
         )
         if not warp_code in list(mask_dict.keys()):
-            sl.append(
-                "%s3dAllineate -overwrite -final %s -%s -float -1Dmatrix_apply %s/%s_xns2at.aff12.1D -input %s -prefix ./%s_export_mask.nii %s %s"
+            esl.append(
+                "%s3dAllineate -overwrite -final %s -%s -float -1Dmatrix_apply %s/%s_xns2at.aff12.1D -input %s -prefix ./%s_export_mask.nii %s %s;"
                 % (
                     tedflag,
                     interp,
@@ -1398,8 +1597,8 @@ def export_result(
                     alfres,
                 )
             )
-            sl.append(
-                "%snifti_tool -mod_hdr -mod_field sform_code 2 -mod_field qform_code 2 -infiles %s_export_mask.nii -overwrite"
+            esl.append(
+                "%snifti_tool -mod_hdr -mod_field sform_code 2 -mod_field qform_code 2 -infiles %s_export_mask.nii -overwrite;"
                 % (tedflag, warp_code)
             )
             mask_dict[warp_code] = "%s_export_mask.nii" % warp_code
@@ -1416,32 +1615,39 @@ def export_result(
         else:
             native_suffix = "epi"
             export_master = ""
-        sl.append(
-            "%s3dresample -rmode Li -overwrite %s %s -input %s -prefix %s_%s.nii"
+        esl.append(
+            "%s3dresample -rmode Li -overwrite %s %s -input %s -prefix %s_%s.nii;"
             % (tedflag, export_master, resstring, infile, outfileprefix, native_suffix)
         )
         warp_code = native_suffix
         if not warp_code in list(mask_dict.keys()):
             # sl.append('3dresample -overwrite -prefix %s_export_mask.nii -rmode Li -master %s_%s.nii -input export_mask.nii.gz' % (warp_code,outfileprefix,warp_code))
-            sl.append(
-                "%s3dresample -rmode Li -overwrite %s %s -input %s -prefix %s_export_mask.nii"
+            esl.append(
+                "%s3dresample -rmode Li -overwrite %s %s -input %s -prefix %s_export_mask.nii;"
                 % (tedflag, export_master, resstring, "export_mask.nii.gz", warp_code)
             )
             mask_dict[warp_code] = "%s_export_mask.nii" % warp_code
         to_export.append(
             ("%s_%s" % (outfileprefix, warp_code), "%s_export_mask.nii" % warp_code)
         )
-    for P, P_mask in to_export:
-        sl.append("%s3dNotes -h '%s' %s.nii" % (tedflag, comment, P))
-        if options.anat != "" and options.space != False and "_nat" not in P:
-            sl.append(
-                "%snifti_tool -mod_hdr -mod_field sform_code 2 -mod_field qform_code 2 -infiles %s.nii -overwrite"
-                % (tedflag, P)
-            )
+    if exportmode == "WARPANDPOST" or exportmode == "WARPONLY":
+        sl.extend(esl)
+    if exportmode == "WARPANDPOST" or exportmode == "POSTONLY":
+        for P, P_mask in to_export:
+            export_postproc(P, P_mask, tedflag, comment, startdir)
+
+
+def export_postproc(P, P_mask, tedflag, comment, startdir):
+    sl.append("%s3dNotes -h '%s' %s.nii;" % (tedflag, comment, P))
+    if options.anat != "" and options.space != False and "_nat" not in P:
         sl.append(
-            "3dcalc -overwrite -a %s -b %s.nii -expr 'ispositive(a-.5)*b' -prefix %s.nii ; gzip -f %s.nii; mv %s.nii.gz %s"
-            % (P_mask, P, P, P, P, startdir)
+            "%snifti_tool -mod_hdr -mod_field sform_code 2 -mod_field qform_code 2 -infiles %s.nii -overwrite;"
+            % (tedflag, P)
         )
+    sl.append(
+        "3dcalc -overwrite -a %s -b %s.nii -expr 'ispositive(a-.5)*b' -prefix %s.nii ; gzip -f %s.nii; mv %s.nii.gz %s;"
+        % (P_mask, P, P, P, P, startdir)
+    )
 
 
 if options.export_only:
@@ -1505,6 +1711,38 @@ export_result(
 export_result("TED/comp_table.txt", "%s_ctab.txt" % (outprefix), plaintext=True)
 export_result("TED/meica_mix.1D", "%s_mmix.1D" % (outprefix), plaintext=True)
 
+if options.t2s:
+    # If these were not generated.
+    sl.append("unset")
+    # In later version add a check flag to export_result to check for existence of input
+    # before execution.
+    # Also would be a great way to export the fout files (in combination with an --fout option)
+    # maybe into a new directory...
+    export_result(
+        "TED/dn_ts_OC.t2s.nii",
+        "%s_T2s_medn" % (outprefix),
+        "Denoised timeseries in absolute T2* units (msec) (w/ scaled thermal noise), produced by ME-ICA %s"
+        % __version__,
+        disable=options.pp_only,
+    )
+    export_result(
+        "TED/hik_ts_OC.pdt2s.nii",
+        "%s_T2s_hikts" % (outprefix),
+        "Denoised timeseries in  perc. delta T2* units (msec) (no thermal noise), produced by ME-ICA %s"
+        % __version__,
+        disable=options.pp_only,
+    )
+
+if options.ted_spms:
+    # Output TE-dependence maps
+    export_glob(
+        "TED/cc*.nii",
+        outfileprefix=f"{outprefix}",
+        globsuffix="_ted",
+        comment="TE-dependence map, produced by ME-ICA %s" % __version__,
+        disable=options.pp_only,
+    )
+
 
 # Write the preproc script and execute it
 ofh = open("_meica_%s.sh" % setname, "w")
@@ -1512,5 +1750,6 @@ print("++ Writing script file: _meica_%s.sh" % (setname))
 ofh.write("\n".join(headsl + sl) + "\n")
 ofh.close()
 if not options.script_only:
+    # should add suffixes for only so we don't overwrite origina _meica...sh file
     print("++ Executing script file: _meica_%s.sh" % (setname))
     system("bash _meica_%s.sh" % setname)
