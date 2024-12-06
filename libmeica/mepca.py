@@ -3,9 +3,9 @@ import os
 import pickle
 
 import numpy as np
+
 from .fastica import FastICA
 from .fitmodels import fitmodels_direct
-
 from .utils.selection import andb, getelbow, getfbounds
 from .utils.volume import eimask, fmask, makemask, unmask
 
@@ -88,7 +88,7 @@ def tedpca(
         if mlepca:
             from sklearn.decomposition import PCA
 
-            ppca = PCA(n_components="mle", svd_solver="full")
+            ppca = PCA(n_components=nt - 2, svd_solver="randomized", random_state=0)
             ppca.fit(dz)
             v = ppca.components_
             s = ppca.explained_variance_
@@ -100,7 +100,7 @@ def tedpca(
         eigelb = sp[getelbow(sp)]
 
         spdif = np.abs(sp[1:] - sp[:-1])
-        spdifh = spdif[spdif.shape[0] // 2:]
+        spdifh = spdif[spdif.shape[0] // 2 :]
         spdmin = spdif.min()
         spdthr = np.mean([spdifh.max(), spdmin])
         spmin = sp[
@@ -126,7 +126,14 @@ def tedpca(
         vTmixN = ((vTmix.T - vTmix.T.mean(0)) / vTmix.T.std(0)).T
         # ctb,KRd,betasv,v_T = fitmodels2(catd,v.T,eimum,t2s,tes,mmixN=vTmixN)
         none, ctb, betasv, v_T = fitmodels_direct(
-            catd, v.T, eimum, assets.t2s, assets.tes, mmixN=vTmixN, full_sel=False, assets=assets,
+            catd,
+            v.T,
+            eimum,
+            assets.t2s,
+            assets.tes,
+            mmixN=vTmixN,
+            full_sel=False,
+            assets=assets,
         )
         ctb = ctb[ctb[:, 0].argsort(), :]
         ctb = np.vstack([ctb.T[0:3], sp]).T
