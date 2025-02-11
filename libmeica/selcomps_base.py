@@ -1,8 +1,7 @@
 # selcompsspectral.py
 # Spatial-spectral component selection of in-plane acceleration artifacts and
 #   physiological artifacts.
-# (c) 2023 Prantik Kundu, PhD
-# Ceretype Neuromedicine Inc.
+# (c) 2025 Prantik Kundu, PhD
 
 from pathlib import Path
 from typing import List, Tuple

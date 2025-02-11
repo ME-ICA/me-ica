@@ -1,24 +1,10 @@
 # Multi-echo ICA (ME-ICA) Processing of fMRI Data
 
-⚠️ **As of 5/18/22**, this repository has been unarchived to allow some maintenance of this codebase. While [tedana](https://fmriprep.readthedocs.io) and [fMRIPrep](https://fmriprep.readthedocs.io) provide the future-facing implementations of ME-ICA, there are still users of meica.py who would benefit from a maintened version. Reasons include continuity of existing workflows, reproducing preprocessing etc. Updates will include migration of all modules (meica.py, t2smap.py, etc) to Python 3, interaction with afni, general bug fixes. In addition, the outputs of meica.py (in this package) are compatible with tedana, which will hopefully ease transitions.
-
-**Note** that [tedana](https://fmriprep.readthedocs.io) is faster, is built according to test-driven development and distribution, has many developers, has more PCA options that may be have fewer convergence issues, and produces pretty reports. Otherwise, the ICA component outputs between these packages correspond well with each other in normative datasets.
-
-~~This code base is currently unmaintained. No new feature enhancements or bug fixes will be considered at this time.
-⚠️ **PLEASE NOTE** This code base is currently unmaintained. No new feature enhancements or bug fixes will be considered at this time.~~
-
-We encourage prospective users to instead consider [tedana](https://tedana.readthedocs.io),
-which maintains and extends many of the multi-echo-specific features of ME-ICA.
-
-For fMRI processing more generally, we refer users to [AFNI](https://afni.nimh.nih.gov/)
-or [fMRIPrep](https://fmriprep.readthedocs.io)
-
-This repository is a fork of the (also unmaintained) [Bitbucket repository](https://bitbucket.org/prantikk/me-ica/src/master/).
 
 # Dependencies
 
 1. AFNI
-2. Python 2.7
+2. Python 3.9
 3. numpy
 4. scipy
 

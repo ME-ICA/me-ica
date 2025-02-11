@@ -177,15 +177,17 @@ def tedpca(
     fmin, fmid, fmax = getfbounds(ne)
     kappa_elbow = getelbow(ctb[:, 1], True)
     kappa_thr_det = min_dFdV(ctb)
+    fmin_ = min(fmin, ctb[:,1].min())        
     kappa_thr = np.average(
-        sorted([kappa_thr_det, fmin, kappa_elbow]), weights=(assets.kdaw, 1, 1)  # type: ignore
+        sorted([kappa_thr_det, fmin_, kappa_elbow]), weights=(assets.kdaw, 1, 1)  # type: ignore
     )
     pcsel_kappa = ctb[:, 1] > kappa_thr
 
     rho_thr_det = min_dFdV(ctb, 2)
     rho_elbow = getelbow(ctb[:, 2], True)
+    fmin_ = min(fmin, ctb[:,2].min())        
     rho_thr = np.average(
-        sorted([rho_thr_det, fmin, rho_elbow]), weights=(assets.rdaw, 1, 1)  # type: ignore
+        sorted([rho_thr_det, fmin_, rho_elbow]), weights=(assets.rdaw, 1, 1)  # type: ignore
     )
     pcsel_rho = ctb[:, 2] > rho_thr
 

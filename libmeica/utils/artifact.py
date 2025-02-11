@@ -1,7 +1,6 @@
 # artifact.py
 # Utilities for component selection for lib_tedana and related files
-# (c) 2023 Prantik Kundu, PhD
-# Ceretype Neuromedicine Inc.
+# (c) 2025 Prantik Kundu, PhD
 
 from enum import Enum
 

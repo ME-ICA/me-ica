@@ -1,8 +1,7 @@
 # selcompsspectral.py
 # Spatial-spectral component selection of in-plane acceleration artifacts and
 #   physiological artifacts.
-# (c) 2023 Prantik Kundu, PhD
-# Ceretype Neuromedicine Inc.
+# (c) 2025 Prantik Kundu, PhD
 
 import hashlib
 from functools import cached_property
@@ -186,11 +185,14 @@ class SelcompsEncoding(SelcompsBase):
         rs = self.nc_
         rs = np.setdiff1d(rs, self.rej)
 
+        FOURIER_MAX_BOOST = 2
+
         # After getting rid of mids, git rid of extreme rhos
-        rs_log_rho = np.log(self.Rhos[rs])
-        rs_sel = mad_sel(rs_log_rho)
-        rej = _u(self.rej, rs[rs_sel])
-        rs = np.setdiff1d(rs, rej)
+        # rs_log_rho = np.log(self.Rhos[rs])
+        # rs_sel = mad_sel(rs_log_rho)
+        # rej = _u(self.rej, rs[rs_sel])
+        # rs = np.setdiff1d(rs, rej)
+        rej = self.rej
 
         _n = self.nc_
 
@@ -208,23 +210,21 @@ class SelcompsEncoding(SelcompsBase):
 
         subelbow = _n[K <= getelbow2(K, True)]
         acc_high = np.setdiff1d(_n[score > 5], np.union1d(rej, subelbow))
+        acc_high = np.setdiff1d(acc_high, _n[score/zu(ex)<FOURIER_MAX_BOOST])
         ign = np.setdiff1d(rs, acc_high)
 
         # Scavenge the ign
         ign = np.setdiff1d(rs, acc_high)
         midk = ign[mad_sel(self.varex[ign])]
         rs = np.setdiff1d(ign, midk)
-        keep = rs[
-            andb(
-                [
-                    z1(R[rs]) == 1,
-                    z1(ex[rs]) == 1,
-                    er[rs] <= 1,
-                    K[rs] > getelbow2(K[rs], True),
-                ]
-            )
-            == 4
+        keep_conds = [
+            z1(R[rs]) == 1,
+            z1(ex[rs]) == 1,
+            er[rs] <= 1,
         ]
+        if len(rs) >= 8:
+            keep_conds.append(K[rs] > getelbow2(K[rs], True))
+        keep = rs[andb([*keep_conds]) == 4]
         acc = np.union1d(acc_high, keep)
         ign = np.setdiff1d(ign, np.union1d(keep, midk))
 

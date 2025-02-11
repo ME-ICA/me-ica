@@ -3,7 +3,6 @@ spatialfilters.py: A set of functions to process volumes for spatial
    maniputations
 
 Author: Prantik Kundu, PhD
-(c) 2023 Ceretype Neuromedicine
 """
 
 import datetime
