@@ -269,6 +269,10 @@ def fitmodels_direct(
         comptab = comptab_pre
         mmix_new = mmix
 
+    # Write out prelimary post-ICA comptab
+    if full_sel:
+        np.savetxt('comptab_ica_pre.txt', comptab,  fmt='%.02f', delimiter='\t')
+
     # Full selection including clustering criteria
     seldict = {}
     selvars = [

@@ -177,21 +177,27 @@ def tedpca(
     fmin, fmid, fmax = getfbounds(ne)
     kappa_elbow = getelbow(ctb[:, 1], True)
     kappa_thr_det = min_dFdV(ctb)
-    fmin_ = min(fmin, ctb[:,1].min())        
+    kmin = ctb[:, 1].min()
     kappa_thr = np.average(
-        sorted([kappa_thr_det, fmin_, kappa_elbow]), weights=(assets.kdaw, 1, 1)  # type: ignore
+        sorted([kappa_thr_det, fmin, kmin, kappa_elbow]),
+        weights=(assets.kdaw, 1, 1, 1),  # type: ignore
     )
     pcsel_kappa = ctb[:, 1] > kappa_thr
 
     rho_thr_det = min_dFdV(ctb, 2)
     rho_elbow = getelbow(ctb[:, 2], True)
-    fmin_ = min(fmin, ctb[:,2].min())        
+    rmin = ctb[:, 2].min()
     rho_thr = np.average(
-        sorted([rho_thr_det, fmin_, rho_elbow]), weights=(assets.rdaw, 1, 1)  # type: ignore
+        sorted([rho_thr_det, fmin, rmin, rho_elbow]),
+        weights=(assets.rdaw, 1, 1, 1),  # type: ignore
     )
     pcsel_rho = ctb[:, 2] > rho_thr
 
-    pcsel = andb([pcsel_kappa, pcsel_rho]) > 0
+    # Make sure we keep top-most variance PCs
+    # import pudb; pudb.set_trace()
+    pcsel_var = ctb[:, -1] > eigelb
+
+    pcsel = andb([pcsel_kappa, pcsel_rho, pcsel_var]) > 0
 
     dd = u.dot(np.diag(s * np.array(pcsel, dtype=int))).dot(v)
 

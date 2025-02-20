@@ -11,7 +11,7 @@ from time import time
 import numpy as np
 from scipy.stats import stats
 
-from libmeica.utils.selection import andb, dice, getelbow2
+from libmeica.utils.selection import andb, dice, getelbow, getelbow2, getelbow3
 
 from .selcomps_base import SelcompsBase, _u
 from .utils.artifact import score_fourier_artifact_count
@@ -19,6 +19,8 @@ from .utils.artifact import score_fourier_artifact_count
 ACORR_NEG_COUNT_FILE = "acorr_neg_count_file.1D"
 ENCODING_FSPACE_FILE = "encoding_fspace.1D"
 ENCODING_FSPACE_GT_FILE = "encoding_fspace.1D.gt"
+
+_PRESEL = None
 
 
 def zp(a):
@@ -34,7 +36,9 @@ def zp(a):
 
 def z_(a, *, sample=None):
     a = zp(a)
-    if sample is None:
+    if sample is None and _PRESEL is not None:
+        sample = a[_PRESEL]
+    elif sample is None:
         sample = a
     _mad = stats.median_abs_deviation(sample)  # type: ignore
     _med = np.median(sample)
@@ -55,7 +59,9 @@ def zu(a, floor=0.01, *, sample=None):
 
 
 def mad_sel(a, sigma=5, sample=None):
-    if sample is None:
+    if sample is None and _PRESEL is not None:
+        sample = a[_PRESEL]
+    elif sample is None:
         sample = a
     _mad = stats.median_abs_deviation(sample)  # type: ignore
     _med = np.median(sample)
@@ -206,11 +212,32 @@ class SelcompsEncoding(SelcompsBase):
             self.fourier_artifacts_score.min(1)
         )
 
-        score = Mg(zu(K - R), zu(sr2 - ss0)) / Mg(zu(ex, 0.5), z1(er), zu(R, 0.5))
+        # global _PRESEL
+        # elb_mean = getelbow3(K)
+        # presel = _n[_n < elb_mean]
+        _K_R = K - R
+        _sr2_ss0 = sr2 - ss0
+        # score = Mg(zu(_K_R, sample=_K_R[presel]), zu(_sr2_ss0)) / Mg(
+        #     zu(ex, 0.5),
+        #     z1(er),
+        #     zu(R, 0.5),
+        # )
+        zu_ex = zu(ex, 0.5)
+        z1_er = z1(er)
+        zu_R = zu(R, 0.5)
+        score = Mg(zu(_K_R), zu(_sr2_ss0)) / Mg(
+            zu_ex,
+            z1_er,
+            zu_R,
+        )
 
         subelbow = _n[K <= getelbow2(K, True)]
         acc_high = np.setdiff1d(_n[score > 5], np.union1d(rej, subelbow))
-        acc_high = np.setdiff1d(acc_high, _n[score/zu(ex)<FOURIER_MAX_BOOST])
+        supra_bad = np.max([zu_ex, z1_er, zu_R], axis=0) 
+        import pudb; pudb.set_trace()
+        acc_high = np.setdiff1d(
+            acc_high, np.union1d(_n[score / zu_ex < FOURIER_MAX_BOOST], _n[supra_bad > 3])
+        )
         ign = np.setdiff1d(rs, acc_high)
 
         # Scavenge the ign
@@ -224,7 +251,7 @@ class SelcompsEncoding(SelcompsBase):
         ]
         if len(rs) >= 8:
             keep_conds.append(K[rs] > getelbow2(K[rs], True))
-        keep = rs[andb([*keep_conds]) == 4]
+        keep = rs[andb([*keep_conds]) == len(keep_conds)]
         acc = np.union1d(acc_high, keep)
         ign = np.setdiff1d(ign, np.union1d(keep, midk))
 
