@@ -7,12 +7,14 @@ from libmeica.t2smap import optcom
 from .utils.filter import spatclust
 from .utils.selection import getfbounds, save_variables_to_file
 from .utils.volume import cat2echos, fmask, niwrite, uncat2echos, unmask
+from .utils.memory import trace_and_profile_inputs, flush_after, create_memmap
 
 F_MAX = 500
 Z_MAX = 8
 
 
-def get_coeffs(data, mask, X, add_const=False):
+@trace_and_profile_inputs
+def get_coeffs(data, mask, X, add_const=False, betas5d=None, Ne5d=None):
     """
     get_coeffs(data,X)
 
@@ -35,12 +37,18 @@ def get_coeffs(data, mask, X, add_const=False):
     if add_const:
         X = np.hstack([X, Xones])
 
+    # import pudb; pudb.set_trace()
     tmpbetas = np.linalg.lstsq(X, mdata, rcond=None)[0].transpose()
     if add_const:
         tmpbetas = tmpbetas[:, :-1]
-    out = unmask(tmpbetas, mask)
 
-    return out
+    if betas5d is not None:
+        assert Ne5d is not None
+        betas5d[:, :, :, Ne5d, :] = unmask(tmpbetas, mask)
+
+    else:
+        out = unmask(tmpbetas, mask)
+        return out
 
 
 def computefeats2(data, mmix, mask, normalize=True):
@@ -62,6 +70,132 @@ def computefeats2(data, mmix, mask, normalize=True):
             + (data_Z.mean(0) / data_Z.std(0))[:, np.newaxis]
         ).T
     return data_Z
+
+
+def fitmodels_pca(
+    catd,
+    mmix,
+    mask,
+    t2s,
+    tes,
+    *,
+    reindex=False,
+    mmixN=None,
+    assets=None,
+):
+    """
+    Usage:
+
+    fitmodels_pca(fout)
+
+    Input:
+    fout is flag for output of per-component TE-dependence maps
+    t2s is a (nx,ny,nz) ndarray
+    tes is a 1d array
+    """
+
+    # Compute opt. com. raw data
+    tsoc = assets.OCcatd[mask]
+    # tsoc = np.array(optcom(catd, t2s, tes, mask), dtype=float)[mask]
+    tsoc_mean = tsoc.mean(axis=-1)
+    tsoc_dm = tsoc - tsoc_mean[:, np.newaxis]
+
+    # Compute un-normalized weight dataset (features)
+    if mmixN is None:
+        mmixN = mmix
+    # WTS = computefeats2(unmask(unmask(tsoc,mask)[t2s!=0],t2s!=0),mmixN,t2s!=0,normalize=False)
+    WTS = computefeats2(unmask(tsoc, mask), mmixN, mask, normalize=False)
+
+    # Compute PSC dataset - shouldn't have to refit data
+    tsoc_B = get_coeffs(unmask(tsoc_dm, mask), mask, mmix)[mask]
+
+    totvar = (tsoc_B**2).sum()
+    totvar_norm = (WTS**2).sum()
+
+    # Compute Betas and means over TEs for TE-dependence analysis
+    Ne = tes.shape[0]
+    nx, ny, nz, _, nt = catd.shape
+    nc = mmix.shape[1]
+    betas = create_memmap("_pca_betas", shape=(nx, ny, nz, Ne, nc,))
+    betas[:] = np.zeros([nx, ny, nz, Ne, nc], dtype=np.float32)
+    for _e in range(Ne):
+        catd_e = catd[:, :, :, _e, :].copy()
+        get_coeffs(catd_e, mask, mmix, betas5d=betas, Ne5d=_e)
+    nx, ny, nz, Ne, nc = betas.shape
+    NmD = (t2s != 0).sum()
+    mu = catd.mean(axis=-1)
+    tes = np.reshape(tes, (Ne, 1))
+
+    # Mask arrays
+    mumask = fmask(mu, t2s != 0)
+    betamask = fmask(betas, t2s != 0)
+
+    # Setup Xmats
+    # Model 1
+    X1 = mumask.transpose()
+
+    # Model 2
+    X2 = -1 * np.tile(tes, (1, NmD)) * mumask.transpose()  # type: ignore
+
+    # Tables for component selection
+    Kappas = np.zeros([nc])
+    Rhos = np.zeros([nc])
+    varex = np.zeros([nc])
+    varex_norm = np.zeros([nc])
+
+    for i in range(nc):
+        # size of B is (nc, nx*ny*nz)
+        # with flush_after(*mmap_list):
+        B = np.atleast_3d(betamask)[:, :, i].transpose()
+        alpha = (np.abs(B) ** 2).sum(axis=0)
+        varex[i] = (tsoc_B[:, i] ** 2).sum() / totvar * 100.0
+        varex_norm[i] = (
+            (unmask(WTS, mask)[t2s != 0][:, i] ** 2).sum() / totvar_norm * 100.0
+        )
+
+        # S0 Model
+        coeffs_S0 = (B * X1).sum(axis=0) / (X1**2).sum(axis=0)
+        SSE_S0 = (B - X1 * np.tile(coeffs_S0, (Ne, 1))) ** 2  # type: ignore
+        SSE_S0 = SSE_S0.sum(axis=0)
+        F_S0 = (alpha - SSE_S0) * 2 / (SSE_S0)
+
+        # R2 Model
+        coeffs_R2 = (B * X2).sum(axis=0) / (X2**2).sum(axis=0)
+        SSE_R2 = (B - X2 * np.tile(coeffs_R2, (Ne, 1))) ** 2
+        SSE_R2 = SSE_R2.sum(axis=0)
+        F_R2 = (alpha - SSE_R2) * 2 / (SSE_R2)
+
+        # Compute weights as Z-values
+        wtsZ = (WTS[:, i] - WTS[:, i].mean()) / WTS[:, i].std()
+        wtsZ[np.abs(wtsZ) > Z_MAX] = (Z_MAX * (np.abs(wtsZ) / wtsZ))[
+            np.abs(wtsZ) > Z_MAX
+        ]
+
+        # Compute Kappa and Rho
+        F_S0[F_S0 > F_MAX] = F_MAX
+        F_R2[F_R2 > F_MAX] = F_MAX
+        F_S0[np.isnan(F_S0)] = 0
+        F_R2[np.isnan(F_R2)] = 0
+        F_S0[np.isinf(F_S0)] = 0
+        F_R2[np.isinf(F_R2)] = 0
+        Kappas[i] = np.average(
+            F_R2, weights=np.abs(np.squeeze(unmask(wtsZ, mask)[t2s != 0] ** 2.0))
+        )
+        Rhos[i] = np.average(
+            F_S0, weights=np.abs(np.squeeze(unmask(wtsZ, mask)[t2s != 0] ** 2.0))
+        )
+
+    comptab_pre = np.vstack([np.arange(nc), Kappas, Rhos, varex, varex_norm]).T
+    if reindex:
+        # Re-index all components in Kappa order
+        comptab = comptab_pre[comptab_pre[:, 1].argsort()[::-1], :]
+        nnc = np.array(comptab[:, 0], dtype=int)
+        mmix_new = mmix[:, nnc]
+        comptab[:, 0] = np.arange(comptab.shape[0])
+    else:
+        comptab = comptab_pre
+        mmix_new = mmix
+    return comptab, betas, mmix_new
 
 
 def fitmodels_direct(
@@ -125,9 +259,17 @@ def fitmodels_direct(
 
     # Compute Betas and means over TEs for TE-dependence analysis
     Ne = tes.shape[0]
-    betas = cat2echos(
-        get_coeffs(uncat2echos(catd, Ne), np.tile(mask, (1, 1, Ne)), mmix), Ne
-    )
+
+    nx, ny, nz, _, nt = catd.shape
+    nc = mmix.shape[1]
+    print("nc is", nc, mmix.shape)
+    betas = np.zeros([nx, ny, nz, Ne, nc], dtype=np.float32)
+    for _e in range(Ne):
+        get_coeffs(catd[:, :, :, _e, :], mask, mmix, betas5d=betas, Ne5d=_e)
+    # betas = np.array(betas).transpose([1,2,3,0,4])
+    # betas = cat2echos(
+    #     get_coeffs(uncat2echos(catd, Ne), np.tile(mask, (1, 1, Ne)), mmix), Ne
+    # )
     nx, ny, nz, Ne, nc = betas.shape
     Nm = mask.sum()
     NmD = (t2s != 0).sum()
@@ -160,24 +302,53 @@ def fitmodels_direct(
     Rhos = np.zeros([nc])
     varex = np.zeros([nc])
     varex_norm = np.zeros([nc])
-    Z_maps = np.zeros([Nm, nc])
-    F_R2_maps = np.zeros([NmD, nc])
-    F_S0_maps = np.zeros([NmD, nc])
-    Z_clmaps = np.zeros([Nm, nc])
-    F_R2_clmaps = np.zeros([NmD, nc])
-    F_S0_clmaps = np.zeros([NmD, nc])
-    # Br_clmaps_R2 = np.zeros([Nm, nc])
-    # Br_clmaps_S0 = np.zeros([Nm, nc])
 
+    # Assuming Nm, NmD, nc are already defined
+    Z_maps = create_memmap("Z_maps", (Nm, nc))
+    F_R2_maps = create_memmap("F_R2_maps", (NmD, nc))
+    F_S0_maps = create_memmap("F_S0_maps", (NmD, nc))
+    Z_clmaps = create_memmap("Z_clmaps", (Nm, nc))
+    F_R2_clmaps = create_memmap("F_R2_clmaps", (NmD, nc))
+    F_S0_clmaps = create_memmap("F_S0_clmaps", (NmD, nc))
     # Parametric outputs
-    coeff_R2_maps = np.zeros([NmD, nc])
-    dS0_maps = np.zeros([NmD, nc])
-    dT2_maps = np.zeros([NmD, nc])
-    pdT2_maps = np.zeros([NmD, nc])
-    pdR2s_maps = np.zeros([NmD, nc])
+    coeff_R2_maps = create_memmap("coeff_R2_maps", (NmD, nc))
+    dS0_maps = create_memmap("dS0_maps", (NmD, nc))
+    dT2_maps = create_memmap("dT2_maps", (NmD, nc))
+    pdT2_maps = create_memmap("pdT2_maps", (NmD, nc))
+    pdR2s_maps = create_memmap("pdR2s_maps", (NmD, nc))
+    mmap_list = [
+        Z_maps,
+        F_R2_maps,
+        F_S0_maps,
+        Z_clmaps,
+        F_R2_clmaps,
+        F_S0_clmaps,
+        coeff_R2_maps,
+        dS0_maps,
+        dT2_maps,
+        pdT2_maps,
+        pdR2s_maps,
+    ]
+
+    # Z_maps = np.zeros([Nm, nc], dtype=np.float32)
+    # F_R2_maps = np.zeros([NmD, nc], dtype=np.float32)
+    # F_S0_maps = np.zeros([NmD, nc], dtype=np.float32)
+    # Z_clmaps = np.zeros([Nm, nc], dtype=np.float32)
+    # F_R2_clmaps = np.zeros([NmD, nc], dtype=np.float32)
+    # F_S0_clmaps = np.zeros([NmD, nc], dtype=np.float32)
+    # # Br_clmaps_R2 = np.zeros([Nm, nc])
+    # # Br_clmaps_S0 = np.zeros([Nm, nc])
+
+    # # Parametric outputs
+    # coeff_R2_maps = np.zeros([NmD, nc], dtype=np.float32)
+    # dS0_maps = np.zeros([NmD, nc], dtype=np.float32)
+    # dT2_maps = np.zeros([NmD, nc], dtype=np.float32)
+    # pdT2_maps = np.zeros([NmD, nc], dtype=np.float32)
+    # pdR2s_maps = np.zeros([NmD, nc], dtype=np.float32)
 
     for i in range(nc):
         # size of B is (nc, nx*ny*nz)
+        # with flush_after(*mmap_list):
         B = np.atleast_3d(betamask)[:, :, i].transpose()
         alpha = (np.abs(B) ** 2).sum(axis=0)
         varex[i] = (tsoc_B[:, i] ** 2).sum() / totvar * 100.0
@@ -268,10 +439,11 @@ def fitmodels_direct(
     else:
         comptab = comptab_pre
         mmix_new = mmix
+    flush_after(*mmap_list)
 
     # Write out prelimary post-ICA comptab
     if full_sel:
-        np.savetxt('comptab_ica_pre.txt', comptab,  fmt='%.02f', delimiter='\t')
+        np.savetxt("comptab_ica_pre.txt", comptab, fmt="%.02f", delimiter="\t")
 
     # Full selection including clustering criteria
     seldict = {}
@@ -362,9 +534,9 @@ def seldict_to_fout(seldict, *, assets, component_list: Optional[List] = None):
             )
 
         niwrite(out, assets.aff, ccname, header=assets.head)
-        psc_labelstrings = " ".join(
-            [f"-sublabel {i + 8 + 1} PSC_te{i + 1}" for i in range(assets.Ne)]
-        )
+        psc_labelstrings = " ".join([
+            f"-sublabel {i + 8 + 1} PSC_te{i + 1}" for i in range(assets.Ne)
+        ])
         os.system(
             "3drefit -sublabel 0 PSC -sublabel 1 F_R2  -sublabel 2 F_SO -sublabel 3 Z_sn -sublabel 4 dR2s  -sublabel 5 dS0  -sublabel 6 dT2s -sublabel 7 PdT2s -sublabel 8 pdR2s %s %s 2>  /dev/null > /dev/null"
             % (psc_labelstrings, ccname)

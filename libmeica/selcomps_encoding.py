@@ -11,7 +11,14 @@ from time import time
 import numpy as np
 from scipy.stats import stats
 
-from libmeica.utils.selection import andb, dice, getelbow, getelbow2, getelbow3
+from libmeica.utils.selection import (
+    andb,
+    dice,
+    getelbow,
+    getelbow2,
+    getelbow3,
+    getfbounds,
+)
 
 from .selcomps_base import SelcompsBase, _u
 from .utils.artifact import score_fourier_artifact_count
@@ -90,6 +97,7 @@ class SelcompsEncoding(SelcompsBase):
     def __init__(self, **kwargs):
         self.ts = time()
         super().__init__(**kwargs)
+        self.report_elbows()
 
     @cached_property
     def fourier_artifacts_score(self, force=False):
@@ -116,6 +124,7 @@ class SelcompsEncoding(SelcompsBase):
         fmts[3:6] = ["%9.1f"] * 3
         fmts[9] = "%8i"
         fmts[10:12] = ["%7i"] * 2
+        fmts[14] = "%2.2f"
 
         spacing = [6] * len(self.Fspace)
         spacing[0] = 5
@@ -139,6 +148,8 @@ class SelcompsEncoding(SelcompsBase):
             "ex",
             "er",
             "R",
+            "K",
+            "Vx",
         ]
         label_string = [
             ("{:>%s}" % spacing[_i]).format(_l) for _i, _l in enumerate(labels)
@@ -212,6 +223,7 @@ class SelcompsEncoding(SelcompsBase):
             self.fourier_artifacts_score.min(1)
         )
 
+        fmin, _, _ = getfbounds(self.Ne)  # type: ignore
         # global _PRESEL
         # elb_mean = getelbow3(K)
         # presel = _n[_n < elb_mean]
@@ -231,30 +243,65 @@ class SelcompsEncoding(SelcompsBase):
             zu_R,
         )
 
+        # 1. Initial definiton of the accepted component set
         subelbow = _n[K <= getelbow2(K, True)]
-        acc_high = np.setdiff1d(_n[score > 5], np.union1d(rej, subelbow))
-        supra_bad = np.max([zu_ex, z1_er, zu_R], axis=0) 
-        import pudb; pudb.set_trace()
         acc_high = np.setdiff1d(
-            acc_high, np.union1d(_n[score / zu_ex < FOURIER_MAX_BOOST], _n[supra_bad > 3])
-        )
-        ign = np.setdiff1d(rs, acc_high)
+            _n[score > 5], np.union1d(rej, subelbow)
+        )  # Initial accpetance
+        acc_high = np.setdiff1d(
+            acc_high, _n[score / zu_ex < FOURIER_MAX_BOOST]
+        )  # Removal of suspicious components from guess
+        acc_high = np.setdiff1d(
+            acc_high, _n[zu_ex > 5]
+        )  # Removal of clear gradient artificat
 
-        # Scavenge the ign
-        ign = np.setdiff1d(rs, acc_high)
-        midk = ign[mad_sel(self.varex[ign])]
+        # 2. Initial definition of the ignore set
+        ign = np.setdiff1d(rs, acc_high)  # Make initial ignore set
+        midk = ign[
+            mad_sel(self.varex[ign])
+        ]  # Identify mid-kappa vs. ignore on variance basis
+
+        # 3. Inspect the ignore set to retain as many components as we can
         rs = np.setdiff1d(ign, midk)
+        # Conditions to keep low amplitude components
         keep_conds = [
             z1(R[rs]) == 1,
             z1(ex[rs]) == 1,
             er[rs] <= 1,
         ]
         if len(rs) >= 8:
-            keep_conds.append(K[rs] > getelbow2(K[rs], True))
+            keep_conds.append(
+                K[rs] > getelbow2(K[rs], True)
+            )  # If we have enough components in the to reference an elbow
         keep = rs[andb([*keep_conds]) == len(keep_conds)]
+
+        # 4. Keeping anything that is relatively high Kappa and
+        #    hasn't been rejected yet
+        keep = np.union1d(
+            rs[
+                andb([
+                    K[rs] > getelbow(K, True),
+                    score[rs] > 2,
+                    score[rs] > z_(K - R)[rs],
+                    R[rs] < np.mean([fmin, getelbow2(R, True)]),
+                ])
+                == 4
+            ],
+            keep,
+        )
+
+        # 5. Penultimate determination of sets
         acc = np.union1d(acc_high, keep)
         ign = np.setdiff1d(ign, np.union1d(keep, midk))
 
+        # 6. Final inspection to remove relatively high Rho components
+        #    vs. others that crept in through our scavenging process
+        rho_test = z_(R[acc]) - z_(score[acc])
+        to_ign = acc[andb([R[acc]>fmin, rho_test>5])==2]
+        acc = np.setdiff1d(acc, to_ign)
+        ign = np.union1d(ign, to_ign)
+
+        # Make take of decision process
         markers = np.ones(self.nc) * 9
         markers[acc] = 1
         markers[rej] = 0
@@ -279,6 +326,8 @@ class SelcompsEncoding(SelcompsBase):
             ex,
             er,
             R,
+            K,
+            self.varex,
         ]
 
         self._write_table()

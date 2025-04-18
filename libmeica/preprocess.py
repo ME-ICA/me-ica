@@ -411,7 +411,7 @@ extopts.add_option(
     help=SUPPRESS_HELP,
     default=False,
 )
-extopts.add_option("", "--daw", dest="daw", help=SUPPRESS_HELP, default="10")
+extopts.add_option("", "--daw", dest="daw", help=SUPPRESS_HELP, default="1")
 extopts.add_option(
     "", "--tlrc", dest="space", help=SUPPRESS_HELP, default=False
 )  # For backwards compat. with existing scripts

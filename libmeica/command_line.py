@@ -81,14 +81,14 @@ def tedana_command_line():
         "--kdaw",
         dest="kdaw",
         help="Dimensionality augmentation weight (Kappa). Default 10. -1 for low-dimensional ICA",
-        default=10.0,
+        default=1.0,
     )
     parser.add_option(
         "",
         "--rdaw",
         dest="rdaw",
         help="Dimensionality augmentation weight (Rho). Default 1. -1 for low-dimensional ICA",
-        default=10.0,
+        default=1.0,
     )
     parser.add_option(
         "",
@@ -188,7 +188,13 @@ def tedana_process_input(options, args):
     head.extensions = []  # type: ignore
     head.set_sform(head.get_sform(), code=1)  # type: ignore
     aff = catim.affine  # type: ignore
-    catd = cat2echos(catim.get_fdata(), ne)  # changed here too  # type: ignore
+    memmap_path = '_catd.memmap'
+    catim_shape = catim.shape # type: ignore
+    catd_shape = catim_shape[:2] + (catim_shape[2]//ne,) + (ne,) + (catim_shape[3],) 
+    catd = np.memmap(memmap_path, dtype=np.float32, mode="w+", shape=catd_shape)  # type: ignore
+    # import pudb; pudb.set_trace() 
+    catd[:] = cat2echos(catim.get_fdata(), ne)  # changed here too  # type: ignore
+    catd.flush()
     nx, ny, nz, Ne, nt = catd.shape
     mu = catd.mean(axis=-1)
     sig = catd.std(axis=-1)
@@ -249,5 +255,6 @@ def tedana_process_input(options, args):
     assets.kdaw = kdaw
     assets.rdaw = rdaw
     assets.args = args
+    assets.tsshape = (nx, ny, nz, nt)
     assets.options = options
     return assets

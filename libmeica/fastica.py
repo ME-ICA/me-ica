@@ -57,6 +57,7 @@ def _ica_par_dyn(X, tol, g, fun_args, max_iter, w_init, n_attempts=10):
       - restarting
     """
     done = False
+    min_restart_lim = 50 * tol
     W = _sym_decorrelation(w_init)
     del w_init
     p_ = float(X.shape[1])
@@ -97,7 +98,7 @@ def _ica_par_dyn(X, tol, g, fun_args, max_iter, w_init, n_attempts=10):
                     else:
                         restart = True
                 else:
-                    if not is_converging(lim_his):
+                    if not is_converging(lim_his) and lim > min_restart_lim:
                         restart = True
 
                 if restart:

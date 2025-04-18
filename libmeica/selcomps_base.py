@@ -117,14 +117,12 @@ class SelcompsBase:
         Return a 4D array with standard briks as outputted in cc***.nii.gz
         files
         """
-        return np.array(
-            [
-                unmask(self.seldict["PSC"][:, i], self.mask),
-                unmask(self.seldict["F_R2_maps"][:, i], self.t2s != 0),
-                unmask(self.seldict["F_S0_maps"][:, i], self.t2s != 0),
-                unmask(self.seldict["Z_maps"][:, i], self.mask),
-            ]
-        ).transpose(1, 2, 3, 0)
+        return np.array([
+            unmask(self.seldict["PSC"][:, i], self.mask),
+            unmask(self.seldict["F_R2_maps"][:, i], self.t2s != 0),
+            unmask(self.seldict["F_S0_maps"][:, i], self.t2s != 0),
+            unmask(self.seldict["Z_maps"][:, i], self.mask),
+        ]).transpose(1, 2, 3, 0)
 
     def write_ted(self, i, fn=None):
         if fn is None:
@@ -185,15 +183,22 @@ class SelcompsBase:
 
     def good_guess(self):
         good_guess_ted = self.nc_[
-            andb(
-                [
-                    self.Kappas > getelbow(self.Kappas, True),
-                    self.Rhos < getelbow(self.Rhos, True),
-                ]
-            )
+            andb([
+                self.Kappas > getelbow(self.Kappas, True),
+                self.Rhos < getelbow(self.Rhos, True),
+            ])
             == 2
         ]
         return good_guess_ted
+
+    def report_elbows(self):
+        print(
+            getelbow(self.Kappas, True),
+            getelbow2(self.Kappas, True),
+            getelbow(self.Rhos, True),
+            getelbow2(self.Rhos, True),
+            getfbounds(self.Ne)
+        )
 
     def fit(self):
         """

@@ -19,6 +19,7 @@ from libmeica.gscontrol import gscontrol_mmix, gscontrol_raw
 from libmeica.mepca import tedica, tedpca
 from libmeica.selcomps_encoding import SelcompsEncoding
 from libmeica.t2smap import optcom
+from libmeica.utils.memory import create_memmap
 from libmeica.utils.t2s import t2sadmap
 from libmeica.utils.volume import eimask, fmask, makeadmask, niwrite, unmask
 
@@ -55,9 +56,14 @@ def write_split_ts(data, comptable, mmix, suffix="", *, glsig=None, assets=None)
     acc = assets.acc
     mask = assets.mask
     mdata = fmask(data, mask)
-    betas = fmask(
-        get_coeffs(unmask((mdata.T - mdata.T.mean(0)).T, mask), mask, mmix), mask
-    )
+    # betas = fmask(
+    #     get_coeffs(unmask((mdata.T - mdata.T.mean(0)).T, mask), mask, mmix), mask
+    # )
+    betas_tmp = mdata - mdata.mean(axis=1, keepdims=True)  # Demean: (V × T)
+    betas_tmp = unmask(betas_tmp, mask)                    # Unmask: (3D × T)
+    betas_tmp = get_coeffs(betas_tmp, mask, mmix)          # Regression or fit: (3D × C)
+    betas_tmp = fmask(betas_tmp, mask)                     # Back to masked space: (V × C)
+    betas = betas_tmp   
     dmdata = mdata.T - mdata.T.mean(0)
     varexpl = (
         1 - ((dmdata.T - betas.dot(mmix.T)) ** 2.0).sum() / (dmdata**2.0).sum()
@@ -431,11 +437,12 @@ def tedana_main():
     assets.t2s = assets.t2sG = t2sG
 
     # Optimally combine data
-    assets.OCcatd = optcom(assets.catd, assets.t2s, assets.tes, mask)
+    assets.OCcatd = create_memmap('_OCcatd', assets.tsshape)
+    assets.OCcatd[:] = optcom(assets.catd, assets.t2s, assets.tes, mask)
 
     if options.pre_gscontrol:
-        gsc_catd = gscontrol_raw(OCcatd=assets.OCcatd, assets=assets)
-        assets.catd = gsc_catd
+        assets.gsc_catd = create_memmap('_gsc_catd', assets.catd.shape)
+        assets.gsc_catd[:] = gscontrol_raw(OCcatd=assets.OCcatd, assets=assets)
 
     me_decompose(assets)
 

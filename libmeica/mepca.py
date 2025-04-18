@@ -5,7 +5,7 @@ import pickle
 import numpy as np
 
 from .fastica import FastICA
-from .fitmodels import fitmodels_direct
+from .fitmodels import fitmodels_direct, fitmodels_pca
 from .utils.selection import andb, getelbow, getfbounds
 from .utils.volume import eimask, fmask, makemask, unmask
 
@@ -42,7 +42,7 @@ def tedpca(
 ):
     catd = assets.catd
     nx, ny, nz, ne, nt = catd.shape
-    ste = np.array([int(ee) for ee in str(ste).split(",")])
+    ste = np.array([int(ee) for ee in str(ste).split(",") if ee != ""])
     cAl = None
     if len(ste) == 1 and ste[0] == -1:
         print("-Computing PCA of optimally combined multi-echo data")
@@ -88,7 +88,12 @@ def tedpca(
         if mlepca:
             from sklearn.decomposition import PCA
 
-            ppca = PCA(n_components=nt - 2, svd_solver="randomized", random_state=0)
+            ppca = PCA(
+                n_components=nt - 2,
+                svd_solver="randomized",
+                random_state=0,
+                iterated_power=10,
+            )
             ppca.fit(dz)
             v = ppca.components_
             s = ppca.explained_variance_
@@ -125,14 +130,14 @@ def tedpca(
         vTmix = v.T
         vTmixN = ((vTmix.T - vTmix.T.mean(0)) / vTmix.T.std(0)).T
         # ctb,KRd,betasv,v_T = fitmodels2(catd,v.T,eimum,t2s,tes,mmixN=vTmixN)
-        none, ctb, betasv, v_T = fitmodels_direct(
+
+        ctb, betasv, v_T = fitmodels_pca(
             catd,
             v.T,
             eimum,
             assets.t2s,
             assets.tes,
             mmixN=vTmixN,
-            full_sel=False,
             assets=assets,
         )
         ctb = ctb[ctb[:, 0].argsort(), :]
@@ -179,8 +184,8 @@ def tedpca(
     kappa_thr_det = min_dFdV(ctb)
     kmin = ctb[:, 1].min()
     kappa_thr = np.average(
-        sorted([kappa_thr_det, fmin, kmin, kappa_elbow]),
-        weights=(assets.kdaw, 1, 1, 1),  # type: ignore
+        sorted([kappa_thr_det, kmin, kappa_elbow]),
+        weights=(assets.kdaw, 1, 1),  # type: ignore
     )
     pcsel_kappa = ctb[:, 1] > kappa_thr
 
@@ -188,8 +193,8 @@ def tedpca(
     rho_elbow = getelbow(ctb[:, 2], True)
     rmin = ctb[:, 2].min()
     rho_thr = np.average(
-        sorted([rho_thr_det, fmin, rmin, rho_elbow]),
-        weights=(assets.rdaw, 1, 1, 1),  # type: ignore
+        sorted([rho_thr_det, rmin, rho_elbow]),
+        weights=(assets.rdaw, 1, 1),  # type: ignore
     )
     pcsel_rho = ctb[:, 2] > rho_thr
 
