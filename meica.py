@@ -4,18 +4,16 @@ import os.path
 import re
 import subprocess
 import sys
+
 # from string import rstrip, split  # python 3 deprecated string import
 from optparse import SUPPRESS_HELP, OptionGroup, OptionParser
 from os import chdir, getcwd, mkdir, popen, system
 from re import split as resplit
 
-from packaging import version
-
 global sl
 sl = []  # Script command list
 
-from libmeica.preprocess import (args, dep_check, dsprefix, dssuffix,
-                                 logcomment, options)
+from libmeica.preprocess import args, dep_check, dsprefix, dssuffix, logcomment, options
 
 __version__ = "v3.9.3"
 welcome_block = """
@@ -81,28 +79,74 @@ if os.path.abspath(os.path.curdir).__contains__("meica."):
     )
     sys.exit(1)
 
-# Parse shorthand input file specification and TEs
-tes = str(options.tes).split(",")
+
+def parse_bids_tes(datasets):
+    tes = []
+    for _di, _dn in enumerate(datasets):
+        _dsin = getdsname(_di)
+        try:
+            json_file = f"{dsprefix(_dsin)}.json"
+            with open(json_file) as bids_ifh:
+                _bids_in = json.load(bids_ifh)
+                _echo_time = float(_bids_in["EchoTime"])
+                if _echo_time < 1:
+                    _echo_time = _echo_time * 1000
+                tes.append(str(_echo_time))
+        except Exception as e:
+            print(e)
+            print("*+ Could not load TEs from BIDS!")
+            sys.exit(10)
+    return tes
+
+
 outprefix = options.prefix
-if "[" in options.dsinputs:
-    shorthand_dsin = True
-    dsinputs = dsprefix(options.dsinputs)
-    prefix = resplit(r"[\[\],]", dsinputs)[0]
-    datasets = resplit(r"[\[\],]", dsinputs)[1:-1]
-    trailing = resplit(r"[\]+]", dsinputs)[-1]
-    isf = dssuffix(options.dsinputs)
-    setname = prefix + "".join(datasets) + trailing + options.label
-else:
-    # Parse longhand input file specificiation
-    shorthand_dsin = False
-    datasets_in = options.dsinputs.split(",")
-    datasets = [str(vv + 1) for vv in range(len(tes))]
+
+if isinstance(options.dsinputs, list) and len(options.dsinputs) > 1:
+    datasets_in = options.dsinputs
+    datasets = [str(vv + 1) for vv in range(len(options.dsinputs))]
     prefix = dsprefix(datasets_in[0])
     isf = dssuffix(datasets_in[0])
     if ".nii" in isf:
         isf = ".nii"
     trailing = ""
     setname = prefix + options.label
+    options.dsinputs = ",".join(datasets_in)
+    shorthand_dsin = False
+else:
+    if isinstance(options.dsinputs, list):
+        options.dsinputs = options.dsinputs[0]
+    if "[" in options.dsinputs:
+        shorthand_dsin = True
+        dsinputs = dsprefix(options.dsinputs)
+        prefix = resplit(r"[\[\],]", dsinputs)[0]
+        datasets = resplit(r"[\[\],]", dsinputs)[1:-1]
+        trailing = resplit(r"[\]+]", dsinputs)[-1]
+        isf = dssuffix(options.dsinputs)
+        setname = prefix + "".join(datasets) + trailing + options.label
+    else:
+        # Parse longhand input file specificiation
+        shorthand_dsin = False
+        datasets_in = options.dsinputs.split(",")
+        datasets = [str(vv + 1) for vv in range(len(datasets_in))]
+        prefix = dsprefix(datasets_in[0])
+        isf = dssuffix(datasets_in[0])
+        if ".nii" in isf:
+            isf = ".nii"
+        trailing = ""
+        setname = prefix + options.label
+
+# Parse shorthand input file specification and TEs
+if isinstance(options.tes, list) and len(options.tes) > 1:
+    tes = options.tes[:]
+    options.tes = ",".join(tes)
+else:
+    if isinstance(options.tes, list):
+        options.tes = options.tes[0]
+    if "," in options.tes:
+        tes = str(options.tes).split(",")
+    else:
+        tes = parse_bids_tes(datasets)
+        options.tes = ",".join([str(_t) for _t in tes])
 
 if not shorthand_dsin and len(datasets) != len(datasets_in):  # type: ignore
     print(
@@ -115,6 +159,7 @@ if len(options.tes.split(",")) != len(datasets):
         "*+ Number of TEs and input datasets must be equal and matched in order. Or try double quotes around -d argument."
     )
     sys.exit(1)
+
 
 # Determine echo processing parallelism
 if options.para_echo:
@@ -135,7 +180,11 @@ headsl.append("#" + runcmd)
 headsl.append(welcome_block)
 osf = ".nii.gz"  # Using NIFTI outputs
 
+logcomment("Parameters:", buffer=headsl, level=2)
+logcomment(f"Datasets: {options.dsinputs}", buffer=headsl, level=5)
+logcomment(f"TEs: {options.tes}", buffer=headsl, level=5)
 # Check if input files exist
+
 notfound = 0
 for ds_ii in range(len(datasets)):
     if subprocess.getstatusoutput("3dinfo %s" % (getdsname(ds_ii)))[0] != 0:
@@ -394,7 +443,7 @@ if external_eBbase:
         sl.append("3daxialize -overwrite -prefix eBbase.nii.gz eBbase.nii.gz")
 # Compute motion parameters
 sl.append(
-    "3dvolreg -overwrite -tshift -quintic  -prefix ./%s_vrA%s -base eBbase.nii.gz -dfile ./%s_vrA.1D -1Dmatrix_save ./%s_vrmat.aff12.1D %s"
+    "3dvolreg -overwrite -quintic  -prefix ./%s_vrA%s -base eBbase.nii.gz -dfile ./%s_vrA.1D -1Dmatrix_save ./%s_vrmat.aff12.1D %s"
     % (vrbase, osf, vrbase, prefix, vrAinput)
 )
 vrAinput = "./%s_vrA%s" % (vrbase, osf)

@@ -31,7 +31,7 @@ def score_vessel_artifact(ted, head, aff):
         header=head,
         affine=aff,
         domask=False,
-        rmoutfile=False,
+        rmoutfile=True,
         # prefix="fwhm",
     )
     src_anchor = np.array(maskvol.shape) / 2
@@ -88,7 +88,7 @@ def score_fourier_artifact_count(ted, head, aff):
         header=head,
         affine=aff,
         domask=False,
-        rmoutfile=False,
+        rmoutfile=True,
     )
     fwhm_sel = fwhm == -1
     fwhm_count = fwhm_sel.sum(0).sum(0).sum(0)
@@ -104,7 +104,7 @@ def score_fourier_artifact(ted, head, aff):
         header=head,
         affine=aff,
         domask=False,
-        rmoutfile=False,
+        rmoutfile=True,
     )
     gradpsc = gradmask(psc, norm=False)
     fwhm_sel = fwhm == -1

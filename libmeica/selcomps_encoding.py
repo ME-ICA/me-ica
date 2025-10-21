@@ -58,10 +58,12 @@ def z1(a, *, sample=None):
     return _za
 
 
-def zu(a, floor=0.01, *, sample=None):
-    _zu = z_(a, sample=sample)
-    _zu[_zu < -1] = np.exp(_zu)[_zu < -1]
-    _zu[_zu < floor] = floor
+def zu(a, floor=None, *, sample=None):
+    _zu = z_(a, sample=sample) + 1
+    _zu[_zu >= 0] = _zu[_zu >= 0] + 1
+    _zu[_zu < 0] = np.exp(_zu)[_zu < 0]
+    if floor is not None:  # TODO: This is redundant with z1
+        _zu[_zu < floor] = floor
     return _zu
 
 
@@ -138,11 +140,11 @@ class SelcompsEncoding(SelcompsBase):
             "Acc",
             "GT",
             "Scr=",
-            "Z:K-R",
-            "Z:r2-s0",
-            "/Zu:ex",
-            "Zu:er",
-            "zu:R",
+            "Zu:K-R",
+            "Zu:r2-s0",
+            "Zu:ex",
+            "Z1:er",
+            "Zu(0.5):R",
             "K-R",
             "r2-s0",
             "ex",
@@ -202,13 +204,6 @@ class SelcompsEncoding(SelcompsBase):
         rs = self.nc_
         rs = np.setdiff1d(rs, self.rej)
 
-        FOURIER_MAX_BOOST = 2
-
-        # After getting rid of mids, git rid of extreme rhos
-        # rs_log_rho = np.log(self.Rhos[rs])
-        # rs_sel = mad_sel(rs_log_rho)
-        # rej = _u(self.rej, rs[rs_sel])
-        # rs = np.setdiff1d(rs, rej)
         rej = self.rej
 
         _n = self.nc_
@@ -218,88 +213,117 @@ class SelcompsEncoding(SelcompsBase):
         sr2 = self.countsigFR2
         ss0 = self.countsigFS0
         ex = self.fourier_artifacts_score.sum(1)
-        # ezx = self.fourier_artifacts_score_z.max(1)
         er = z_(self.fourier_artifacts_score.max(1)) / z1(
             self.fourier_artifacts_score.min(1)
         )
 
-        fmin, _, _ = getfbounds(self.Ne)  # type: ignore
-        # global _PRESEL
-        # elb_mean = getelbow3(K)
-        # presel = _n[_n < elb_mean]
+        fmin, fmid, _ = getfbounds(self.Ne)  # type: ignore
         _K_R = K - R
         _sr2_ss0 = sr2 - ss0
-        # score = Mg(zu(_K_R, sample=_K_R[presel]), zu(_sr2_ss0)) / Mg(
-        #     zu(ex, 0.5),
-        #     z1(er),
-        #     zu(R, 0.5),
-        # )
-        zu_ex = zu(ex, 0.5)
-        z1_er = z1(er)
-        zu_R = zu(R, 0.5)
-        score = Mg(zu(_K_R), zu(_sr2_ss0)) / Mg(
+
+        zu_KR = zu(_K_R)
+        zu_sr2_ss0 = zu(sr2 - ss0)
+        zu_ex = zu(ex)
+        zu_er = zu(er)
+        zu05_R = zu(R, 0.5)
+
+        zu_KR_v_ex = zu_KR / zu_ex
+
+        score = Mg(zu_KR, zu_sr2_ss0) / Mg(
             zu_ex,
-            z1_er,
-            zu_R,
+            zu_er,
+            zu05_R,
         )
 
-        # 1. Initial definiton of the accepted component set
-        subelbow = _n[K <= getelbow2(K, True)]
-        acc_high = np.setdiff1d(
-            _n[score > 5], np.union1d(rej, subelbow)
-        )  # Initial accpetance
-        acc_high = np.setdiff1d(
-            acc_high, _n[score / zu_ex < FOURIER_MAX_BOOST]
-        )  # Removal of suspicious components from guess
-        acc_high = np.setdiff1d(
-            acc_high, _n[zu_ex > 5]
-        )  # Removal of clear gradient artificat
+        # import pudb; pudb.set_trace()
 
-        # 2. Initial definition of the ignore set
-        ign = np.setdiff1d(rs, acc_high)  # Make initial ignore set
-        midk = ign[
-            mad_sel(self.varex[ign])
-        ]  # Identify mid-kappa vs. ignore on variance basis
+        score_thr = np.mean([5, np.median(zu_KR[K > getelbow2(K, True)])])
 
-        # 3. Inspect the ignore set to retain as many components as we can
+        # recognizing that gradient artifact may be kappa-coupled
+        #   and Rho may be Kappa coupled, we need to pick a representative
+        #   guess for K that discounts off the coupling factors
+        #   while still holding the assumption that good high K components
+        #   will have basically low zu_ex, even if not as low as the empty
+        #   components or pure Rho components
+        zu_ex_thr = np.average(zu_ex, weights=zu_KR_v_ex)
+
+        # In high dimensional datasets, 1./self.varex pushes the R threshold
+        # tigher but in noisy datastes R might still have high kappa coupling
+        # so we pick the more inclusive of the two conditions, the average R
+        # consistent with high K values, or the R corresponding to the floor
+        R_thresh = np.mean([np.average(R, weights=zu_KR_v_ex), fmin, getelbow(R, True)])
+
+        acc_high = _n[andb([score > score_thr, zu_ex_thr > zu_ex, R < R_thresh]) == 3]
+
+        # Make an ignore set that will be whittled down
+        ign = np.setdiff1d(rs, acc_high)
+
+        # Get rid of high-variance clear artifacts
+        if len(acc_high) >= 4:
+            _sample = acc_high
+        else:
+            _sample = rs
+        zu_ex_art_thr = np.mean([np.average(zu_ex, weights=R), 5])
+        midk_cand_1 = ign[
+            mad_sel(self.varex[ign], sigma=4, sample=self.varex[_sample])
+        ]  # High variance
+        midk_cand_2 = _n[zu_ex >= zu_ex_art_thr]  # Clear artifact
+        midk = np.intersect1d(midk_cand_1, midk_cand_2)
+
+        # Whittle
         rs = np.setdiff1d(ign, midk)
-        # Conditions to keep low amplitude components
-        keep_conds = [
-            z1(R[rs]) == 1,
-            z1(ex[rs]) == 1,
-            er[rs] <= 1,
+
+        # Keep subtle TE-dependent components
+        if len(acc_high) >= 4:
+            _sample = acc_high
+        else:
+            _sample = rs
+        zu_ex_thr_2 = np.mean([np.average(zu_ex, weights=K), np.max(zu_ex[_sample])])
+        # zu_er_thr_2 = np.mean([np.average(zu_er, weights=K), np.max(zu_er[acc_high])])
+        R_thresh_2 = np.mean([fmid, np.max(R[_sample])])
+
+        # The _2 tresholds are relaxed compared to the acc_high pass
+        print(f"""
+        >score_thr={score_thr}
+        <zu_ex_thr={zu_ex_thr}
+        <R_thresh={R_thresh}
+        <<zu_ex_art_thr={zu_ex_art_thr}
+        <zU_ex_thr_2={zu_ex_thr_2}
+        <R_thresh_2={R_thresh_2}
+        """)
+
+        # Basic inclusion
+        keep_1 = rs[
+            andb(
+                [
+                    # Guessing location of 'ideal' elbow
+                    K[rs] > getelbow2(K, True),
+                    score[rs] > 3,
+                    zu_er[rs] < 1,
+                    zu_ex[rs] <= zu_ex_thr_2,
+                    R[rs] <= R_thresh_2,
+                ]
+            )
+            == 5
         ]
-        if len(rs) >= 8:
-            keep_conds.append(
-                K[rs] > getelbow2(K[rs], True)
-            )  # If we have enough components in the to reference an elbow
-        keep = rs[andb([*keep_conds]) == len(keep_conds)]
+        # Safety condition to high-res / 7T where er drives a bit too much exlusion
+        keep_2 = rs[
+            andb(
+                [
+                    K[rs] > getelbow2(K, True),
+                    score[rs] > 4,
+                    zu_ex[rs] < zu_ex_thr_2,
+                    R[rs] < R_thresh_2,
+                ]
+            )
+            == 4
+        ]
+        keep = np.union1d(keep_1, keep_2)
 
-        # 4. Keeping anything that is relatively high Kappa and
-        #    hasn't been rejected yet
-        keep = np.union1d(
-            rs[
-                andb([
-                    K[rs] > getelbow(K, True),
-                    score[rs] > 2,
-                    score[rs] > z_(K - R)[rs],
-                    R[rs] < np.mean([fmin, getelbow2(R, True)]),
-                ])
-                == 4
-            ],
-            keep,
-        )
-
-        # 5. Penultimate determination of sets
-        acc = np.union1d(acc_high, keep)
-        ign = np.setdiff1d(ign, np.union1d(keep, midk))
-
-        # 6. Final inspection to remove relatively high Rho components
-        #    vs. others that crept in through our scavenging process
-        rho_test = z_(R[acc]) - z_(score[acc])
-        to_ign = acc[andb([R[acc]>fmin, rho_test>5])==2]
-        acc = np.setdiff1d(acc, to_ign)
-        ign = np.union1d(ign, to_ign)
+        # Final
+        acc = np.union1d(acc_high, keep)  # to go into Hi-K
+        # Extra harmless variance
+        ign = np.setdiff1d(ign, np.union1d(np.union1d(keep, midk), acc_high))
 
         # Make take of decision process
         markers = np.ones(self.nc) * 9
@@ -316,13 +340,13 @@ class SelcompsEncoding(SelcompsBase):
             markers,
             _gt,
             score,
-            z_(K - R),
-            z_(sr2 - ss0),
-            zu(ex),
-            zu(er),
-            zu(R),
-            K - R,
-            sr2 - ss0,
+            zu(_K_R),
+            zu(_sr2_ss0),
+            zu_ex,
+            zu_er,
+            zu05_R,
+            _K_R,
+            _sr2_ss0,
             ex,
             er,
             R,

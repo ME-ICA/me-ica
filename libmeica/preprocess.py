@@ -207,6 +207,10 @@ def logcomment(comment, level=3, buffer=None, global_sl=None):
     out_cmd = "echo"
     majmark = "\n"
     leading = "--------"
+    if level == 5:
+        # A regular comment with an echo
+        majmark = ""
+        leading = ""
     if level == 4:
         # A regular comment
         majmark = "#"
@@ -226,17 +230,36 @@ def logcomment(comment, level=3, buffer=None, global_sl=None):
     buffer.append(f'{majmark}{out_cmd} "{leading} {comment}"')
 
 
+def _collect_dsinputs(option, opt_str, value, parser):
+    """Collect multiple dataset input filenames from command line."""
+    ds = [value]
+    # grab subsequent args until the next option
+    while parser.rargs and not parser.rargs[0].startswith("-"):
+        ds.append(parser.rargs.pop(0))
+    setattr(parser.values, option.dest, ds)
+
+
 # Configure options and help dialog
 parser = OptionParser()
 parser.add_option(
-    "-e", "", dest="tes", help="ex: -e 14.5,38.5,62.5  Echo times (in ms)", default=""
+    "-e",
+    "",
+    dest="tes",
+    action="callback",
+    callback=_collect_dsinputs,
+    type="string",
+    default=["bids"],
+    help="ex: -e bids | -e 14.5 38.5 62.5  Echo times from BIDS header or in ms",
 )
 parser.add_option(
     "-d",
     "",
     dest="dsinputs",
-    help="ex: -d RESTe1.nii.gz,RESTe2.nii.gz,RESTe3.nii.gz",
-    default="",
+    action="callback",
+    callback=_collect_dsinputs,
+    type="string",
+    help="ex: -d RESTe1.nii.gz RESTe2.nii.gz RESTe3.nii.gz",
+    default=[],
 )
 parser.add_option(
     "-a",

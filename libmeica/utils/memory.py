@@ -1,3 +1,4 @@
+import atexit
 import functools
 import traceback
 import inspect
@@ -8,6 +9,7 @@ import numpy as np
 from types import ModuleType, FunctionType, BuiltinFunctionType, SimpleNamespace
 from collections.abc import Mapping, Container
 from contextlib import contextmanager
+from pathlib import Path
 
 try:
     import numpy as np
@@ -50,6 +52,7 @@ def trace_and_profile_inputs(func):
 
     return wrapper
 
+
 def deep_getsizeof(obj, seen):
     obj_id = id(obj)
     if obj_id in seen:
@@ -67,7 +70,10 @@ def deep_getsizeof(obj, seen):
             return 0  # skip if size can't be obtained
 
     # Don't recurse into non-containers or irrelevant types
-    if isinstance(obj, (str, bytes, bytearray, FunctionType, BuiltinFunctionType, ModuleType, type)):
+    if isinstance(
+        obj,
+        (str, bytes, bytearray, FunctionType, BuiltinFunctionType, ModuleType, type),
+    ):
         return size
 
     # Traverse mappings (dict-like)
@@ -77,9 +83,15 @@ def deep_getsizeof(obj, seen):
             size += deep_getsizeof(v, seen)
 
     # Traverse containers and SimpleNamespace
-    elif isinstance(obj, (Container, SimpleNamespace)) and not isinstance(obj, (str, bytes, bytearray)):
+    elif isinstance(obj, (Container, SimpleNamespace)) and not isinstance(
+        obj, (str, bytes, bytearray)
+    ):
         try:
-            items = list(obj) if not isinstance(obj, SimpleNamespace) else vars(obj).values()
+            items = (
+                list(obj)
+                if not isinstance(obj, SimpleNamespace)
+                else vars(obj).values()
+            )
             for item in items:
                 size += deep_getsizeof(item, seen)
         except Exception:
@@ -103,14 +115,21 @@ def list_big_live_objects(limit=15, min_size_mb=1):
     results.sort(key=lambda x: x[1], reverse=True)
     print(f"\nTop {limit} largest live objects (> {min_size_mb} MB):\n")
     for typename, size, preview in results[:limit]:
-        print(f"{typename:20s} : {size / (1024 ** 2):6.2f} MB  | {preview}")
+        print(f"{typename:20s} : {size / (1024**2):6.2f} MB  | {preview}")
     return results
+
+
+def _unlink(p):
+    p = Path(p)
+    p.unlink()
+
 
 def create_memmap(name, shape, dtype=np.float32):
     memmap_dir = "memmaps"
     os.makedirs(memmap_dir, exist_ok=True)
-    path = os.path.join(memmap_dir, f"{name}.dat")
-    return np.memmap(path, dtype=dtype, mode="w+", shape=shape)
+    mmpath = os.path.join(memmap_dir, f"{name}.dat")
+    atexit.register(_unlink, mmpath)
+    return np.memmap(mmpath, dtype=dtype, mode="w+", shape=shape)
 
 
 @contextmanager
