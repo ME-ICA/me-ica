@@ -365,7 +365,7 @@ if options.anat != "":
     pathanatprefix = "%s/%s" % (startdir, anatprefix)
     if oblique_mode:
         sl.append(
-            "if [ ! -e %s_do.nii.gz ]; then 3dWarp -overwrite -prefix %s_do.nii.gz -deoblique %s/%s; fi"
+            "if [ ! -e %s_do.nii.gz ]; then 3dWarp -wsinc5 -overwrite -prefix %s_do.nii.gz -deoblique %s/%s; fi"
             % (pathanatprefix, pathanatprefix, startdir, nsmprage)
         )
         nsmprage = "%s_do.nii.gz" % (anatprefix)
@@ -406,24 +406,31 @@ logcomment(
     level=1,
 )
 # Determine input to volume registration
-vrAinput = "./%s%s" % (vrbase, isf)
+vrinput = "./%s%s" % (vrbase, isf)
+vrAinput = "./%s_vrA%s" % (vrbase, osf)
 # Compute obliquity matrix
 if oblique_mode:
     if options.anat != "":
         sl.append(
             "3dWarp -verb -card2oblique %s[0] -overwrite  -newgrid 1.000000 -prefix ./%s_ob.nii.gz %s/%s | grep  -A 4 '# mat44 Obliquity Transformation ::'  > %s_obla2e_mat.1D"
-            % (vrAinput, anatprefix, startdir, nsmprage, prefix)  # type: ignore
+            % (vrinput, anatprefix, startdir, nsmprage, prefix)  # type: ignore
         )
     else:
-        sl.append("3dWarp -overwrite -prefix %s -deoblique %s" % (vrAinput, vrAinput))
+        sl.append(
+            "3dWarp -wsinc5 -overwrite -prefix %s -deoblique %s" % (vrAinput, vrinput)
+        )
 # Despike and axialize
 if not options.no_despike:
+    if options.anat != "":
+        _despike_input = vrinput
+    else:
+        _despike_input = vrAinput
     sl.append(
-        "3dDespike -nomask -overwrite -prefix ./%s_vrA%s %s " % (vrbase, osf, vrAinput)
+        "3dDespike -nomask -overwrite -prefix %s %s " % (vrAinput, _despike_input)
     )
     vrAinput = "./%s_vrA%s" % (vrbase, osf)
 if not options.no_axialize:
-    sl.append("3daxialize -overwrite -prefix ./%s_vrA%s %s" % (vrbase, osf, vrAinput))
+    sl.append("3daxialize -overwrite -prefix %s %s" % (vrAinput, vrAinput))
     vrAinput = "./%s_vrA%s" % (vrbase, osf)
 # Set eBbase
 external_eBbase = False
@@ -438,7 +445,7 @@ else:
 sl.append("3dcalc -a %s  -expr 'a' -prefix eBbase.nii.gz " % (basevol))
 if external_eBbase:
     if oblique_mode:
-        sl.append("3dWarp -overwrite -deoblique eBbase.nii.gz eBbase.nii.gz")
+        sl.append("3dWarp -wsinc5 -overwrite -deoblique eBbase.nii.gz eBbase.nii.gz")
     if not options.no_axialize:
         sl.append("3daxialize -overwrite -prefix eBbase.nii.gz eBbase.nii.gz")
 # Compute motion parameters
@@ -496,13 +503,13 @@ for echo_ii in range(len(datasets)):
     else:
         tpat_opt = ""
     sl.append(
-        "3dTshift -Fourier %s -prefix ./%s_ts+orig %s" % (tpat_opt, dsin, intsname)
+        "3dTshift -wsinc9 %s -prefix ./%s_ts+orig %s" % (tpat_opt, dsin, intsname)
     )
     # Force +orig label on dataset
     sl.append("3drefit -view orig %s_ts*HEAD" % (dsin))
     if oblique_mode and options.anat == "":
         sl.append(
-            "3dWarp -overwrite -deoblique -prefix ./%s_ts+orig ./%s_ts+orig"
+            "3dWarp -wsinc5 -overwrite -deoblique -prefix ./%s_ts+orig ./%s_ts+orig"
             % (dsin, dsin)
         )
     # Axialize functional dataset
@@ -948,7 +955,7 @@ sl.append(
         ica_input,
         options.sourceTEs,
         options.daw,
-        options.daw,
+        "1",
         options.initcost,
         options.finalcost,
         strict_setting,

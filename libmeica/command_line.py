@@ -88,7 +88,7 @@ def tedana_command_line():
         "--kdaw",
         dest="kdaw",
         help="Dimensionality augmentation weight (Kappa). Default 10. -1 for low-dimensional ICA",
-        default=1.0,
+        default=10.0,
     )
     parser.add_option(
         "",

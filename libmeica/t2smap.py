@@ -55,7 +55,7 @@ def scoreatpercentile(a, per, limit=(), interpolation_method="lower"):
             score = values[np.ceil(idx)]
         else:
             raise ValueError(
-                "interpolation_method can only be 'fraction', " "'lower' or 'higher'"
+                "interpolation_method can only be 'fraction', 'lower' or 'higher'"
             )
     return score
 
@@ -135,6 +135,11 @@ def makemask(cdat, min=True, getsum=False):
         if len(lthrs.shape) == 1:
             lthrs = np.atleast_2d(lthrs).T
         lthrs = lthrs[:, lthrs.sum(0).argmax()]
+
+        # Adjustment for case of both digitation errors to 0 and
+        #   preprocessing errors yielding negative values around
+        #   zeros culminating in negative values in lthrs
+        lthrs[lthrs < 0] = 0
 
         mthr = np.ones([nx, ny, nz, ne])
         for ee in range(Ne):

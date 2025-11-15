@@ -160,6 +160,7 @@ def makeadmask(cdat, min=True, getsum=False):
         if len(lthrs.shape) == 1:
             lthrs = np.atleast_2d(lthrs).T
         lthrs = lthrs[:, lthrs.sum(0).argmax()]
+        lthrs[lthrs < 0] = 0
         mthr = np.ones([nx, ny, nz, Ne])
         for ee in range(Ne):
             mthr[:, :, :, ee] *= lthrs[ee]

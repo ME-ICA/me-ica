@@ -43,9 +43,7 @@ welcome_block = """
 #    and denoised time series
 # -or- Computes TE-dependence of each component of a general linear model
 #    specified by input (includes MELODIC FastICA mixing matrix)
-""" % (
-    __version__
-)
+""" % (__version__)
 
 
 def write_split_ts(data, comptable, mmix, suffix="", *, glsig=None, assets=None):
@@ -60,10 +58,10 @@ def write_split_ts(data, comptable, mmix, suffix="", *, glsig=None, assets=None)
     #     get_coeffs(unmask((mdata.T - mdata.T.mean(0)).T, mask), mask, mmix), mask
     # )
     betas_tmp = mdata - mdata.mean(axis=1, keepdims=True)  # Demean: (V × T)
-    betas_tmp = unmask(betas_tmp, mask)                    # Unmask: (3D × T)
-    betas_tmp = get_coeffs(betas_tmp, mask, mmix)          # Regression or fit: (3D × C)
-    betas_tmp = fmask(betas_tmp, mask)                     # Back to masked space: (V × C)
-    betas = betas_tmp   
+    betas_tmp = unmask(betas_tmp, mask)  # Unmask: (3D × T)
+    betas_tmp = get_coeffs(betas_tmp, mask, mmix)  # Regression or fit: (3D × C)
+    betas_tmp = fmask(betas_tmp, mask)  # Back to masked space: (V × C)
+    betas = betas_tmp
     dmdata = mdata.T - mdata.T.mean(0)
     varexpl = (
         1 - ((dmdata.T - betas.dot(mmix.T)) ** 2.0).sum() / (dmdata**2.0).sum()
@@ -342,7 +340,15 @@ def me_decompose(assets):
             breakpoint()
 
         nc, dd = tedpca(options.ste, assets=assets)
-        mmix_orig = tedica(dd, nc, cost=options.initcost, assets=assets)
+        mmix_orig, converge_success = tedica(
+            dd, nc, cost=options.initcost, assets=assets
+        )
+
+        if not converge_success:
+            raise RuntimeError(
+                "ICA did not reach any covergence limit. Not producing output."
+            )
+
         np.savetxt("__meica_mix.1D", mmix_orig)
         seldict, comptable, betas, mmix = fitmodels_direct(
             assets.catd,
@@ -426,25 +432,36 @@ def tedana_main():
 
     print("++ Computing T2* map")
     t2s, s0, t2ss, s0s, t2sG, s0G = t2sadmap(
-        assets.catd,
-        mask,
-        assets.tes,
-        masksum,
-        assets=assets
+        assets.catd, mask, assets.tes, masksum, assets=assets
     )
 
     assets.mask = mask
     assets.t2s = assets.t2sG = t2sG
 
     # Optimally combine data
-    assets.OCcatd = create_memmap('_OCcatd', assets.tsshape)
+    assets.OCcatd = create_memmap("_OCcatd", assets.tsshape)
     assets.OCcatd[:] = optcom(assets.catd, assets.t2s, assets.tes, mask)
 
     if options.pre_gscontrol:
-        assets.gsc_catd = create_memmap('_gsc_catd', assets.catd.shape)
+        assets.gsc_catd = create_memmap("_gsc_catd", assets.catd.shape)
         assets.gsc_catd[:] = gscontrol_raw(OCcatd=assets.OCcatd, assets=assets)
 
-    me_decompose(assets)
+    # TODO: Place daw reducing outer-loop here by counting RuntimeExceptions up to
+    # minimum reduced daw ~ 0.5, then do a full fail out
+    assets.kdaw_orig = assets.kdaw
+
+    while assets.kdaw > 0.5:
+        try:
+            print(f"Trying decompositon with kdaw={assets.kdaw}")
+            me_decompose(assets)
+            break
+        except RuntimeError:
+            print(f"No ICA solution found at kdaw={assets.kdaw}.")
+            assets.kdaw = assets.kdaw * (3.0 / 4.0)
+            if assets.kdaw < 0.5:
+                raise RuntimeError(
+                    "No convergence found across any daws>0.5. Failing. Evaluate data carefully."
+                )
 
     writeresults(assets=assets)
 

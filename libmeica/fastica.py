@@ -46,7 +46,7 @@ def is_converging(lim_list, initially=False):
             return False
 
 
-def _ica_par_dyn(X, tol, g, fun_args, max_iter, w_init, n_attempts=10):
+def _ica_par_dyn(X, tol, g, fun_args, max_iter, w_init, n_attempts=5):
     """Dynamic Parallel FastICA.
 
     Aborts and retarts given parameters of convergence
@@ -114,7 +114,19 @@ def _ica_par_dyn(X, tol, g, fun_args, max_iter, w_init, n_attempts=10):
             ConvergenceWarning,
         )
 
-    return W, ii + 1
+    np.savetxt(
+        "convergence_history.1D",
+        np.array(lim_his),
+        fmt="%0.7f",
+        delimiter=" ",
+        header=f"# Converged: {done}   Steps: {ii + 1}",
+    )
+
+    return (
+        W,
+        lim,
+    )  # returning lim is hack to return final tol,
+    #     instead of num_iter which FastICA.transform stores
 
 
 sklearn.decomposition._fastica._ica_par = _ica_par_dyn
