@@ -214,32 +214,21 @@ class SelcompsEncoding(SelcompsBase):
         sr2 = self.countsigFR2
         ss0 = self.countsigFS0
 
-        # import pudb
-        #
-        # pudb.set_trace()
-
         _ex, _em = self.fourier_artifacts_score
         ex = _ex.sum(1)
-        em = _em.flatten()
         er = z_(_ex.max(1)) / z1(_ex.min(1))
 
-        fmin, fmid, _ = getfbounds(self.Ne)  # type: ignore
+        fmin, fmid, fmax = getfbounds(self.Ne)  # type: ignore
         _K_R = K - R
+        # _R_K = R - K
         _sr2_ss0 = sr2 - ss0
 
         zu_KR = zu(_K_R)
+
         zu_sr2_ss0 = zu(sr2 - ss0)
         zu_ex = zu(ex)
         zu_er = zu(er)
         zu05_R = zu(R, 0.5)
-
-        denom_max = np.array(
-            [
-                zu_ex,
-                zu_er,
-                zu05_R,
-            ]
-        ).max(0)
 
         score = Mg(zu_KR, zu_sr2_ss0) / Mg(
             zu_ex,
@@ -247,35 +236,60 @@ class SelcompsEncoding(SelcompsBase):
             zu05_R,
         )
 
-        knob = 50
-
-        min_K = np.min([getelbow2(K, True), np.average(K, weights=1.0 / self.varex)])
-        max_zuex = np.average(zu_ex, weights=R)
-
-        acc_cand = rs[
-            andb([score[rs] > 2, K[rs] > min_K, denom_max[rs] < max_zuex]) == 3
-        ]
-
-        keep = np.union1d(
-            acc_cand[score[acc_cand] > zu_KR[acc_cand]],
-            acc_cand[score[acc_cand] >= getelbow(score, True)],
-        )
-
-        tent = np.setdiff1d(acc_cand, keep)
-        R_thr = np.mean([np.percentile(R[keep], 100 - knob), fmin])
-        ex_thr = np.percentile(ex[keep], knob)
-        score_thr = np.max(
+        K_thr = np.mean(
             [
-                np.min(score[keep]),
-                np.mean([getelbow(score, True), getelbow2(score, True)]),
+                getelbow(K, True),
+                getelbow2(K, True),
+                np.average(K, weights=1.0 / self.varex),
             ]
         )
 
-        eject = tent[
-            andb([R[tent] > R_thr, ex[tent] > ex_thr, score[tent] < score_thr]) == 3
-        ]
+        # Make a good guess of a set of decent components
+        acc_ini = []
 
-        acc = np.setdiff1d(acc_cand, eject)
+        # Scale back from a high estimate
+        score_start = np.max([np.percentile(score, 95) / 10, 7])
+        score_ini_thr = score_start
+        for _s in range(10):
+            score_ini_thr = score_start - _s
+            acc_ini = _n[score > score_ini_thr]
+            if len(acc_ini) > 4 or score_ini_thr <= 2:
+                break
+
+        # Check if a bad initial guess happened and place stopgap
+        if score_ini_thr <= 2 or len(acc_ini) <= 4:
+            score_ini_thr = getelbow(score, True)
+            acc_ini = score > score_ini_thr
+            print(
+                "WARNING Couldn't find a stable initial guess for component selection, results likely wrong. "
+            )
+
+        # Capture the GRAPPA artifact treshold from the good guess
+        zu_nex = zu(-ex)
+        zu_ner = zu(-er)
+        zu_nex_thr = np.min(
+            [2, zu_nex[acc_ini].min()]
+        )  # Note this does not scale like zu_ex, bigger is better!
+        zu_ner_thr = np.min([2, zu_ner[acc_ini].min()])
+
+        # Final selection from a group of rational votes
+        sel_sum = andb(
+            [
+                zu_KR > 2,
+                zu(K) > 2,
+                score > 2,
+                zu_sr2_ss0 > 2,
+                zu_nex >= zu_nex_thr,
+                zu_ner >= zu_ner_thr,
+                K >= K_thr,
+            ]
+        )
+        acc = _n[sel_sum == 7]
+
+        min_score = score[acc].min()
+        print("Minimum score is", min_score)
+
+        eject = []
 
         rs = np.setdiff1d(rs, acc)
         midk = rs[zu(ex[rs]) > 5]
