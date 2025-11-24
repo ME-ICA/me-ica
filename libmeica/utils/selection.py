@@ -110,7 +110,7 @@ def scoreatpercentile(a, per, limit=(), interpolation_method="lower"):
             score = values[int(np.ceil(idx))]
         else:
             raise ValueError(
-                "interpolation_method can only be 'fraction', " "'lower' or 'higher'"
+                "interpolation_method can only be 'fraction', 'lower' or 'higher'"
             )
     return score
 

@@ -6,7 +6,9 @@
 import hashlib
 from functools import cached_property
 from pathlib import Path
+from sys import argv
 from time import time
+
 
 import numpy as np
 from scipy.stats import stats
@@ -16,12 +18,12 @@ from libmeica.utils.selection import (
     dice,
     getelbow,
     getelbow2,
-    getelbow3,
     getfbounds,
 )
 
-from .selcomps_base import SelcompsBase, _u
+from .selcomps_base import SelcompsBase
 from .utils.artifact import score_fourier_artifact_count
+from .utils.filter import rankvec
 
 ACORR_NEG_COUNT_FILE = "acorr_neg_count_file.1D"
 ENCODING_FSPACE_FILE = "encoding_fspace.1D"
@@ -218,6 +220,11 @@ class SelcompsEncoding(SelcompsBase):
         ex = _ex.sum(1)
         er = z_(_ex.max(1)) / z1(_ex.min(1))
 
+        if "DEBUG" in argv:
+            import pudb
+
+            pudb.set_trace()
+
         fmin, fmid, fmax = getfbounds(self.Ne)  # type: ignore
         _K_R = K - R
         # _R_K = R - K
@@ -244,52 +251,89 @@ class SelcompsEncoding(SelcompsBase):
             ]
         )
 
+        R_thrs = [
+            # getelbow(R, True),
+            np.average(R, weights=1.0 / self.varex),
+            np.average(R, weights=1.0 / K),
+            np.average(R[rej], weights=1.0 / R[rej]),
+        ]
+        R_thr = np.mean(R_thrs)
+
         # Make a good guess of a set of decent components
         acc_ini = []
 
-        # Scale back from a high estimate
+        # Guess how many good components there are
+        est_n_good = (
+            andb([K[rs] > getelbow2(K, True), zu_ex[rs] < 3, R[rs] < R_thr]) == 3
+        ).sum()
+
+        # Make an initial guess of a medium score
         score_start = np.max([np.percentile(score, 95) / 10, 7])
         score_ini_thr = score_start
-        for _s in range(10):
-            score_ini_thr = score_start - _s
-            acc_ini = _n[score > score_ini_thr]
-            if len(acc_ini) > 4 or score_ini_thr <= 2:
+        for _s in range(100):
+            score_ini_thr = score_start - _s / 10
+            acc_ini = rs[score[rs] > score_ini_thr]
+            # acc_ini = acc_ini[R[acc_ini] < R_thr]
+            if len(acc_ini) > est_n_good / 2:
                 break
 
-        # Check if a bad initial guess happened and place stopgap
-        if score_ini_thr <= 2 or len(acc_ini) <= 4:
-            score_ini_thr = getelbow(score, True)
+        # Check if a initial guess was bad and place stopgap
+        if score_ini_thr < 1 or len(acc_ini) <= 4:
+            score_ini_thr = 3  # getelbow(score, True)
             acc_ini = score > score_ini_thr
             print(
                 "WARNING Couldn't find a stable initial guess for component selection, results likely wrong. "
             )
 
-        # Capture the GRAPPA artifact treshold from the good guess
+        # Estimate the ex thr (GRAPPA artifact) from the iniital guess
         zu_nex = zu(-ex)
         zu_ner = zu(-er)
         zu_nex_thr = np.min(
             [2, zu_nex[acc_ini].min()]
         )  # Note this does not scale like zu_ex, bigger is better!
-        zu_ner_thr = np.min([2, zu_ner[acc_ini].min()])
+        zu_ner_thr = np.min([zu_nex_thr / 2, zu_ner[acc_ini].min() / 2])
 
         # Final selection from a group of rational votes
         sel_sum = andb(
             [
                 zu_KR > 2,
                 zu(K) > 2,
-                score > 2,
                 zu_sr2_ss0 > 2,
-                zu_nex >= zu_nex_thr,
-                zu_ner >= zu_ner_thr,
                 K >= K_thr,
+                # Dynamic bounds
+                score > 2,
+                zu_nex >= zu_nex_thr,
+                zu_ner > zu_ner_thr,
+                # Hard lower bounds
+                zu_nex >= np.min([zu_nex_thr, 1]),
+                zu_ner > 0,
             ]
         )
-        acc = _n[sel_sum == 7]
+
+        if score_ini_thr < 5 and est_n_good > 20:
+            acc_wR = np.intersect1d(_n[sel_sum >= 7], rs)
+            print(
+                "Warning! Found high mixed artifact effect or nigh neural load and low artifact load, falling back to conservative component selection."
+            )
+        else:
+            acc_wR = np.intersect1d(_n[sel_sum == 9], rs)
+
+        # Heuristic exclusion of "high" R comps to ignore values on their MAD
+        eject = acc_wR[
+            andb(
+                [
+                    rankvec(R[acc_wR]) - rankvec(zu_KR[acc_wR]) > est_n_good / 2,
+                    R[acc_wR] > R_thr,
+                    zu(R[acc_wR]) > 6,
+                ]
+            )
+            == 3
+        ]
+
+        acc = np.setdiff1d(acc_wR, eject)
 
         min_score = score[acc].min()
         print("Minimum score is", min_score)
-
-        eject = []
 
         rs = np.setdiff1d(rs, acc)
         midk = rs[zu(ex[rs]) > 5]

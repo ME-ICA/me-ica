@@ -1,5 +1,3 @@
-from typing import Union
-
 import nibabel as nib
 import numpy as np
 
@@ -177,66 +175,3 @@ def is_tedlike(tedarr: np.ndarray) -> bool:
     if len(tedarr.shape) == 4 and tedarr.shape[3] >= 9:  # TODO: Change 9 to Constant
         return True
     return False
-
-
-def place3d(
-    src_box,
-    src_anchor,
-    tgt_box,
-    tgt_anchor,
-    *,
-    sourceval: Union[int, float, None] = None,
-    inplace=False,
-    add=False,
-):
-    assert np.min(src_anchor) >= 0
-    assert np.min(tgt_anchor) >= 0
-
-    src_anchor = np.round(src_anchor)
-    tgt_anchor = np.round(tgt_anchor)
-
-    tgt_box_shape = tgt_box.shape
-    if not inplace and not add:
-        tgt_box = np.zeros(tgt_box_shape)
-
-    src_shape = src_box.shape
-
-    start_source = -src_anchor  # think of src_anchor like cmass
-    end_source = start_source + src_shape
-
-    start_target = tgt_anchor - src_anchor
-    # tgt_anchor + src_shape - src_anchor, switching order for type sanity
-    end_target = -src_anchor + tgt_anchor + src_shape
-
-    adj_start_target = np.max([[0, 0, 0], start_target], axis=0)
-    adj_end_target = np.min([tgt_box_shape, end_target], axis=0)
-
-    start_adj = adj_start_target - start_target
-    end_adj = adj_end_target - end_target
-
-    start_source_adj = start_source + start_adj
-    end_source_adj = end_source + end_adj
-
-    start_source_abs = start_source_adj + src_anchor
-    end_source_abs = end_source_adj + src_anchor
-
-    _sp = start_source_abs.astype(int)
-    _ep = end_source_abs.astype(int)
-    _sr = adj_start_target.astype(int)
-    _er = adj_end_target.astype(int)
-
-    if sourceval is not None:
-        _src_box = np.array(src_box != 0)
-        _src_box[src_box != 0] = sourceval
-        src_box = _src_box
-
-    toplace = src_box[_sp[0] : _ep[0], _sp[1] : _ep[1], _sp[2] : _ep[2]]  # noqa # type: ignore
-
-    if add:
-        tgt_box[_sr[0] : _er[0], _sr[1] : _er[1], _sr[2] : _er[2]] = (  # noqa
-            tgt_box[_sr[0] : _er[0], _sr[1] : _er[1], _sr[2] : _er[2]] + toplace  # noqa
-        )
-    else:
-        tgt_box[_sr[0] : _er[0], _sr[1] : _er[1], _sr[2] : _er[2]] = toplace  # noqa
-
-    return tgt_box

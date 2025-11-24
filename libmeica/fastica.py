@@ -46,7 +46,7 @@ def is_converging(lim_list, initially=False):
             return False
 
 
-def _ica_par_dyn(X, tol, g, fun_args, max_iter, w_init, n_attempts=5):
+def _ica_par_dyn(X, tol, g, fun_args, max_iter, w_init, n_attempts=2):
     """Dynamic Parallel FastICA.
 
     Aborts and retarts given parameters of convergence

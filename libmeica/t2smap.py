@@ -26,12 +26,13 @@ import nibabel as nib
 import numpy as np
 import scipy.stats as stats
 
-if "DEBUG" in argv:
-    import ipdb
-
-    debug_mode = True
-else:
-    debug_mode = False
+# if "DEBUG" in argv:
+#     import ipdb
+#
+#     debug_mode = True
+# else:
+#     debug_mode = False
+debug_mode = False
 
 
 def scoreatpercentile(a, per, limit=(), interpolation_method="lower"):

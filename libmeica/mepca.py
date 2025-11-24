@@ -11,35 +11,6 @@ from .utils.volume import eimask, fmask, makemask, unmask
 from .utils.filter import rankvec
 
 
-def min_dFdV(ctpca, krsel=1):
-    """
-    In this function we maximimze the L1 norm of the
-    derivative of variance versus TE-dependence, i.e.
-    F s.t. max(|dV/dF|_1), so essentially an
-    "L1 derivative", which is done in signal processesing
-    for tasks such as edge detection.
-    """
-    # import pudb
-    #
-    # pudb.set_trace()
-    assert krsel in [1, 2]
-    ctpca_v = ctpca[ctpca[:, 3].argsort()[::-1], :]
-    kr = np.log(ctpca[:, krsel])
-    nstep = kr.max() / 0.01
-    # kr_min = getelbow2(kr, True)
-    kr_min = kr.min()
-    ls_dF = np.linspace(kr_min, kr.max(), int(nstep))
-    assert ls_dF.max() == kr.max()
-    ndFdV0 = []
-    for _i, _F in enumerate(ls_dF):
-        # kapaps
-        plsel = (ctpca_v[:, krsel] > np.exp(_F)).astype(int)
-        sel_grad = np.gradient(plsel)
-        ndFdV0.append(np.count_nonzero(sel_grad))
-    F_thr = np.exp(np.array(ls_dF)[np.argmax(ndFdV0)])
-    return F_thr
-
-
 def skew_positive(x, alpha=0.5, n=None):
     """
     Smoothly boost positive values of x.
@@ -140,12 +111,6 @@ def tedpca(
     dz = ((d.T - d.T.mean(0)) / d.T.std(0)).T  # Variance normalize timeseries
     dz = (dz - dz.mean()) / dz.std()  # Variance normalize everything
 
-    # if wvpca:
-    #       import ipdb
-    #       ipdb.set_trace()
-    #       print "++Transforming time series from time domain to wavelet domain."
-    #       dz,cAl = dwtmat(dz)
-
     pcastate_fn = "pcastate.pklgz"
 
     if not os.path.exists(pcastate_fn):
@@ -186,14 +151,11 @@ def tedpca(
 
         # Compute K and Rho for PCA comps
 
-        # ipdb.set_trace()
-
         eimum = np.atleast_2d(eim)
         eimum = np.transpose(eimum, np.argsort(np.atleast_2d(eim).shape)[::-1])
         eimum = np.array(np.squeeze(unmask(eimum.prod(1), assets.mask)), dtype=bool)
         vTmix = v.T
         vTmixN = ((vTmix.T - vTmix.T.mean(0)) / vTmix.T.std(0)).T
-        # ctb,KRd,betasv,v_T = fitmodels2(catd,v.T,eimum,t2s,tes,mmixN=vTmixN)
 
         ctb, betasv, v_T = fitmodels_pca(
             catd,
@@ -240,31 +202,12 @@ def tedpca(
     np.savetxt("comp_table_pca.txt", ctb[ctb[:, 1].argsort(), :][::-1])
     np.savetxt("mepca_mix.1D", v[ctb[:, 1].argsort()[::-1], :].T)
 
-    # Select a high dimensionli subspace
-    # fmin, fmid, fmax = getfbounds(ne)
-    # kappa_elbow = getelbow(ctb[:, 1], True)
-    # kappa_thr_det = min_dFdV(ctb)
-    # kmin = ctb[:, 1].min()
-    # kappa_thr = np.average(
-    #     sorted([kappa_thr_det, kmin, kappa_elbow]),
-    #     weights=(assets.kdaw, 1, 1),  # type: ignore
-    # )
-
-    # import pudb
-    #
-    # pudb.set_trace()
-
-    # Experiment:  may dump all of above
     _K = ctb[:, 1]
     _R = ctb[:, 2]
     _V = ctb[:, 3]
 
     kappa_thr = KR_V_thr(_K, _V, assets.kdaw)
     pcsel_kappa = _K > kappa_thr
-    # For short datasets
-    # if np.sum(pcsel_kappa) < 75 and getelbow2(_K, True) < kappa_thr:
-    #     kappa_thr = np.mean([getelbow2(_K, True), kappa_thr])
-    # pcsel_kappa = _K > kappa_thr
 
     KR_V_thr_test(_K, _V)
 
@@ -275,22 +218,6 @@ def tedpca(
 
     # Final pc selection
     pcsel = andb([pcsel_kappa, pcsel_rho, pcsel_var]) > 0
-
-    # pcsel_kappa = ctb[:, 1] > kappa_thr
-    #
-    # rho_thr_det = min_dFdV(ctb, 2)
-    # rho_elbow = getelbow(ctb[:, 2], True)
-    # rmin = ctb[:, 2].min()
-    # rho_thr = np.average(
-    #     sorted([rho_thr_det, rmin, rho_elbow]),
-    #     weights=(assets.rdaw, 1, 1),  # type: ignore
-    # )
-    #
-    # rho_thr = np.average(ctb[:, 2], weights=ctb[:, 3] ** (1.0 / assets.rdaw))
-    # pcsel_rho = ctb[:, 2] > rho_thr
-
-    # Make sure we keep top-most variance PCs
-    # import pudb; pudb.set_trace()
 
     dd = u.dot(np.diag(s * np.array(pcsel, dtype=int))).dot(v)
 
