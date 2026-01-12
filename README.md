@@ -28,7 +28,7 @@ meica.py and tedana.py have a number of options which you can view using the -h 
 
 **NOTE**
 - ***meica.py* (and this codebase) can be *saved to any directory* or be on the path**
-- ***meica.py* must be *called from inside the data directory*, which will also be where results are stored*** 
+- ***meica.py* must be *called from inside the data directory*, which will also be where results are stored** 
 
 For example:
 
@@ -61,17 +61,15 @@ See `meica.py -h` for handling other situations such as: no BIDS headers, anatom
 
 Assuming use of `-prefix sub1_rest`,
 
-- `./meica.rest1_e1/` : contains preprocessing intermediate files. Click [here](http://wiki.org/meica_preprocessing.html) for detailed listing.
+- `./meica.rest1_e1/` : contains preprocessing intermediate files.
 - `sub1_rest_medn.nii.gz` : 'Denoised' BOLD time series after: basic preprocessing, T2* weighted averaging of echoes (i.e. 'optimal combination'), ICA denoising. Use this dataset for task analysis and resting state time series correlation analysis. See [here](http://wiki.org/viewing_results.html#dof) for information on degrees of freedom in denoised data.
 - `sub1_rest_tsoc.nii.gz` : 'Raw' BOLD time series dataset after: basic preprocessing and T2* weighted averaging of echoes (i.e. 'optimal combination'). 'Standard' denoising or task analyses can be assessed on this dataset (e.g. motion regression, physio correction, scrubbing, blah...) for comparison to ME-ICA denoising.
 - `sub1_rest_mefc.nii.gz` : Component maps (in units of \delta S) of accepted BOLD ICA components. Use this dataset for ME-ICR seed-based connectivity analysis.
 - `sub1_rest_mefl.nii.gz` : Component maps (in units of \delta S) of ALL ICA components.
-- `sub1_rest_ctab.nii.gz` : Table of component Kappa, Rho, and variance explained values, plus listing of component classifications. See [here](http://wiki.org/viewing_results.html#kappa_spectra) for more info.
-
-For a step-by-step guide on how to assess ME-ICA results in more detail, click [here](http://wiki.org/viewing_results.html)
+- `sub1_rest_ctab.nii.gz` : Table of component Kappa, Rho, and variance explained values, plus listing of component classifications.
 
 # Some Notes
 
 - Make sure your datasets have slice timing information in the header. If slice timing information is in BIDS headers, specify a `--tpattern bids` option to `meica.py`. Check AFNI documentation of [3dTshift](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dTshift.html) to see slice timing codes.
-- For more info on T2* weighted anatomical-functional coregistration click [here](http://wiki.org/meica_alignp_mepi_anat.html)
+- For more info on T2* weighted anatomical-functional coregistration click [here](https://pmc.ncbi.nlm.nih.gov/articles/PMC6319659/pdf/nihms-1001520.pdf)
 - FWHM smoothing is not recommended. tSNR boost is provided by optimal combination of echoes. For better overlap of 'blobs' across subjects, use non-linear standard space normalization instead with `meica.py ... --qwarp`
