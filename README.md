@@ -26,9 +26,23 @@ Anatomical is:		mprage.nii.gz
 
 meica.py and tedana.py have a number of options which you can view using the -h flag. 
 
-Here's an example use:
+**NOTE**
+- ***meica.py* (and this codebase) can be *saved to any directory* or be on the path**
+- ***meica.py* must be *called from inside the data directory*, which will also be where results are stored*** 
 
-    meica.py -d rest1_e1.nii.gz rest1_e2.nii.gz rest1_e3.nii.gz  -a mprage.nii --MNI --prefix sub1_rest
+For example:
+
+```bash
+cd /path/to/data
+/path/to/meica.py -d rest1_e1.nii.gz rest1_e2.nii.gz rest1_e3.nii.gz  -a mprage.nii --MNI --prefix sub1_rest
+```
+
+or
+
+```bash
+cd /path/to/data
+/path/to/meica.py -d task1_e*.nii.gz
+```
 
 This means:
 
@@ -41,14 +55,11 @@ N.B.
 - Now a simple space separated list of datasets is supported, no quotes needed. 
 - Assuming BIDS .json files are in the folder, TEs are read from the BIDS headers, making usage much easier
 
-Other options:
-    -e 15,30,45   are the echo times in milliseconds
-
-Again, see `meica.py -h` for handling other situations such as: anatomical with no skull, no anatomical at all, applying FWHM smoothing, non-linear warp to standard space, etc.
-
-Click [here](http://wiki.org/group_analysis.html) more info on group analysis.
+See `meica.py -h` for handling other situations such as: no BIDS headers, anatomical with no skull, no anatomical at all, non-linear warp to standard space, etc.
 
 ## Output
+
+Assuming use of `-prefix sub1_rest`,
 
 - `./meica.rest1_e1/` : contains preprocessing intermediate files. Click [here](http://wiki.org/meica_preprocessing.html) for detailed listing.
 - `sub1_rest_medn.nii.gz` : 'Denoised' BOLD time series after: basic preprocessing, T2* weighted averaging of echoes (i.e. 'optimal combination'), ICA denoising. Use this dataset for task analysis and resting state time series correlation analysis. See [here](http://wiki.org/viewing_results.html#dof) for information on degrees of freedom in denoised data.
@@ -59,7 +70,7 @@ Click [here](http://wiki.org/group_analysis.html) more info on group analysis.
 
 For a step-by-step guide on how to assess ME-ICA results in more detail, click [here](http://wiki.org/viewing_results.html)
 
-#Some Notes
+# Some Notes
 
 - Make sure your datasets have slice timing information in the header. If slice timing information is in BIDS headers, specify a `--tpattern bids` option to `meica.py`. Check AFNI documentation of [3dTshift](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dTshift.html) to see slice timing codes.
 - For more info on T2* weighted anatomical-functional coregistration click [here](http://wiki.org/meica_alignp_mepi_anat.html)
