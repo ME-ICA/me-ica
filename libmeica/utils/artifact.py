@@ -7,7 +7,7 @@ import numpy as np
 from .filter import gradmask, localfwhm_afni
 
 
-def score_fourier_artifact_count(ted, head, aff):
+def score_fourier_artifact_count(ted, head, aff, prefix=""):
     psc = ted[..., 0]
     maskvol = psc != 0
     fwhm = localfwhm_afni(
@@ -16,22 +16,23 @@ def score_fourier_artifact_count(ted, head, aff):
         header=head,
         affine=aff,
         domask=False,
-        rmoutfile=False,
+        prefix=prefix,
+        # rmoutfile=True,
     )
     fwhm_sel = fwhm == -1
     fwhm_count = fwhm_sel.sum(0).sum(0).sum(0)
 
-    sel_any = fwhm_sel.sum(3)
+    fwhm_max = fwhm.max(-1)
+    fwhm_min = fwhm.min(-1)
+    psc[psc < 0] = 0
 
-    mag = np.abs(psc)
-    sig = np.abs(ted[..., 3])
-    sig[sig < 1] = 1
+    ign = fwhm_min == -1
+    fwhm_psc = np.average(fwhm_max[~ign], weights=psc[~ign] ** 2.0)
+    fwhm_fr2 = np.average(fwhm_max[~ign], weights=ted[..., 1][~ign] ** 2.0)
+    fwhm_fs0 = np.average(fwhm_max[~ign], weights=ted[..., 2][~ign] ** 2.0)
 
-    frac_power = (sel_any * mag * sig).sum() / mag.sum()
-
-    # fwhm_mean = np.average(np.abs(psc) ** 2, weights=sel_any) ** 1.0 / 2
-
-    return fwhm_count, frac_power
+    fwhm_sig = np.array([fwhm_psc, fwhm_fr2, fwhm_fs0])
+    return fwhm_count, fwhm_sig
 
 
 def score_fourier_artifact(ted, head, aff):
