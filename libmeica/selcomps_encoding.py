@@ -285,7 +285,7 @@ class SelcompsEncoding(SelcompsBase):
             K_thr_safe, K_thr_agg  = np.percentile(K_thrs, [50,75], method='linear')
 
         # High Rho dataset
-        if getelbow2(R, True) > getelbow2(K, True):  
+        if getelbow2(R, True) > 1.5 * fmin:  
             high_rho = True
         R_thr = np.min([np.mean([getelbow(R, True), getelbow2(R,True)]), 1.5*fmin])
 
