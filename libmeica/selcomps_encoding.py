@@ -377,7 +377,8 @@ class SelcompsEncoding(SelcompsBase):
         print("Minimum score is", min_score)
 
         rs = np.setdiff1d(rs, acc)
-        midk = rs[zu_ex[rs] > 5]
+        eject_ex_midk = np.setdiff1d(eject_ex, acc)
+        midk = np.union1d(rs[zu_ex[rs] > 5], eject_ex_midk)
 
         ign = np.setdiff1d(rs, midk)
 
@@ -385,9 +386,9 @@ class SelcompsEncoding(SelcompsBase):
         markers = np.ones(self.nc) * 9
         markers[acc] = 1
         markers[rej] = 0
-        markers[midk] = -1
         markers[ign] = 3
         markers[eject] = 2
+        markers[midk] = -1
 
         _gt = self.ground_truth()
 

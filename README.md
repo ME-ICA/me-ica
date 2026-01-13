@@ -2,31 +2,25 @@
 
 # Installation
 
-For a simple install on Linux, open a terminal, `cd` to a directory of your choosing (e.g. `$HOME`), and clone this repository. 
+For a simple install on Linux, open a terminal, set an install directory and run the installer
 
 ```bash
-cd $HOME
-git clone -b 3.9.7-gpl --single-branch https://github.com/ME-ICA/me-ica me-ica-3.9.7
+INSTALLDIR=$HOME
+curl -LO https://raw.githubusercontent.com/ME-ICA/me-ica/3.9.7-gpl/install.sh
+bash install.sh $INSTALLDIR
 ```
 
-Run the installer, specifying the installation directory (e.g. could be `$HOME` or `~/bin`).
-
-```bash
-INSTALLATION_DIR=$HOME
-bash $HOME/me-ica-3.9.7/install.sh $INSTALLATION_DIR
-```
-
-You must already have AFNI installed and available on the path (e.g. try executing `to3d` on the command line).
+This installs all Python and AFNI dependencies to an independent directory. This installer does not require admin rights to run and does not interfere with existing Python environments.
 
 # Usage
 
-Start by activating the environment. Assuming your INSTALLATION_DIR was $HOME
+Start by activating the environment.
 
 ```bash
 source ~/activate_meica
 ```
 
-You can then call `meica.py` from any location.
+You can then call `meica.py` from any data directory.
 
 If ME-fMRI data are called: 		rest_e1.nii.gz rest_e2.nii.gz rest_e3.nii.gz, etc. 
 Anatomical is:		mprage.nii.gz
@@ -58,7 +52,6 @@ cd /path/to/data
 meica.py -d task1_e*.nii.gz
 ```
 
-
 N.B. 
 - Now a simple space separated list of datasets is supported, no quotes needed as was the case in previous versions. 
 - Assuming BIDS .json files are in the folder, TEs are read from the BIDS headers, making usage much easier
@@ -70,12 +63,15 @@ See `meica.py -h` for handling other situations such as: no BIDS headers, anatom
 
 Assuming use of `-prefix sub1_rest`,
 
-- `./meica.rest1_e1/` : contains preprocessing intermediate files.
+- `sub1_rest_ctab.txt` : Table of component Kappa, Rho, and variance explained values, plus listing of component classifications.
+- `sub1_rest_mefl.nii.gz` : Component maps (in units of \delta S) of ALL ICA components.
+
+Examining accepted components in _ctab.txt and component maps in _mefl.nii.gz (using AFNI or FSL) is key to determining component selection effectiveness.
+
 - `sub1_rest_medn.nii.gz` : 'Denoised' BOLD time series after: basic preprocessing, T2* weighted averaging of echoes (i.e. 'optimal combination'), ICA denoising. Use this dataset for task analysis and resting state time series correlation analysis. See [here](http://wiki.org/viewing_results.html#dof) for information on degrees of freedom in denoised data.
 - `sub1_rest_tsoc.nii.gz` : 'Raw' BOLD time series dataset after: basic preprocessing and T2* weighted averaging of echoes (i.e. 'optimal combination'). 'Standard' denoising or task analyses can be assessed on this dataset (e.g. motion regression, physio correction, scrubbing, blah...) for comparison to ME-ICA denoising.
 - `sub1_rest_mefc.nii.gz` : Component maps (in units of \delta S) of accepted BOLD ICA components. Use this dataset for ME-ICR seed-based connectivity analysis.
-- `sub1_rest_mefl.nii.gz` : Component maps (in units of \delta S) of ALL ICA components.
-- `sub1_rest_ctab.nii.gz` : Table of component Kappa, Rho, and variance explained values, plus listing of component classifications.
+- `./meica.rest1_e1/` : contains preprocessing intermediate files.
 
 # Some Notes
 
