@@ -4,9 +4,10 @@
 # Dependencies
 
 1. AFNI
-2. Python 3.9
+2. Python >3.9
 3. numpy
 4. scipy
+5. scikit-learn
 
 
 # Installation
@@ -15,9 +16,9 @@ Install Python and other dependencies. If you have AFNI installed and on your pa
 
 # Important Files and Directories
 
-- `meica.py` : a master script that performs preprocessing and calls the ICA/TE-dependence analysis script `lib_tedana.py`
+- `meica.py` : a master script that performs preprocessing and calls the ICA/TE-dependence analysis script `tedana.py`
 - `libmeica` : a folder that includes utility functions for TE-dependence analysis for denoising and anatomical-functional co-registration
-- `tedana.py` : performs ICA and TE-dependence calculations
+- `tedana.py` : performs ICA and TE-dependence calculations (the meica.py version)
 
 # Usage
 
