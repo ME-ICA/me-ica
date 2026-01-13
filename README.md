@@ -22,16 +22,15 @@ source ~/activate_meica
 
 You can then call `meica.py` from any data directory.
 
-If ME-fMRI data are called: 		rest_e1.nii.gz rest_e2.nii.gz rest_e3.nii.gz, etc. 
-Anatomical is:		mprage.nii.gz
-
-meica.py has a number of options which you can view using the -h flag. 
-
 **NOTE**
-- ***meica.py* (and this codebase) can be *installed to any directory* or be on the path**
-- ***meica.py* must be *called from inside the data directory*, which will also be where results are stored** 
+- ***meica.py* must be *called from inside a data directory*, which will also be where results are stored** 
+
+meica.py has many options which you can view using the -h flag. 
 
 For example:
+
+If ME-fMRI data are called: 		rest_e1.nii.gz rest_e2.nii.gz rest_e3.nii.gz, etc. 
+Anatomical is:		mprage.nii.gz
 
 ```bash
 cd /path/to/data
@@ -45,7 +44,7 @@ This means:
     --MNI   warp anatomical to MNI space using a built-in high-resolution MNI template. 
    	--prefix sub1_rest   prefix for final functional output datasets, i.e. sub1_rest_....nii.gz
 
-If you just want to analyze an ME-fMRI without an anatomical, do
+If you just want to analyze an ME-fMRI run without an anatomical, try something like
 
 ```bash
 cd /path/to/data
@@ -68,7 +67,7 @@ Assuming use of `-prefix sub1_rest`,
 
 Examining accepted components in _ctab.txt and component maps in _mefl.nii.gz (using AFNI or FSL) is key to determining component selection effectiveness.
 
-- `sub1_rest_medn.nii.gz` : 'Denoised' BOLD time series after: basic preprocessing, T2* weighted averaging of echoes (i.e. 'optimal combination'), ICA denoising. Use this dataset for task analysis and resting state time series correlation analysis. See [here](http://wiki.org/viewing_results.html#dof) for information on degrees of freedom in denoised data.
+- `sub1_rest_medn.nii.gz` : 'Denoised' BOLD time series after: basic preprocessing, T2* weighted averaging of echoes (i.e. 'optimal combination'), ICA denoising. Use this dataset for task analysis and resting state time series correlation analysis. See [here](https://www.pnas.org/doi/abs/10.1073/pnas.1301725110) for information on degrees of freedom in denoised data.
 - `sub1_rest_tsoc.nii.gz` : 'Raw' BOLD time series dataset after: basic preprocessing and T2* weighted averaging of echoes (i.e. 'optimal combination'). 'Standard' denoising or task analyses can be assessed on this dataset (e.g. motion regression, physio correction, scrubbing, blah...) for comparison to ME-ICA denoising.
 - `sub1_rest_mefc.nii.gz` : Component maps (in units of \delta S) of accepted BOLD ICA components. Use this dataset for ME-ICR seed-based connectivity analysis.
 - `./meica.rest1_e1/` : contains preprocessing intermediate files.
