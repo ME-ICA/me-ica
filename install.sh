@@ -18,6 +18,11 @@ mkdir -p "$INSTALLDIR"
 cd "$INSTALLDIR"
 
 # -------------------------
+# Clone repo
+# -------------------------
+git clone -b ${MEICA_VERSION}-gpl --single-branch https://github.com/ME-ICA/me-ica.git me-ica-${MEICA_VERSION}
+
+# -------------------------
 # Install micromamba locally
 # -------------------------
 mkdir -p "$INSTALLDIR/micromamba"
