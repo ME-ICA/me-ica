@@ -63,6 +63,16 @@ export PATH="$INSTALLDIR/micromamba/bin:\$PATH"
 eval "\$(micromamba shell hook --shell bash)"
 micromamba activate meicapy
 export PATH="$INSTALLDIR/me-ica-${MEICA_VERSION}/:\$PATH"
+deactivate() {
+  while [ "${CONDA_SHLVL:-0}" -gt 0 ]; do
+    micromamba deactivate
+  done
+}
+echo "Welcome to the ME-ICA environment"
+echo "To use (from the data directory!):"
+echo "  meica.py -h"
+echo "To exit:"
+echo "  deactivate"
 EOF
 
 echo
@@ -71,7 +81,15 @@ echo "To begin using ME-ICA:"
 echo "  source ~/activate_meica"
 echo "For help:"
 echo "  meica.py -h"
-echo "To analyze data,"
+echo "To analyze data:"
 echo "  cd to_datadir"
 echo "  meica.py -d data1_e*nii.gz"
+echo "To deactivate environment:"
+echo "  deactivate"
 
+deactivate() {
+  while [ "${CONDA_SHLVL:-0}" -gt 0 ]; do
+    micromamba deactivate
+  done
+}
+deactivate

@@ -360,7 +360,7 @@ class SelcompsEncoding(SelcompsBase):
         
         # Remove large included artifacts after tail inclusion
         eject_score_thr = np.mean([getelbow(score,True), np.percentile(score[acc_a], 33)])
-        high_varex_thr = np.mean(self.varex[acc_a])
+        high_varex_thr = np.percentile(self.varex[acc_a], 80)
         eject_quality = acc_b[andb([score[acc_b]<eject_score_thr, R[acc_b]>R_thr, self.varex[acc_b]>high_varex_thr])>=2]
         
         # Combine ejects
