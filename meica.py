@@ -98,6 +98,9 @@ def parse_bids_tes(datasets):
             sys.exit(10)
     return tes
 
+if len(sys.argv) == 1:
+    dep_check()
+    exit()
 
 outprefix = options.prefix
 
