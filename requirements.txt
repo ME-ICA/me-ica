@@ -3,4 +3,5 @@ numpy==1.26.4
 scipy==1.13.1
 scikit-learn==1.5.1
 nibabel==5.3.2
+pudb
 

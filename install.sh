@@ -14,6 +14,7 @@ fi
 # -------------------------
 # Setup directories
 # -------------------------
+STARTDIR=`pwd`
 mkdir -p "$INSTALLDIR"
 cd "$INSTALLDIR"
 
@@ -47,12 +48,12 @@ micromamba activate meicapy
 # -------------------------
 # Install dependencies
 # -------------------------
-pip install -r "$INSTALLDIR/me-ica-${MEICA_VERSION}/requirements.txt"
+pip install -r "$STARTDIR/$INSTALLDIR/me-ica-${MEICA_VERSION}/requirements.txt"
 
 # -------------------------
 # Test install
 # -------------------------
-"$INSTALLDIR/me-ica-${MEICA_VERSION}/meica.py"
+"$STARTDIR/$INSTALLDIR/me-ica-${MEICA_VERSION}/meica.py"
 
 # -------------------------
 # Create activation helper

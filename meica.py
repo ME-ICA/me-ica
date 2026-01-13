@@ -944,12 +944,9 @@ tedanapath = "tedana.py"
 #     tedanapath = "lib_tedana.py"
 
 logcomment("Perform TE-dependence analysis (takes a good while)", level=1)
-interactive_flag = ""
-if "IPYTHON" in args:
-    interactive_flag = " -i -- "
-sl.append(
-    "%s%s %s %s -e %s  -d %s --sourceTEs=%s --kdaw=%s --rdaw=%s --initcost=%s --finalcost=%s --post_gscontrol --pre_gscontrol --conv=2.5e-5 %s %s %s"
-    % (
+interactive_flag = ""  #deprecated
+
+tedcall = "%s%s %s %s -e %s  -d %s --sourceTEs=%s --kdaw=%s --rdaw=%s --initcost=%s --finalcost=%s --post_gscontrol --pre_gscontrol --conv=2.5e-5 %s %s %s" % (
         tedflag,
         sys.executable,
         interactive_flag,
@@ -965,7 +962,12 @@ sl.append(
         ted_spms_setting,
         options.ted_args,
     )
-)
+
+tedcall_debug_cs = tedcall + ' --mix=meica_mix.1D DEBUG'
+sl.append(f"echo {tedcall_debug_cs} > debug_component_selection.sh" )
+
+sl.append(tedcall)
+
 if outprefix == "":
     outprefix = setname
 

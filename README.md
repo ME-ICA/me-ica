@@ -10,7 +10,7 @@ curl -LO https://raw.githubusercontent.com/ME-ICA/me-ica/3.9.7-gpl/install.sh
 bash install.sh $INSTALLDIR
 ```
 
-This installs all Python and AFNI dependencies to an independent directory. This installer does not require admin rights to run and does not interfere with existing Python environments.
+This installs all Python dependencies to an independent directory. This installer does not require admin rights to run and does not interfere with existing Python environments. The standard AFNI distribution needs to be installed and available on your path. 
 
 # Usage
 
@@ -34,14 +34,14 @@ Anatomical is:		mprage.nii.gz
 
 ```bash
 cd /path/to/data
-meica.py -d rest1_e1.nii.gz rest1_e2.nii.gz rest1_e3.nii.gz  -a mprage.nii --MNI --prefix sub1_rest
+meica.py -d rest1_e1.nii.gz rest1_e2.nii.gz rest1_e3.nii.gz -a mprage.nii --para_echo --prefix sub1_rest
 ```
 
 This means:
 
     -d rest_e1.nii.gz rest_e2...   are the 4-D time series datasets (space separated list) from a multi-echo fMRI acqusition
     -a ...   is a "raw" mprage with a skull
-    --MNI   warp anatomical to MNI space using a built-in high-resolution MNI template. 
+    --para_echo  preprocess echo datasets in parallel for speed
    	--prefix sub1_rest   prefix for final functional output datasets, i.e. sub1_rest_....nii.gz
 
 If you just want to analyze an ME-fMRI run without an anatomical, try something like
@@ -63,14 +63,20 @@ See `meica.py -h` for handling other situations such as: no BIDS headers, anatom
 Assuming use of `-prefix sub1_rest`,
 
 - `sub1_rest_ctab.txt` : Table of component Kappa, Rho, and variance explained values, plus listing of component classifications.
-- `sub1_rest_mefl.nii.gz` : Component maps (in units of \delta S) of ALL ICA components.
+- `sub1_rest_mefl_nat.nii.gz` : Component maps (in units of \delta S) of ALL ICA components.
 
 Examining accepted components in _ctab.txt and component maps in _mefl.nii.gz (using AFNI or FSL) is key to determining component selection effectiveness.
 
-- `sub1_rest_medn.nii.gz` : 'Denoised' BOLD time series after: basic preprocessing, T2* weighted averaging of echoes (i.e. 'optimal combination'), ICA denoising. Use this dataset for task analysis and resting state time series correlation analysis. See [here](https://www.pnas.org/doi/abs/10.1073/pnas.1301725110) for information on degrees of freedom in denoised data.
-- `sub1_rest_tsoc.nii.gz` : 'Raw' BOLD time series dataset after: basic preprocessing and T2* weighted averaging of echoes (i.e. 'optimal combination'). 'Standard' denoising or task analyses can be assessed on this dataset (e.g. motion regression, physio correction, scrubbing, blah...) for comparison to ME-ICA denoising.
-- `sub1_rest_mefc.nii.gz` : Component maps (in units of \delta S) of accepted BOLD ICA components. Use this dataset for ME-ICR seed-based connectivity analysis.
+- `sub1_rest_medn_nat.nii.gz` : 'Denoised' BOLD time series after: basic preprocessing, T2* weighted averaging of echoes (i.e. 'optimal combination'), ICA denoising. Use this dataset for task analysis and resting state time series correlation analysis. See [here](https://www.pnas.org/doi/abs/10.1073/pnas.1301725110) for information on degrees of freedom in denoised data.
+- `sub1_rest_tsoc_afw.nii.gz` : 'Raw' BOLD time series dataset after: basic preprocessing and T2* weighted averaging of echoes (i.e. 'optimal combination'). 'Standard' denoising or task analyses can be assessed on this dataset (e.g. motion regression, physio correction, scrubbing, blah...) for comparison to ME-ICA denoising.
+- `sub1_rest_mefc_afw.nii.gz` : Component maps (in units of \delta S) of accepted BOLD ICA components. Use this dataset for ME-ICR seed-based connectivity analysis.
 - `./meica.rest1_e1/` : contains preprocessing intermediate files.
+
+Suffixes indicate warp spaces (see `meica.py -h`):
+- `epi` : Original EPI geometry
+- `nat` : Native anatomical affine warp
+- `afw` : Affine warp e.g. to MNI space
+- `nlw` : Non-linear warp to standard space using Qwarp 
 
 # Some Notes
 

@@ -285,7 +285,7 @@ class SelcompsEncoding(SelcompsBase):
             K_thr_safe, K_thr_agg  = np.percentile(K_thrs, [50,75], method='linear')
 
         # High Rho dataset
-        if getelbow2(R, True) > 1.5 * fmin:  
+        if getelbow2(R, True) > 1.5 * fmin or np.mean(R) > 1.5 * fmin:  
             high_rho = True
         R_thr = np.min([np.mean([getelbow(R, True), getelbow2(R,True)]), 1.5*fmin])
 
@@ -347,28 +347,32 @@ class SelcompsEncoding(SelcompsBase):
         z_sr2_ex_a = (sr2_ex[_n]-sr2_ex[acc_a].mean())/sr2_ex[acc_a].std()
         eject_ex = acc_b[andb([(z_ex_a - z_sr2_ss0_a)[acc_b] > 6.5, z_ex_a[acc_b] > 4])==2]
 
-        # High anisotropy and large magnitude of ACF indicates a low-freq
-        #  gradient field artifact. Extreme anisotropy can happen at middle of 
-        #  K-spectrum, so no other conditions. Moderate happens at tail so can
-        #  control using K_thr
-        eject_field = np.intersect1d(
-            rs[z_(np.max(_em, axis=1)[rs]) > 9],
-            rs[z_((np.max(_em, axis=1) / np.min(_em, axis=1))[rs]) > 9],
-        )
-        eject_field_rank = acc_b[rankvec(_em.max(axis=1)[acc_b]) - rankvec(K[acc_b]) > len(acc_a)]
-        eject_field = np.union1d(eject_field, eject_field_rank)
-        
         # Remove large included artifacts after tail inclusion
         eject_score_thr = np.mean([getelbow(score,True), np.percentile(score[acc_a], 33)])
         high_varex_thr = np.percentile(self.varex[acc_a], 80)
         eject_quality = acc_b[andb([score[acc_b]<eject_score_thr, R[acc_b]>R_thr, self.varex[acc_b]>high_varex_thr])>=2]
+
+        # High anisotropy and large magnitude of ACF indicates a low-freq
+        #  gradient field artifact. Extreme anisotropy can happen at middle of 
+        #  K-spectrum, so no other conditions. Moderate happens at tail so can
+        #  control using K_thr
+        eject_field_em = np.intersect1d(
+            rs[z_(np.max(_em, axis=1)[rs]) > 9],
+            rs[z_((np.max(_em, axis=1) / np.min(_em, axis=1))[rs]) > 9],
+        )
+        eject_field_rank = acc_b[rankvec(_em.max(axis=1)[acc_b]) - rankvec(K[acc_b]) > len(acc_a)]
+        eject_field = np.union1d(eject_field_em, eject_field_rank)
+        eject_field_agg = np.intersect1d(eject_field, K[acc_b]<K_thrs.max())
         
-        # Combine ejects
+        # Combine safe ejects
         eject_R = np.setdiff1d(eject_R, acc_a)  # R not allowed to go after acc_a
         eject = np.union1d(eject_field, eject_R)  # field will be protected by quality requirements
         eject = np.intersect1d(eject, eject_quality)
+
+        # Combine all ejects
         eject_ex = np.setdiff1d(eject_ex, acc_a)
         eject = np.union1d(eject, eject_ex)
+        eject = np.union1d(eject, eject_field_agg)
 
         # Final acceptance
         acc = np.setdiff1d(acc_b, eject) 
