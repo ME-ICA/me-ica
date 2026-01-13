@@ -52,12 +52,12 @@ pip install -r "$INSTALLDIR/me-ica-${MEICA_VERSION}/requirements.txt"
 # -------------------------
 # Test install
 # -------------------------
-"$INSTALLDIR/me-ica-${MEICA_VERSION}/meica.py" -h >/dev/null
+"$INSTALLDIR/me-ica-${MEICA_VERSION}/meica.py"
 
 # -------------------------
 # Create activation helper
 # -------------------------
-cat > "$INSTALLDIR/activate_meica" <<EOF
+cat > "$HOME/activate_meica" <<EOF
 # Source this file to activate ME-ICA
 export PATH="$INSTALLDIR/micromamba/bin:\$PATH"
 eval "\$(micromamba shell hook --shell bash)"
@@ -68,6 +68,10 @@ EOF
 echo
 echo "Installation complete."
 echo "To begin using ME-ICA:"
-echo "  source $INSTALLDIR/activate_meica"
-echo "Then try: meica.py"
+echo "  source ~/activate_meica"
+echo "For help:"
+echo "  meica.py -h"
+echo "To analyze data,"
+echo "  cd to_datadir"
+echo "  meica.py -d data1_e*nii.gz"
 

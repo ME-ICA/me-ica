@@ -15,7 +15,7 @@ sl = []  # Script command list
 
 from libmeica.preprocess import args, dep_check, dsprefix, dssuffix, logcomment, options
 
-__version__ = "v3.9.3"
+__version__ = "v3.9.7"
 welcome_block = """
 # Multi-Echo ICA, Version %s
 #

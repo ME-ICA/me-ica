@@ -23,7 +23,7 @@ from libmeica.utils.memory import create_memmap
 from libmeica.utils.t2s import t2sadmap
 from libmeica.utils.volume import eimask, fmask, makeadmask, niwrite, unmask
 
-__version__ = "v4.0.0"
+__version__ = "v3.9.7"
 welcome_block = """
 # Multi-Echo ICA, Version %s
 #
