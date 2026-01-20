@@ -5,6 +5,7 @@ import inspect
 import sys
 import os
 import gc
+import uuid
 import numpy as np
 from types import ModuleType, FunctionType, BuiltinFunctionType, SimpleNamespace
 from collections.abc import Mapping, Container
@@ -124,10 +125,16 @@ def _unlink(p):
     p.unlink()
 
 
-def create_memmap(name, shape, dtype=np.float32):
-    memmap_dir = "memmaps"
-    os.makedirs(memmap_dir, exist_ok=True)
-    mmpath = os.path.join(memmap_dir, f"{name}.dat")
+def create_memmap(name, shape, dtype=np.float32, *, loc=None):
+    try:
+        memmap_dir = os.environ["MEMMAP_DIR"]
+    except:
+        if loc is not None:
+            memmap_dir = str(loc)
+        else:
+            memmap_dir = os.path.join(os.getcwd(), "memmaps")
+        os.makedirs(memmap_dir, exist_ok=True)
+    mmpath = os.path.join(memmap_dir, str(uuid.uuid4()) + f"{name}.dat")
     atexit.register(_unlink, mmpath)
     return np.memmap(mmpath, dtype=dtype, mode="w+", shape=shape)
 

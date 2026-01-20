@@ -1,4 +1,3 @@
-import atexit
 import os
 import sys
 from optparse import OptionParser
@@ -10,11 +9,12 @@ import nibabel as nib
 import numpy as np
 
 from .utils.volume import cat2echos
+from .utils.memory import create_memmap
 
 
-def _unlink(p):
-    p = Path(p)
-    p.unlink()
+# def _unlink(p):
+#     p = Path(p)
+#     p.unlink()
 
 
 def tedana_command_line():
@@ -195,11 +195,12 @@ def tedana_process_input(options, args):
     head.extensions = []  # type: ignore
     head.set_sform(head.get_sform(), code=1)  # type: ignore
     aff = catim.affine  # type: ignore
-    memmap_path = "_catd.memmap"
+    # memmap_path = "_catd.memmap"
     catim_shape = catim.shape  # type: ignore
     catd_shape = catim_shape[:2] + (catim_shape[2] // ne,) + (ne,) + (catim_shape[3],)
-    catd = np.memmap(memmap_path, dtype=np.float32, mode="w+", shape=catd_shape)  # type: ignore
-    atexit.register(_unlink, memmap_path)
+    # catd = np.memmap(memmap_path, dtype=np.float32, mode="w+", shape=catd_shape)  # type: ignore
+    # atexit.register(_unlink, memmap_path)
+    catd = create_memmap("catd", catd_shape)
     # import pudb; pudb.set_trace()
     catd[:] = cat2echos(catim.get_fdata(), ne)  # changed here too  # type: ignore
     catd.flush()
