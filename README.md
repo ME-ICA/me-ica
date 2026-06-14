@@ -1,4 +1,4 @@
-# Multi-echo ICA (ME-ICA) Processing of fMRI Data version 3.9.7
+# Multi-echo ICA (ME-ICA) Processing of fMRI Data version 4.0.0
 
 # Installation
 
