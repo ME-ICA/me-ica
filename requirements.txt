@@ -1,0 +1,7 @@
+# Requirements stack (Python >=3.9)
+numpy==2.1.1
+scipy==1.14.1
+scikit-learn==1.5.2
+nibabel==5.2.1
+pudb
+
