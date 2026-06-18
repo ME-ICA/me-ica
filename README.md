@@ -22,9 +22,6 @@ source ~/activate_meica
 
 You can then call `meica.py` from any data directory.
 
-**NOTE**
-- ***meica.py* must be *called from inside a data directory*, which will also be where results are stored** 
-
 meica.py has many options which you can view using the -h flag. 
 
 For example:
