@@ -6,7 +6,7 @@ For a simple install on Linux, open a terminal, set an install directory and run
 
 ```bash
 INSTALLDIR=$HOME
-curl -LO https://raw.githubusercontent.com/ME-ICA/me-ica/3.9.7-gpl/install.sh
+curl -LO https://raw.githubusercontent.com/ME-ICA/me-ica/main/install.sh
 bash install.sh $INSTALLDIR
 ```
 
