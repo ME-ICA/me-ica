@@ -34,14 +34,13 @@ Anatomical is:		mprage.nii.gz
 
 ```bash
 cd /path/to/data
-meica.py -d rest1_e1.nii.gz rest1_e2.nii.gz rest1_e3.nii.gz -a mprage.nii --para_echo --prefix sub1_rest
+meica.py -d rest1_e1.nii.gz rest1_e2.nii.gz rest1_e3.nii.gz -a mprage.nii --prefix sub1_rest
 ```
 
 This means:
 
     -d rest_e1.nii.gz rest_e2...   are the 4-D time series datasets (space separated list) from a multi-echo fMRI acqusition
     -a ...   is a "raw" mprage with a skull
-    --para_echo  preprocess echo datasets in parallel for speed
    	--prefix sub1_rest   prefix for final functional output datasets, i.e. sub1_rest_....nii.gz
 
 If you just want to analyze an ME-fMRI run without an anatomical, try something like
