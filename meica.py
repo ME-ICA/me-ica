@@ -5,20 +5,15 @@ import random
 import re
 import subprocess
 import sys
-
 # from string import rstrip, split  # python 3 deprecated string import
 from optparse import SUPPRESS_HELP, OptionGroup, OptionParser
 from os import chdir, getcwd, mkdir, popen, system
 from re import split as resplit
 
-from libmeica.preprocess import (
-    argsort,
-    dep_check,
-    dsprefix,
-    dssuffix,
-    logcomment,
-    options,
-)
+from libmeica.preprocess import (argsort, dep_check, dsprefix, dssuffix,
+                                 logcomment, options)
+from libmeica.runtime import (activate_distributed_afni_runtime,
+                              shell_activation_lines)
 
 VENDOR_OPT = None
 VENDOR_ARGS = None
@@ -29,6 +24,8 @@ try:
     VENDOR_ARGS = vendortedargs()
 except ImportError:
     pass
+
+activate_distributed_afni_runtime()
 
 global sl
 sl = []  # Script command list
@@ -308,7 +305,7 @@ else:
 
 # Misc. command parsing
 if options.mni:
-    options.space = "MNI_caez_N27+tlrc"
+    options.space = "MNI152_2009_template.nii.gz"
 if options.qwarp and (options.anat == "" or not options.space):
     print(
         "*+ Can't specify Qwarp nonlinear coregistration without anatomical and SPACE template!"
@@ -400,6 +397,7 @@ afnidir = os.path.dirname(os.popen("which 3dSkullStrip").readlines()[0])
 # Prepare script and enter MEICA directory
 logcomment("Set up script run environment", level=1, global_sl=sl)
 headsl.append("set -e")
+headsl.extend(shell_activation_lines())
 headsl.append("export OMP_NUM_THREADS=%s" % (options.cpus))
 headsl.append("export MKL_NUM_THREADS=%s" % (options.cpus))
 headsl.append("export DYLD_FALLBACK_LIBRARY_PATH=%s" % (afnidir))
@@ -529,7 +527,7 @@ if oblique_mode:
         )
 # Despike and axialize
 if not options.no_despike:
-    if options.anat != "":
+    if options.anat != "" or not oblique_mode:
         _despike_input = vrinput
     else:
         _despike_input = vrAinput
