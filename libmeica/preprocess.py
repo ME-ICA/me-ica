@@ -8,7 +8,7 @@ from packaging import version
 
 from .command_line import _collect_dsinputs
 
-__version__ = "v4.0.0"
+__version__ = "v4.0.1"
 welcome_block = """
 # Multi-Echo ICA, Version %s
 #

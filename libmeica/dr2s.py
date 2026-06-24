@@ -4,7 +4,7 @@ import numpy as np
 from libmeica.utils.selection import z_
 from libmeica.utils.volume import niwrite, ts_sigma_rescale, unmask
 
-__version__ = "4.0.0"
+__version__ = "4.0.1"
 
 
 def signal_to_dr2s(*, assets, glsig=None, lambda_r2star=0):
