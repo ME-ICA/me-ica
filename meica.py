@@ -139,10 +139,22 @@ if options.anat == "" and (options.mni or options.space):
     print("Need to specify anatomical for standard space normalization.")
     sys.exit(1)
 
+# Prepare script
+STARTDIR = str.rstrip(popen("pwd").readlines()[0])
+
+
+def bids_path_detect(d):
+    if d[0] == "/":
+        return os.path.dirname(d)
+    elif "/" in d:
+        return f"{STARTDIR}/{os.path.dirname(d)}"
+    else:
+        return STARTDIR
+
 
 if isinstance(options.dsinputs, list) and len(options.dsinputs) > 1:
     DATASETS_IN = options.dsinputs
-    SRC_FOLDERS = [os.path.dirname(_d) for _d in DATASETS_IN]
+    SRC_FOLDERS = [bids_path_detect(_d) for _d in DATASETS_IN]
     DATASETS_IN = [os.path.basename(_d) for _d in DATASETS_IN]
     DATASETS = [str(vv + 1) for vv in range(len(options.dsinputs))]
     PREFIX = dsprefix(DATASETS_IN[0])
@@ -164,14 +176,14 @@ else:
         TRAILING = resplit(r"[\]+]", dsinputs)[-1]
         ISF = dssuffix(options.dsinputs)
         SETNAME = PREFIX + "".join(DATASETS) + TRAILING + options.label
-        SRC_FOLDERS = [os.path.dirname(_d) for _d in DATASETS]
         DATASETS_IN = DATASETS = [os.path.basename(_d) for _d in DATASETS]
+        SRC_FOLDERS = [bids_path_detect(_d) for _d in DATASETS_IN]
     else:
         # Parse longhand input file specificiation
         SHORTHAND_DSIN = False
         DATASETS_IN = options.dsinputs.split(",")
         assert isinstance(DATASETS_IN, list)
-        SRC_FOLDERS = [os.path.dirname(_d) for _d in DATASETS_IN]
+        SRC_FOLDERS = [bids_path_detect(_d) for _d in DATASETS_IN]
         DATASETS_IN = [os.path.basename(_d) for _d in DATASETS_IN]
         DATASETS = [str(vv + 1) for vv in range(len(DATASETS_IN))]
         PREFIX = dsprefix(DATASETS_IN[0])
@@ -181,8 +193,6 @@ else:
         TRAILING = ""
         SETNAME = PREFIX + options.label
 
-# Prepare script
-STARTDIR = str.rstrip(popen("pwd").readlines()[0])
 
 # Parse shorthand input file specification and TEs
 if isinstance(options.tes, list) and len(options.tes) > 1:
@@ -199,11 +209,6 @@ tes_order = argsort(tes_float)
 DATASETS_IN = [DATASETS_IN[_tei] for _tei in tes_order]
 tes = [tes_float[_tei] for _tei in tes_order]
 options.tes = ",".join(["%0.2f" % _te for _te in tes])
-
-# import pudb
-#
-# pudb.set_trace()
-
 
 if not SHORTHAND_DSIN and len(DATASETS) != len(DATASETS_IN):  # type: ignore
     print(
@@ -599,16 +604,16 @@ for echo_ii in range(len(DATASETS)):
     if options.tpattern == "bids":
         # breakpoint()
         _src_dir = SRC_FOLDERS[echo_ii]
-        json_file = os.path.join(_src_dir, f"{dsprefix(indata)}.json")
-        with open(json_file) as bids_ifh:
+        in_bids_json = os.path.join(_src_dir, f"{dsprefix(indata)}.json")
+        with open(in_bids_json) as bids_ifh:
             _bids_in = json.load(bids_ifh)
             if "SliceTiming" not in _bids_in.keys():
                 tpat_opt = ""
             else:
-                json_st_file = json_file + ".st.1D"
-                st_extract_cmd = f"{sys.executable} -c \"import json; open('{json_st_file}', 'w').write(' '.join([str(tt) for tt in json.load(open('{_src_dir}/{json_file}'))['SliceTiming']]))\" "
+                out_st_1d = in_bids_json + ".st.1D"
+                st_extract_cmd = f"{sys.executable} -c \"import json; open('{out_st_1d}', 'w').write(' '.join([str(tt) for tt in json.load(open('{in_bids_json}'))['SliceTiming']]))\" "
                 sl.append(st_extract_cmd)
-                tpat_opt = f"-tpattern @{json_st_file}"
+                tpat_opt = f"-tpattern @{out_st_1d}"
     elif options.tpattern != "":
         tpat_opt = " -tpattern %s " % options.tpattern
     else:
@@ -716,13 +721,13 @@ if options.anat != "":
     abmprage = nsmprage  # type: ignore
     refanat = nsmprage  # type: ignore
     if options.space:
-        sl.append(f"anat_proc_st2()" + "{")
         sl.append("afnibinloc=`which 3dSkullStrip`")
         if "/" in options.space:
             sl.append('ll="%s"; templateloc=${ll%%/*}/' % options.space)
             options.space = options.space.split("/")[-1]
         else:
             sl.append("templateloc=${afnibinloc%/*}")
+        sl.append(f"anat_proc_st2()" + "{")
         atnsmprage = "%s_at.nii.gz" % (dsprefix(nsmprage))  # type: ignore
         if not dssuffix(nsmprage).__contains__("nii"):  # type: ignore
             sl.append(
@@ -771,8 +776,8 @@ if options.anat != "":
                 "Compute non-linear warp to standard space using 3dQwarp (get lunch, takes a while) "
             )
             sl.append(
-                "3dUnifize -overwrite -GM -prefix ./%su.nii.gz %s/%s"
-                % (dsprefix(atnsmprage), ANAT_DIR, atnsmprage)
+                "3dUnifize -overwrite -GM -prefix %s/%su.nii.gz %s/%s"
+                % (ANAT_DIR, dsprefix(atnsmprage), ANAT_DIR, atnsmprage)
             )
             sl.append(
                 "3dQwarp -iwarp -overwrite -resample -useweight -blur 2 2 -duplo -workhard -base ${templateloc}/%s -prefix %s/%snl.nii.gz -source %s/%su.nii.gz"
@@ -1271,7 +1276,7 @@ def export_result(
         this_nwarpstring = " -nwarp %s/%s_xns2at.aff12.1D '%s/%s_WARP.nii.gz' " % (
             ANAT_DIR,
             anatprefix,
-            STARTDIR,
+            ANAT_DIR,
             dsprefix(nlatnsmprage),
         )
         esl.append(
