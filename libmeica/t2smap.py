@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-__version__ = "v4.0.0"
+__version__ = "v4.0.1"
 welcome_block = """
 # Multi-Echo ICA, Version %s
 # See https://doi.org/10.1016/j.neuroimage.2011.12.028

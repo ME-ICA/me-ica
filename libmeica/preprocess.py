@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import subprocess
 import sys
-
 # from string import rstrip, split  # python 3 deprecated string import
 from optparse import SUPPRESS_HELP, OptionGroup, OptionParser
 
@@ -9,7 +8,7 @@ from packaging import version
 
 from .command_line import _collect_dsinputs
 
-__version__ = "v4.0.0"
+__version__ = "v4.0.1"
 welcome_block = """
 # Multi-Echo ICA, Version %s
 #
@@ -476,8 +475,8 @@ runopts.add_option(
     "-j",
     "--cpus",
     dest="cpus",
-    help="Maximum number of CPUs (OpenMP threads) to use. Default 2.",
-    default="2",
+    help="Maximum number of CPUs (OpenMP threads) to use. Default 4.",
+    default="4",
 )
 runopts.add_option(
     "",

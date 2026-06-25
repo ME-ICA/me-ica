@@ -8,7 +8,8 @@ from sys import argv
 
 import numpy as np
 
-from libmeica.utils.selection import Mg, andb, getelbow, getelbow2, getfbounds, z_, zu
+from libmeica.utils.selection import (Mg, andb, getelbow, getelbow2,
+                                      getfbounds, z_, zu)
 
 from .utils.encoding_table import EncodingTable
 from .utils.filter import rankvec
@@ -219,7 +220,7 @@ def fit_encoding(fspace_fn=ENCODING_FSPACE_FILE):
                 z_ex_a[acc_b] > np.max([np.percentile(z_ex_a[K < K_thr_agg], 20), 4]),
                 # z_ex_a[acc_b] > 4,
                 N[acc_b] > np.min([getelbow(K), 15]),
-                e.lz[acc_b] < np.percentile(e.lz[acc_a], 20),
+                e.lz[acc_b] < np.percentile(e.lz[acc_a], 50) / 5,
             ]
         )
         == 4
@@ -254,7 +255,7 @@ def fit_encoding(fspace_fn=ENCODING_FSPACE_FILE):
     )
     eject_field_rank = acc_b[rankvec(e.emx[acc_b]) - rankvec(K[acc_b]) > len(acc_a)]
     eject_field = np.union1d(eject_field_em, eject_field_rank)
-    eject_field_agg = np.intersect1d(eject_field_em, acc_b[K[acc_b] < K_thrs.max()])
+    # eject_field_agg = np.intersect1d(eject_field_em, acc_b[K[acc_b] < K_thrs.max()])
     eject_field_t2s = rs[e.zu_cT2s[rs] > 6.5]
     # eject_field_low_t2s = rs[
     #     andb([e.zu_cT2s[rs] > 6, score[rs] < eject_score_thr]) == 2
@@ -273,7 +274,7 @@ def fit_encoding(fspace_fn=ENCODING_FSPACE_FILE):
     # Combine all ejects
     eject_ex = np.setdiff1d(eject_ex, acc_a)
     eject = np.union1d(eject, eject_ex)
-    eject = np.union1d(eject, eject_field_agg)
+    # eject = np.union1d(eject, eject_field_agg)
     eject = np.union1d(eject, eject_score_low)
 
     # Final acceptance
