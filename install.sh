@@ -2,17 +2,27 @@
 set -euo pipefail
 
 # -------------------------
-# ME-ICA version / runtime release
+# ME-ICA source / runtime release selection
 # -------------------------
-MEICA_VERSION="${MEICA_VERSION:-4.0.1}"
-
-# Runtime release defaults. Override these before running if needed:
-#   MEICA_RUNTIME_REPO="https://github.com/ME-ICA/meica-afni" \
+# The source release/tag and runtime release/tag can be set independently.
+# This is useful for staging or interim source releases that should use an
+# already-published compatible runtime, for example:
+#
+#   MEICA_SOURCE_TAG="4.0.1-stage" \
 #   MEICA_RUNTIME_TAG="4.0.1" \
-#   bash install.sh INSTALLDIR
+#   bash install.sh "$HOME"
+#
+# Backward compatibility: MEICA_VERSION is treated as an alias for
+# MEICA_SOURCE_TAG if MEICA_SOURCE_TAG is not set.
+MEICA_SOURCE_TAG="${MEICA_SOURCE_TAG:-${MEICA_VERSION:-4.0.1}}"
 MEICA_RUNTIME_REPO="${MEICA_RUNTIME_REPO:-https://github.com/ME-ICA/meica-afni}"
-MEICA_RUNTIME_TAG="${MEICA_RUNTIME_TAG:-${MEICA_VERSION}}"
+MEICA_RUNTIME_TAG="${MEICA_RUNTIME_TAG:-${MEICA_RUNTIME_VERSION:-${MEICA_SOURCE_TAG}}}"
 MEICA_RUNTIME_ASSET="${MEICA_RUNTIME_ASSET:-meica-afni-runtime-linux-x86_64.tar.gz}"
+
+# By default, the source checkout directory and micromamba environment name
+# follow the source tag. Override these only if you need a custom local name.
+MEICA_INSTALL_LABEL="${MEICA_INSTALL_LABEL:-${MEICA_SOURCE_TAG}}"
+MEICA_ENV_NAME="${MEICA_ENV_NAME:-meicapy${MEICA_INSTALL_LABEL}}"
 
 # -------------------------
 # Check usage
@@ -31,7 +41,7 @@ if [ "${INSTALLDIR:0:1}" != "/" ]; then
   INSTALLDIR="$STARTDIR/$INSTALLDIR"
 fi
 
-MEICA_SRC_DIR="$INSTALLDIR/me-ica-${MEICA_VERSION}"
+MEICA_SRC_DIR="$INSTALLDIR/me-ica-${MEICA_INSTALL_LABEL}"
 
 # -------------------------
 # Platform detection
@@ -99,7 +109,7 @@ fi
 # Check for existing environment
 # -------------------------
 ENV_ROOT="$INSTALLDIR"
-ENV_NAME="meicapy${MEICA_VERSION}"
+ENV_NAME="${MEICA_ENV_NAME}"
 ENV_DIR="$ENV_ROOT/envs/$ENV_NAME"
 if [ -e "$ENV_DIR" ]; then
   echo "Environment already exists at $ENV_DIR . Remove and re-run installer."
@@ -117,7 +127,7 @@ if [ -e "$MEICA_SRC_DIR" ]; then
   exit 1
 fi
 
-git clone -b "${MEICA_VERSION}" --single-branch https://github.com/ME-ICA/me-ica.git "$MEICA_SRC_DIR"
+git clone -b "${MEICA_SOURCE_TAG}" --single-branch https://github.com/ME-ICA/me-ica.git "$MEICA_SRC_DIR"
 
 # -------------------------
 # Download distributed AFNI runtime on Linux/WSL
@@ -125,7 +135,7 @@ git clone -b "${MEICA_VERSION}" --single-branch https://github.com/ME-ICA/me-ica
 # The runtime is installed inside the matched ME-ICA source tree:
 #
 #   $INSTALLDIR/
-#     me-ica-${MEICA_VERSION}/
+#     me-ica-${MEICA_INSTALL_LABEL}/
 #       meica.py
 #       libmeica/
 #       meica-afni-runtime/
@@ -140,9 +150,11 @@ MEICA_RUNTIME_UTILS="$MEICA_AFNI_RUNTIME/utils"
 if [ "$IS_LINUX" -eq 1 ]; then
   echo
   echo "Downloading ME-ICA distributed AFNI runtime release:"
-  echo "  repo: $MEICA_RUNTIME_REPO"
-  echo "  tag:  $MEICA_RUNTIME_TAG"
-  echo "  file: $MEICA_RUNTIME_ASSET"
+  echo "  source tag:  $MEICA_SOURCE_TAG"
+  echo "  source dir:  $MEICA_SRC_DIR"
+  echo "  runtime repo: $MEICA_RUNTIME_REPO"
+  echo "  runtime tag:  $MEICA_RUNTIME_TAG"
+  echo "  runtime file: $MEICA_RUNTIME_ASSET"
   echo
 
   RUNTIME_URL="${MEICA_RUNTIME_REPO}/releases/download/${MEICA_RUNTIME_TAG}/${MEICA_RUNTIME_ASSET}"
@@ -159,7 +171,7 @@ if [ "$IS_LINUX" -eq 1 ]; then
     "$RUNTIME_URL"
 
   # Extract into the matched ME-ICA source directory, so the runtime appears at:
-  #   me-ica-${MEICA_VERSION}/meica-afni-runtime
+  #   me-ica-${MEICA_INSTALL_LABEL}/meica-afni-runtime
   tar -xzf "$RUNTIME_TARBALL" -C "$MEICA_SRC_DIR"
 
   if [ ! -d "$MEICA_AFNI_RUNTIME" ]; then
@@ -242,6 +254,8 @@ micromamba activate $ENV_NAME
 
 # ME-ICA source
 export MEICA_REPO="$MEICA_SRC_DIR"
+export MEICA_SOURCE_TAG="$MEICA_SOURCE_TAG"
+export MEICA_RUNTIME_TAG="$MEICA_RUNTIME_TAG"
 export PATH="\$MEICA_REPO:\$PATH"
 
 # ME-ICA distributed AFNI runtime.
@@ -294,6 +308,8 @@ micromamba activate $ENV_NAME
 
 # ME-ICA source
 export MEICA_REPO="$MEICA_SRC_DIR"
+export MEICA_SOURCE_TAG="$MEICA_SOURCE_TAG"
+export MEICA_RUNTIME_TAG="$MEICA_RUNTIME_TAG"
 export PATH="\$MEICA_REPO:\$PATH"
 
 # No distributed AFNI runtime is installed on this platform by this installer.
@@ -339,6 +355,15 @@ set -e
 # -------------------------
 echo
 echo "Installation complete. Review dependency check from meica.py (above)."
+echo
+echo "Installed source tag:"
+echo "  $MEICA_SOURCE_TAG"
+echo "Installed source directory:"
+echo "  $MEICA_SRC_DIR"
+if [ "$RUNTIME_INSTALLED" -eq 1 ]; then
+  echo "Installed runtime tag:"
+  echo "  $MEICA_RUNTIME_TAG"
+fi
 echo
 echo "To begin using ME-ICA:"
 echo "  source ~/activate_meica"
