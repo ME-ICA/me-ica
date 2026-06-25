@@ -2,7 +2,7 @@
 
 ## Version 4.0.1
 
-Multi-Echo ICA v4, or MEICA4, is a pipeline for comprehensive processing of multi-echo fMRI data. MEICA4 uses the echo-time dependence of BOLD signal changes to distinguish BOLD-like signal sources from non-BOLD sources. Other mechanism-aware measures are also used to identify and remove complex artifacts. This approach provides robust denoising and analysis of multi-echo fMRI datasets from task, resting-state, and ecologically valid paradigms across a wide range of human-subject and patient-research studies, using a single pipeline with uniform configuration.
+Multi-Echo ICA v4, or MEICA4, is a pipeline for comprehensive processing of multi-echo fMRI data. MEICA4 uses the echo-time dependence of BOLD signal changes to distinguish BOLD-like signal sources from non-BOLD sources. Other mechanism-aware measures are also used to identify and remove complex artifacts. This approach provides robust denoising and analysis of multi-echo fMRI datasets from task, resting-state, and ecologically valid paradigms across a wide range of human-subject and patient-research studies, using a single pipeline with uniform configuration. *Note ME-ICA is a research tool and not for standard clinical use.*
 
 MEICA4 is designed to reduce the practical barrier to entry for multi-echo fMRI. On Linux and Windows (via Windows Subsystem for Linux, WSL2), the standard installer downloads a matched ME-ICA AFNI runtime into the MEICA4 source directory. This runtime supplies the AFNI command-line tools, templates, runtime libraries, and selected utilities needed by MEICA4 without requiring users to install AFNI separately or make system-level changes.
 
