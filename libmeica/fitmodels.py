@@ -415,9 +415,9 @@ def fitmodels_direct(
         t2smask_z = zscore(t2smask)
 
         wtsZ_t2s = wtsZ.copy()
-        wtsZ_t2s[wtsZ_t2s < -4] = -4
-        wtsZ_t2s[wtsZ_t2s > 4] = 4
-        t2s_z = np.average(t2smask_z, weights=wtsZ_t2s**2) * 100
+        wtsZ_t2s[wtsZ_t2s < -5] = -5
+        wtsZ_t2s[wtsZ_t2s > 5] = 5
+        t2s_z = np.average(t2smask_z, weights=np.abs(wtsZ_t2s)) * 100
         corrT2s[i] = t2s_z
 
         print(".", end="", flush=True)
