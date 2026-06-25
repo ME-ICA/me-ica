@@ -11,7 +11,7 @@ MEICA4 is designed to reduce the practical barrier to entry for multi-echo fMRI.
 For a user installation on Linux or WSL2 without administrator privileges, copy, paste, and run this one-line command in a terminal. This assumes installation into your home directory:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ME-ICA/me-ica/4.0.1/install.sh | bash -s -- "$HOME"
+curl -fsSL https://raw.githubusercontent.com/ME-ICA/me-ica/4.0.1/install.sh | bash -s -- "$HOME/meica4"
 ```
 
 This downloads and executes `install.sh`, which installs MEICA4 into a dedicated micromamba Python environment that does not interfere with other Python installations. On Linux and WSL2, the installer also downloads a matched ME-ICA AFNI runtime release and installs it inside the MEICA4 source directory.
