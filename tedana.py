@@ -257,6 +257,14 @@ def writect(comptable, *, assets, ctname="", varexpl="-1", classarr=[]):
             "#IGN %s \t#Ignored components (kept in denoised time series)\n"
             % ",".join([str(int(cc)) for cc in empty])
         )
+        ejc = np.setdiff1d(
+            np.arange(nc),
+            np.union1d(np.union1d(acc, rej), np.union1d(midk, empty)),
+        )
+        f.write(
+            "#EJC %s \t#Ejected components (unassigned to any group)\n"
+            % ",".join([str(int(cc)) for cc in ejc])
+        )
         f.write("#VEx   TCo     DFe     RJn     DFn     \n")
         f.write(
             "##%.02f        %i      %i      %i      %i \n"
