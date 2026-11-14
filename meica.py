@@ -602,18 +602,17 @@ for echo_ii in range(len(DATASETS)):
         )
     # Time shift datasets
     if options.tpattern == "bids":
-        # breakpoint()
+        from libmeica.utils.bids import bids_slice_timing_cmd
+
         _src_dir = SRC_FOLDERS[echo_ii]
         in_bids_json = os.path.join(_src_dir, f"{dsprefix(indata)}.json")
-        with open(in_bids_json) as bids_ifh:
-            _bids_in = json.load(bids_ifh)
-            if "SliceTiming" not in _bids_in.keys():
-                tpat_opt = ""
-            else:
-                out_st_1d = in_bids_json + ".st.1D"
-                st_extract_cmd = f"{sys.executable} -c \"import json; open('{out_st_1d}', 'w').write(' '.join([str(tt) for tt in json.load(open('{in_bids_json}'))['SliceTiming']]))\" "
-                sl.append(st_extract_cmd)
-                tpat_opt = f"-tpattern @{out_st_1d}"
+        _st = bids_slice_timing_cmd(in_bids_json)
+        if _st is None:
+            tpat_opt = ""
+        else:
+            out_st_1d, st_extract_cmd = _st
+            sl.append(st_extract_cmd)
+            tpat_opt = f"-tpattern @{out_st_1d}"
     elif options.tpattern != "":
         tpat_opt = " -tpattern %s " % options.tpattern
     else:
