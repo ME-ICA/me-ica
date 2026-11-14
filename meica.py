@@ -30,7 +30,7 @@ activate_distributed_afni_runtime()
 global sl
 sl = []  # Script command list
 
-__version__ = "v4.0.1"
+__version__ = "v4.0.2"
 welcome_block = """
 # Multi-Echo ICA, Version %s
 #
