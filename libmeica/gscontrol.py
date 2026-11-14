@@ -38,7 +38,7 @@ def gscontrol_raw(*, OCcatd, assets, dtrank=4):
     # Find spatial global signal
     dat = OCcatd[Gmask] - Gmu[Gmask][:, np.newaxis]
     sol = np.linalg.lstsq(Lmix, dat.T, rcond=None)  # Legendre basis for detrending
-    detr = dat - np.dot(sol[0].T, Lmix.T)[0]
+    detr = dat - np.dot(sol[0].T, Lmix.T)
     sphis = (detr).min(1)
     sphis -= sphis.mean()
     T1mi = unmask(sphis, Gmask)
