@@ -1124,6 +1124,11 @@ tedcall_debug_cs = tedcall + " --mix=meica_mix.1D DEBUG"
 sl.append(f"echo {tedcall_debug_cs} > debug_component_selection.sh")
 
 sl.append(tedcall)
+# tSNR map of the denoised (hikts) time series
+sl.append(
+    "%s%s/libmeica/utils/tsnr.py TED/ts_OC.nii TED/tsnr_OC.nii"
+    % (tedflag + sys.executable + " ", meica_src_dir)
+)
 
 if outprefix == "":
     outprefix = SETNAME
@@ -1434,6 +1439,13 @@ export_result(
     "TED/hik_ts_OC_T1c.nii",
     "%s_hikts" % (outprefix),
     "Denoised timeseries with T1 equilibration correction (no thermal noise), produced by ME-ICA %s"
+    % __version__,
+    disable=options.pp_only,
+)
+export_result(
+    "TED/tsnr_OC.nii",
+    "%s_tsnr" % (outprefix),
+    "Temporal SNR map of the denoised time series (hikts), produced by ME-ICA %s"
     % __version__,
     disable=options.pp_only,
 )
