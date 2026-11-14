@@ -982,6 +982,7 @@ sl.append(
 logcomment("Extended preprocessing of functional datasets", level=1)
 para_proc_fun_names = []
 ica_input_list = []
+finalpp_post = []
 for echo_ii in range(len(DATASETS)):
     # Determine dataset name
     _para_proc_fun_name = f"finalpp_loop_e{echo_ii}"
@@ -1007,48 +1008,73 @@ for echo_ii in range(len(DATASETS)):
             osf,
         )
     )
+    sl.append("}")
+    # 4.0.2 fix: the mask/detrend steps are collected here and run
+    # after the `wait`, in the main shell. (a) A mask-step failure
+    # then aborts the run via set -e instead of being swallowed in a
+    # background subshell. (b) The eN_in.nii sibling deletion below
+    # precedes the mask step, so the eN_in.nii.gz reads are not
+    # broken by the AFNI >= 24.x same-name .nii/.nii.gz reader
+    # defect (see the rm -f %s_in.nii line).
+    _post = []
     # sl.append("3dTstat -min -prefix ./%s_vr_min%s ./%s_vr%s" % (dsin, osf, dsin, osf))
     # sl.append(
     #     "3dcalc -a eBvrmask.nii.gz -b %s_vr_min%s -expr 'step(a)*step(b)' -overwrite -prefix eBvrmask.nii.gz "
     #     % (dsin, osf)
     # )
     if options.FWHM == "0mm":
-        sl.append(
+        _post.append(
             "3dcalc -float -overwrite -a eBvrmask.nii.gz -b ./%s_in%s[%i..$] -expr 'step(a)*b' -prefix ./%s_in%s "
             % (dsin, osf, basebrik, dsin, osf)
         )
     else:
-        sl.append(
+        _post.append(
             "3dBlurInMask -fwhm %s -mask eBvrmask%s -prefix ./%s_in%s ./%s_in%s[%i..$]"
             % (options.FWHM, osf, dsin, osf, dsin, osf, basebrik)
         )
     if options.detrend or options.highpass:
-        sl.append("3dTstat -prefix ./%s_mean%s ./%s_in%s" % (dsin, osf, dsin, osf))
+        _post.append("3dTstat -prefix ./%s_mean%s ./%s_in%s" % (dsin, osf, dsin, osf))
         if options.detrend:
-            sl.append(
+            _post.append(
                 "3dDetrend -polort %s -overwrite -prefix ./%s_in%s ./%s_in%s "
                 % (options.detrend, dsin, osf, dsin, osf)
             )
         if options.highpass:
-            sl.append(
+            _post.append(
                 "3dBandpass -prefix ./%s_in%s %f 99 ./%s_in%s "
                 % (dsin, osf, float(options.highpass), dsin, osf)
             )
-        sl.append(
+        _post.append(
             "3dcalc -float -overwrite -a ./%s_in%s -b ./%s_mean%s -expr 'a+b' -prefix ./%s_in%s"
             % (dsin, osf, dsin, osf, dsin, osf)
         )
+    finalpp_post.append(_post)
     ica_input_list.append(f"./{dsin}_in{osf}")
     # else:
     #     sl.append("mv %s_sm%s %s_in%s" % (dsin, osf, dsin, osf))
     # sl.append("3dTstat -stdev -prefix ./%s_std%s ./%s_in%s" % (dsin, osf, dsin, osf))
-    sl.append("}")
     if not (options.test_proc or options.keep_int):
         sl.append("rm -f %s_pt.nii.gz %s_vr%s %s_sm%s" % (dsin, dsin, osf, dsin, osf))
+    # 4.0.2 fix: delete the uncompressed eN_in.nii copy left by the
+    # initial copy stage. In AFNI >= 24.x the NIfTI reader fails
+    # deterministically on eN_in.nii.gz while a same-named eN_in.nii
+    # exists in the workdir (it opens both representations and the
+    # brick reads FATAL), so the mask step below -- and TEDana
+    # itself -- cannot consume the eN_in.nii.gz inputs. 3.9.8
+    # workdirs never contained the sibling file, which is why
+    # production (HPC AFNI 2.2.22) was unaffected. Unconditional:
+    # keeping the file breaks the run on modern AFNI builds.
+    sl.append("rm -f %s_in.nii" % dsin)
     para_proc_fun_names.append(_para_proc_fun_name)
 for _fun_name in para_proc_fun_names:
     sl.append(f"{_fun_name} {para_echo_indicator}")
 sl.append("wait")
+# 4.0.2 fix: apply per-echo masking (and detrend/highpass) after all
+# 3dAllineate warps have finished, in the main shell so a mask-step
+# failure aborts the run via set -e instead of being swallowed in a
+# background subshell.
+for _post in finalpp_post:
+    sl.extend(_post)
 
 ica_input = " ".join(ica_input_list)
 
